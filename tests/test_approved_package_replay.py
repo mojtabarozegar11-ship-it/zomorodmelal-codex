@@ -34,7 +34,8 @@ class ApprovedPackageReplayTests(unittest.TestCase):
             first = executor.execute(package["package_id"], request["id"])
             self.assertTrue(first["success"])
             second = executor.execute(package["package_id"], request["id"])
-            self.assertTrue(second["success"])
+            self.assertFalse(second["success"])
+            self.assertEqual(second["status"], "already_executed")
             self.assertEqual((root / "demo.txt").read_text(encoding="utf-8"), "v1")
 
     def test_package_binding_mismatch_is_blocked(self):
