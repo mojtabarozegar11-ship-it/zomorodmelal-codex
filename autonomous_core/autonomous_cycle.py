@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+from approval.approval_gateway import ApprovalGateway
+from autonomous_core.change_package import ChangePackage
 from autonomous_core.master_core import MasterCore
 from autonomous_core.safe_builder import SafeBuilder
 from evaluation.evaluation_engine import EvaluationEngine
@@ -30,23 +32,11 @@ class CycleReport:
 
 
 class AutonomousCycle:
-    """Run a safe autonomous cycle with sandboxed build and verification.
-
-    The cycle may inspect the project, prepare sandbox artifacts and run the
-    project's existing test suite. It never deploys, uses credentials, or
-    promotes sandbox changes without the owner-approval boundary.
-    """
+    """Run a safe autonomous cycle and produce an approval-bound package."""
 
     PHASES = (
-        "discover",
-        "research",
-        "plan",
-        "build",
-        "test",
-        "verify",
-        "approval",
-        "deploy",
-        "learn",
+        "discover", "research", "plan", "build", "test", "verify",
+        "approval", "deploy", "learn",
     )
 
     def __init__(self, project_root: str | Path | None = None) -> None:
@@ -55,6 +45,8 @@ class AutonomousCycle:
         self.testing = TestingEngine()
         self.evolution = EvolutionEngine()
         self.evaluation = EvaluationEngine()
+        self.approval = ApprovalGateway()
+        self.packages = ChangePackage(self.project_root / "data" / "change_packages")
 
     def _sandbox_build(self, core: Dict[str, Any]) -> Dict[str, Any]:
         sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"
@@ -72,21 +64,14 @@ class AutonomousCycle:
                 indent=2,
             )
         }
-        return {
-            "sandbox": str(sandbox),
-            "files": builder.build(manifest),
-        }
+        return {"sandbox": str(sandbox), "files": builder.build(manifest)}
 
     def _run_tests(self) -> Dict[str, Any]:
         command = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"]
         try:
             completed = subprocess.run(
-                command,
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                timeout=90,
-                shell=False,
+                command, cwd=self.project_root, capture_output=True,
+                text=True, timeout=90, shell=False,
             )
             return {
                 "passed": completed.returncode == 0,
@@ -108,6 +93,8 @@ class AutonomousCycle:
         completed = ["discover", "research", "plan"]
         build_result: Dict[str, Any] | None = None
         test_result: Dict[str, Any] | None = None
+        package: Dict[str, Any] | None = None
+        approval_request: Dict[str, Any] | None = None
 
         if core.get("syntax_errors"):
             pending.append("fix_syntax_errors")
@@ -117,31 +104,40 @@ class AutonomousCycle:
                 completed.append("build")
                 test_result = self._run_tests()
                 self.testing.record_test(
-                    f"autonomous_cycle_{core['cycle']}",
-                    test_result["passed"],
+                    f"autonomous_cycle_{core['cycle']}", test_result["passed"],
                     "Sandbox build plus project unittest discovery.",
                 )
                 if test_result["passed"]:
                     completed.extend(["test", "verify"])
+                    sandbox_rel = str(Path(build_result["sandbox"]).relative_to(self.project_root))
+                    package = self.packages.create(
+                        build_result["files"],
+                        f"Autonomous cycle {core['cycle']} verified sandbox change set",
+                        sandbox_rel=sandbox_rel,
+                    )
+                    approval_request = self.approval.request(
+                        "change_package_deploy",
+                        f"انتقال بسته تغییر چرخه {core['cycle']} به محیط اصلی",
+                        metadata={
+                            "package_id": package["package_id"],
+                            "package_sha256": package["package_sha256"],
+                            "cycle": core["cycle"],
+                        },
+                    )
                 else:
                     pending.append("fix_failing_tests")
             except (OSError, TypeError, ValueError) as exc:
                 pending.append(f"build_error: {exc}")
 
-        pending.extend([
-            "owner_approval_for_real_changes",
-            "controlled_deployment",
-            "post_deployment_learning",
-        ])
+        if approval_request:
+            pending.extend(["owner_approval_for_real_changes", "controlled_deployment", "post_deployment_learning"])
+        else:
+            pending.extend(["owner_approval_for_real_changes", "controlled_deployment", "post_deployment_learning"])
 
         report = CycleReport(
-            cycle=core["cycle"],
-            phase="approval",
-            completed=completed,
-            pending=pending,
-            owner_approval_required=True,
-            real_changes_allowed=False,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            cycle=core["cycle"], phase="approval", completed=completed,
+            pending=pending, owner_approval_required=True,
+            real_changes_allowed=False, timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
         return {
@@ -149,6 +145,8 @@ class AutonomousCycle:
             "core": core,
             "build": build_result,
             "tests": test_result,
+            "package": package,
+            "approval_request": approval_request,
             "safety": {
                 "sandbox_only": True,
                 "generated_code_executed": False,
