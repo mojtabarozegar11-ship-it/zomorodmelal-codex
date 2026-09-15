@@ -12,11 +12,7 @@ from execution.execution_controller import ExecutionController
 
 
 class ChangePackageExecutor:
-    """Promote only an owner-approved, hash-verified sandbox package.
-
-    This component copies files only; it never executes generated code and
-    never accesses credentials or external services.
-    """
+    """Promote only an owner-approved, hash-verified sandbox package."""
 
     def __init__(self, root: str | Path | None = None) -> None:
         self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
@@ -69,7 +65,7 @@ class ChangePackageExecutor:
         for item in files:
             relative = str(item["path"])
             source = (sandbox / relative).resolve()
-            target = self._safe_target(relative)
+            self._safe_target(relative)
             if sandbox not in source.parents or not source.is_file():
                 raise FileNotFoundError(relative)
             content = source.read_bytes()
@@ -77,9 +73,10 @@ class ChangePackageExecutor:
                 raise ValueError(f"size mismatch: {relative}")
             if hashlib.sha256(content).hexdigest() != item["sha256"]:
                 raise ValueError(f"hash mismatch: {relative}")
-            verified.append(str(target.relative_to(self.root)))
+            verified.append(relative)
 
         backup = self.execution.backup(verified)
+        existed_before = {relative: self._safe_target(relative).is_file() for relative in verified}
         promoted: list[str] = []
         try:
             for relative in verified:
@@ -100,7 +97,14 @@ class ChangePackageExecutor:
         except Exception:
             for relative in promoted:
                 target = self._safe_target(relative)
-                target.unlink(missing_ok=True)
+                backup_file = Path(backup) / relative
+                if existed_before.get(relative) and backup_file.is_file():
+                    shutil.copy2(backup_file, target)
+                else:
+                    target.unlink(missing_ok=True)
+            self.execution._log("package_promote", "rolled_back_after_failure", {
+                "request_id": request_id, "package_id": package_id, "backup": backup,
+            })
             raise
 
         return {
