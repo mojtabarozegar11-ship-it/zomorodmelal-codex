@@ -67,7 +67,21 @@ class AutonomousCycle:
         # The cycle may use an isolated temporary project root in tests. Run the
         # repository's test suite from the source tree while keeping all cycle
         # artifacts (sandbox/state/packages) under the requested project root.
-        command = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"]
+        # Exclude this end-to-end cycle test from the nested suite to prevent
+        # recursive cycle -> tests -> cycle execution until the timeout.
+        script = (
+            "import unittest; "
+            "suite=unittest.defaultTestLoader.discover('tests'); "
+            "filtered=unittest.TestSuite(); "
+            "stack=[suite]; "
+            "while stack: "
+            " item=stack.pop(); "
+            " (stack.extend(item) if isinstance(item, unittest.TestSuite) else "
+            "  filtered.addTest(item) if 'test_autonomous_cycle_goal' not in item.id() else None); "
+            "result=unittest.TextTestRunner(verbosity=0).run(filtered); "
+            "raise SystemExit(0 if result.wasSuccessful() else 1)"
+        )
+        command = [sys.executable, "-c", script]
         try:
             completed = subprocess.run(
                 command,
