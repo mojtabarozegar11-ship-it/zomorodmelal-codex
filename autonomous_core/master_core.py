@@ -7,15 +7,14 @@ from datetime import datetime
 
 
 class MasterCore:
-    VERSION = "1.1.0"
+    VERSION = "1.1.1"
 
     def __init__(self, root=None):
         self.root = os.path.abspath(root or os.path.join(os.path.dirname(__file__), ".."))
         self.data_dir = os.path.join(self.root, "data")
         self.sandbox_dir = os.path.join(self.root, "sandbox", "autonomous_workspace")
         self.state_file = os.path.join(self.data_dir, "master_core_state.json")
-        os.makedirs(self.data_dir, exist_ok=True)
-        os.makedirs(self.sandbox_dir, exist_ok=True)
+        os.makedirs(self.data_dir, exist_ok=True); os.makedirs(self.sandbox_dir, exist_ok=True)
         self.state = self._load_state()
 
     def _defaults(self):
@@ -23,16 +22,13 @@ class MasterCore:
 
     def _load_state(self):
         defaults = self._defaults()
-        if not os.path.exists(self.state_file):
-            self._save_state(defaults)
-            return defaults
+        if not os.path.exists(self.state_file): self._save_state(defaults); return defaults
         try:
-            with open(self.state_file, "r", encoding="utf-8") as f:
-                state = json.load(f)
+            with open(self.state_file, "r", encoding="utf-8") as f: state = json.load(f)
             for key, value in defaults.items(): state.setdefault(key, value)
+            state["version"] = self.VERSION
             return state
-        except Exception:
-            return defaults
+        except Exception: return defaults
 
     def _save_state(self, state=None):
         if state is not None: self.state = state
@@ -43,10 +39,10 @@ class MasterCore:
     def set_goal(self, goal):
         goal = str(goal).strip()
         if not goal: raise ValueError("goal is required")
+        for item in reversed(self.state["goals"]):
+            if item.get("text") == goal and item.get("status") == "active": return item
         item = {"id": max((int(x.get("id", 0)) for x in self.state["goals"]), default=0) + 1, "text": goal, "status": "active", "created_at": datetime.now().isoformat()}
-        self.state["goals"].append(item)
-        self._save_state()
-        return item
+        self.state["goals"].append(item); self._save_state(); return item
 
     def discover_project(self):
         files=[]; ignored={".git","__pycache__",".venv","venv","node_modules"}
