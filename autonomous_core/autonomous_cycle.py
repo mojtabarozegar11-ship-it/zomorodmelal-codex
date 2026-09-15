@@ -39,6 +39,7 @@ class AutonomousCycle:
 
     def __init__(self, project_root: str | Path | None = None) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parent.parent).resolve()
+        self.source_root = Path(__file__).resolve().parent.parent
         self.master = MasterCore(self.project_root)
         self.testing = TestingEngine()
         self.evolution = EvolutionEngine()
@@ -63,14 +64,32 @@ class AutonomousCycle:
         return {"sandbox": str(sandbox), "files": builder.build(files)}
 
     def _run_tests(self) -> Dict[str, Any]:
+        # The cycle may use an isolated temporary project root in tests. Run the
+        # repository's test suite from the source tree while keeping all cycle
+        # artifacts (sandbox/state/packages) under the requested project root.
         command = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"]
         try:
-            completed = subprocess.run(command, cwd=self.project_root, capture_output=True, text=True, timeout=90, shell=False)
-            return {"passed": completed.returncode == 0, "returncode": completed.returncode,
-                    "stdout": completed.stdout[-4000:], "stderr": completed.stderr[-4000:]}
+            completed = subprocess.run(
+                command,
+                cwd=self.source_root,
+                capture_output=True,
+                text=True,
+                timeout=90,
+                shell=False,
+            )
+            return {
+                "passed": completed.returncode == 0,
+                "returncode": completed.returncode,
+                "stdout": completed.stdout[-4000:],
+                "stderr": completed.stderr[-4000:],
+            }
         except subprocess.TimeoutExpired as exc:
-            return {"passed": False, "returncode": None, "stdout": (exc.stdout or "")[-4000:],
-                    "stderr": "test suite timed out after 90 seconds"}
+            return {
+                "passed": False,
+                "returncode": None,
+                "stdout": (exc.stdout or "")[-4000:],
+                "stderr": "test suite timed out after 90 seconds",
+            }
 
     def run(self, goal: str | None = None) -> Dict[str, Any]:
         core = self.master.run_cycle(goal)
