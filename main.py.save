@@ -1,0 +1,85 @@
+import os
+import logging
+import sys
+
+from dotenv import load_dotenv
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+)
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from approval.approval_gateway import ApprovalGateway
+from execution.execution_controller import ExecutionController
+
+
+load_dotenv()
+
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+goals = []
+
+gateway = ApprovalGateway()
+executor = ExecutionController()
+
+
+def is_owner(update: Update) -> bool:
+    user = update.effective_user
+    return user is not None and user.id == OWNER_ID
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update):
+        return
+
+    await update.message.reply_text(
+        "🧠 Master Agent فعال شد.\n\n"
+        "👑 سلام مالک\n"
+        "🔐 تأیید مالک: فعال\n"
+        "🛡️ Execution Controller: فعال\n\n"
+        "دستورها:\n"
+        "/goal متن هدف\n"
+        "/status وضعیت سیستم\n"
+        "/tasks اهداف\n"
+        "/approvals درخواست‌های تأیید\n"
+        "/help راهنما"
+    )
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update):
+        return
+
+    await update.message.reply_text(
+        "📚 راهنما\n\n"
+        "/start شروع\n"
+        "/goal ثبت هدف\n"
+        "/status وضعیت\n"
+        "/tasks اهداف\n"
+        "/approvals درخواست‌های تأیید\n"
+        "/help راهنما"
+    )
+
+
+async def goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update):
+        return
+
+    text = " ".join(context.args).strip()
+
+    if not text:
+        await update.message.reply_text(
+      
