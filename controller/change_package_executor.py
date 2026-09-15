@@ -1,34 +1,48 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 from approval.approval_gateway import ApprovalGateway
-from execution.execution_controller import ExecutionController
 from autonomous_core.change_package import ChangePackage
+from execution.execution_controller import ExecutionController
 
 
 class ChangePackageExecutor:
-    """Promotes only an approved, hash-verified package into the project.
+    """Promote only an owner-approved, hash-verified sandbox package.
 
-    Real deployment remains opt-in through ``execute``; credentials and
-    external services are deliberately outside this component.
+    This component copies files only; it never executes generated code and
+    never accesses credentials or external services.
     """
 
-    def __init__(self) -> None:
-        self.root = Path(__file__).resolve().parents[1]
-        self.approval = ApprovalGateway()
-        self.execution = ExecutionController()
+    def __init__(self, root: str | Path | None = None) -> None:
+        self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
+        self.approval = ApprovalGateway() if root is None else ApprovalGatewayForRoot(self.root)
+        self.execution = ExecutionController() if root is None else ExecutionControllerForRoot(self.root)
         self.packages = ChangePackage(self.root / "data" / "change_packages")
+
+    def _safe_target(self, relative: str) -> Path:
+        raw = Path(relative)
+        if raw.is_absolute() or ".." in raw.parts or not raw.name:
+            raise ValueError("package path must be relative and contained")
+        if raw.parts[0] in {".git", "data", "sandbox"}:
+            raise ValueError("protected project path cannot be promoted")
+        target = (self.root / raw).resolve()
+        if self.root not in target.parents:
+            raise ValueError("package path escapes project")
+        return target
 
     def _verify_package(self, package_id: str) -> Dict[str, Any]:
         package = self.packages.get(package_id)
-        if package.get("status") != "approved":
-            raise PermissionError("change package is not approved")
+        if not self.packages.verify_integrity(package):
+            raise ValueError("change package integrity check failed")
+        if package.get("status") != "awaiting_owner_approval":
+            raise PermissionError("change package is not awaiting owner approval")
+        if not package.get("owner_approval_required", True):
+            raise PermissionError("owner approval boundary is missing")
         return package
 
     def execute(self, package_id: str, request_id: int) -> Dict[str, Any]:
@@ -37,29 +51,87 @@ class ChangePackageExecutor:
             return {"success": False, "status": "approval_required", "request_id": request_id}
 
         package = self._verify_package(package_id)
-        backup = self.execution.backup()
-        staged = []
+        metadata = request.get("metadata") or {}
+        if metadata.get("package_id") != package_id:
+            return {"success": False, "status": "package_binding_mismatch", "request_id": request_id}
+        if metadata.get("package_sha256") != package.get("package_sha256"):
+            return {"success": False, "status": "package_hash_binding_mismatch", "request_id": request_id}
 
-        for item in package.get("files", []):
+        sandbox_rel = package.get("sandbox_rel")
+        if not sandbox_rel:
+            return {"success": False, "status": "sandbox_source_missing", "request_id": request_id}
+        sandbox = (self.root / str(sandbox_rel)).resolve()
+        if self.root not in sandbox.parents or not sandbox.is_dir():
+            return {"success": False, "status": "sandbox_source_invalid", "request_id": request_id}
+
+        files = package.get("files", [])
+        verified: list[str] = []
+        for item in files:
             relative = str(item["path"])
-            source = (self.root / "sandbox" / relative).resolve()
-            target = (self.root / relative).resolve()
-            if self.root not in source.parents or self.root not in target.parents:
-                raise ValueError("package path escapes project")
-            if not source.is_file():
+            source = (sandbox / relative).resolve()
+            target = self._safe_target(relative)
+            if sandbox not in source.parents or not source.is_file():
                 raise FileNotFoundError(relative)
-            digest = hashlib.sha256(source.read_bytes()).hexdigest()
-            if digest != item["sha256"]:
+            content = source.read_bytes()
+            if len(content) != int(item["size"]):
+                raise ValueError(f"size mismatch: {relative}")
+            if hashlib.sha256(content).hexdigest() != item["sha256"]:
                 raise ValueError(f"hash mismatch: {relative}")
-            staged.append(relative)
+            verified.append(str(target.relative_to(self.root)))
+
+        backup = self.execution.backup(verified)
+        promoted: list[str] = []
+        try:
+            for relative in verified:
+                source = (sandbox / relative).resolve()
+                target = self._safe_target(relative)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temp = target.with_name(target.name + ".master-agent.tmp")
+                shutil.copy2(source, temp)
+                os.replace(temp, target)
+                promoted.append(relative)
+            self.execution._log("package_promote", "completed", {
+                "request_id": request_id,
+                "package_id": package_id,
+                "package_sha256": package.get("package_sha256"),
+                "files": promoted,
+                "backup": backup,
+            })
+        except Exception:
+            for relative in promoted:
+                target = self._safe_target(relative)
+                target.unlink(missing_ok=True)
+            raise
 
         return {
             "success": True,
-            "status": "verified_ready_for_promotion",
+            "status": "promoted",
             "request_id": request_id,
             "package_id": package_id,
             "backup_path": backup,
-            "verified_files": staged,
-            "real_deployment": False,
-            "message": "بسته تأییدشده اعتبارسنجی شد؛ انتقال به محیط اصلی همچنان مرحله‌ای جداگانه است."
+            "promoted_files": promoted,
+            "real_deployment": True,
+            "generated_code_executed": False,
         }
+
+
+class ApprovalGatewayForRoot(ApprovalGateway):
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.data_dir = root / "data"
+        self.file = self.data_dir / "approval_requests.json"
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        if not self.file.exists():
+            self._save([])
+
+
+class ExecutionControllerForRoot(ExecutionController):
+    def __init__(self, root: Path) -> None:
+        self.root = str(root)
+        self.data_dir = str(root / "data")
+        self.sandbox_dir = str(root / "sandbox" / "execution_workspace")
+        self.log_file = str(root / "data" / "execution_log.json")
+        os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.sandbox_dir, exist_ok=True)
+        if not os.path.exists(self.log_file):
+            self._save_logs([])
