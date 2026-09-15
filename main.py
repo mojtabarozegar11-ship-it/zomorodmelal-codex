@@ -17,6 +17,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from approval.approval_gateway import ApprovalGateway
+from autonomous_core.autonomous_cycle import AutonomousCycle
 from execution.execution_controller import ExecutionController
 from planner.planner import Planner
 
@@ -36,6 +37,7 @@ goals = []
 gateway = ApprovalGateway()
 executor = ExecutionController()
 planner = Planner()
+autonomous_cycle = AutonomousCycle()
 
 
 def is_owner(update: Update) -> bool:
@@ -54,6 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🛡️ Execution Controller: فعال\n\n"
         "دستورها:\n"
         "/goal متن هدف\n"
+        "/cycle اجرای یک چرخه امن خودارزیابی\n"
         "/status وضعیت سیستم\n"
         "/tasks اهداف\n"
         "/approvals درخواست‌های تأیید\n"
@@ -69,11 +72,42 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📚 راهنما\n\n"
         "/start شروع\n"
         "/goal ثبت هدف\n"
+        "/cycle چرخه امن Master Agent\n"
         "/status وضعیت\n"
         "/tasks اهداف\n"
         "/approvals درخواست‌های تأیید\n"
         "/help راهنما"
     )
+
+
+async def cycle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update):
+        return
+
+    try:
+        result = autonomous_cycle.run()
+        report = result["report"]
+        safety = result["safety"]
+
+        completed = "، ".join(report["completed"]) or "—"
+        pending = "، ".join(report["pending"]) or "—"
+
+        await update.message.reply_text(
+            "🧠 چرخه امن Master Agent\n\n"
+            f"🔄 چرخه: {report['cycle']}\n"
+            f"📍 مرحله: {report['phase']}\n\n"
+            f"✅ انجام‌شده: {completed}\n"
+            f"⏳ باقی‌مانده: {pending}\n\n"
+            f"🔐 تأیید مالک: {'فعال' if report['owner_approval_required'] else 'غیرفعال'}\n"
+            f"🛡️ Sandbox: {'فعال' if safety['sandbox_only'] else 'غیرفعال'}\n"
+            f"🚫 تغییر واقعی: {'مجاز' if safety['real_changes_allowed'] else 'غیرمجاز'}"
+        )
+    except Exception as exc:
+        logging.exception("Autonomous cycle failed")
+        await update.message.reply_text(
+            "⛔ چرخه اجرا نشد.\n\n"
+            f"خطا: {exc}"
+        )
 
 
 async def goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -130,7 +164,8 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎯 اهداف: {len(goals)}\n"
         "🔐 تأیید مالک: فعال\n"
         "🛡️ Execution Controller: فعال\n"
-        "⛔ اجرای خودکار: غیرفعال\n"
+        "🔄 Autonomous Cycle: فعال\n"
+        "⛔ اجرای واقعی خودکار: غیرفعال\n"
         "🧬 خودسازی: کنترل‌شده"
     )
 
@@ -326,6 +361,10 @@ def main():
     )
 
     app.add_handler(
+        CommandHandler("cycle", cycle)
+    )
+
+    app.add_handler(
         CommandHandler("goal", goal)
     )
 
@@ -348,6 +387,7 @@ def main():
     print("🧠 Master Agent Telegram Bot is running...")
     print("🔐 Owner Approval: ACTIVE")
     print("🛡️ Execution Controller: ACTIVE")
+    print("🔄 Autonomous Cycle: ACTIVE")
 
     app.run_polling()
 
