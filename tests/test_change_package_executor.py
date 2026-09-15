@@ -9,7 +9,12 @@ from controller.change_package_executor import ChangePackageExecutor
 
 class ChangePackageExecutorTests(unittest.TestCase):
     def _package_and_request(self, root, text="approved content", path="demo.txt"):
-        sandbox = root / "data" / "sandbox" / "cycle_1"
+        sandbox_root = root / "data" / "sandbox"
+        sandbox_root.mkdir(parents=True, exist_ok=True)
+        cycle = 1
+        while (sandbox_root / f"cycle_{cycle}").exists():
+            cycle += 1
+        sandbox = sandbox_root / f"cycle_{cycle}"
         sandbox.mkdir(parents=True)
         source = sandbox / Path(path).name
         source.write_text(text, encoding="utf-8")
@@ -17,7 +22,7 @@ class ChangePackageExecutorTests(unittest.TestCase):
         package = ChangePackage(root / "data" / "change_packages").create(
             [{"path": path, "sha256": digest, "size": source.stat().st_size}],
             "executor test",
-            sandbox_rel="data/sandbox/cycle_1",
+            sandbox_rel=f"data/sandbox/cycle_{cycle}",
         )
         executor = ChangePackageExecutor(root)
         request = executor.approval.request(
