@@ -19,13 +19,16 @@ class ExecutionController:
     def _load_logs(self):
         try:
             with open(self.log_file, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            return data if isinstance(data, list) else []
         except Exception:
             return []
 
     def _save_logs(self, logs):
-        with open(self.log_file, "w", encoding="utf-8") as f:
+        tmp_file = self.log_file + ".tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(logs, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_file, self.log_file)
 
     def _log(self, action, status, details=None):
         logs = self._load_logs()
@@ -73,15 +76,30 @@ class ExecutionController:
 
     def execute(self, request_id, action, approved=False, files=None):
         if not approved:
-            self._log(action, "blocked", {"request_id": request_id, "reason": "owner_approval_required"})
-            return {"success": False, "request_id": request_id, "status": "blocked", "message": "تأیید مالک لازم است."}
+            self._log(action, "blocked", {
+                "request_id": request_id,
+                "reason": "owner_approval_required",
+                "project_promotion": False,
+                "external_deployment": False,
+            })
+            return {
+                "success": False,
+                "request_id": request_id,
+                "status": "blocked",
+                "project_promotion": False,
+                "external_deployment": False,
+                "generated_code_executed": False,
+                "message": "تأیید مالک لازم است.",
+            }
         prepared = self.prepare_sandbox(files)
         backup_path = self.backup(files)
         self._log(action, "approved_staged", {
             "request_id": request_id,
             "backup": backup_path,
             "sandbox_files": prepared,
-            "real_deployment": False,
+            "project_promotion": False,
+            "external_deployment": False,
+            "generated_code_executed": False,
         })
         return {
             "success": True,
@@ -90,7 +108,9 @@ class ExecutionController:
             "backup_created": True,
             "backup_path": backup_path,
             "sandbox_files": prepared,
-            "real_deployment": False,
+            "project_promotion": False,
+            "external_deployment": False,
+            "generated_code_executed": False,
             "message": "تأیید شد؛ عملیات در Sandbox/Stage قرار گرفت.",
         }
 
@@ -101,7 +121,9 @@ class ExecutionController:
             "backup_enabled": True,
             "audit_log_enabled": True,
             "owner_approval_required": True,
-            "real_deployment": False,
+            "project_promotion": False,
+            "external_deployment": False,
+            "generated_code_executed": False,
         }
 
 
