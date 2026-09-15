@@ -8,14 +8,14 @@ from controller.change_package_executor import ChangePackageExecutor
 
 
 class ChangePackageExecutorTests(unittest.TestCase):
-    def _package_and_request(self, root, text="approved content"):
+    def _package_and_request(self, root, text="approved content", path="demo.txt"):
         sandbox = root / "data" / "sandbox" / "cycle_1"
         sandbox.mkdir(parents=True)
-        source = sandbox / "demo.txt"
+        source = sandbox / Path(path).name
         source.write_text(text, encoding="utf-8")
         digest = hashlib.sha256(source.read_bytes()).hexdigest()
         package = ChangePackage(root / "data" / "change_packages").create(
-            [{"path": "demo.txt", "sha256": digest, "size": source.stat().st_size}],
+            [{"path": path, "sha256": digest, "size": source.stat().st_size}],
             "executor test",
             sandbox_rel="data/sandbox/cycle_1",
         )
@@ -38,6 +38,9 @@ class ChangePackageExecutorTests(unittest.TestCase):
             result = executor.execute(package["package_id"], request["id"])
             self.assertTrue(result["success"])
             self.assertEqual(result["status"], "promoted")
+            self.assertTrue(result["project_promotion"])
+            self.assertFalse(result["external_deployment"])
+            self.assertFalse(result["generated_code_executed"])
             self.assertEqual((root / "demo.txt").read_text(encoding="utf-8"), "approved content")
             self.assertFalse((root / "demo.txt.master-agent.tmp").exists())
 
@@ -60,6 +63,36 @@ class ChangePackageExecutorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 executor.execute(package["package_id"], request["id"])
             self.assertFalse((root / "demo.txt").exists())
+
+    def test_rejects_package_request_binding_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            executor, package, request = self._package_and_request(root)
+            other = self._package_and_request(root, "other content")[1]
+            executor.approval.approve(request["id"])
+            result = executor.execute(other["package_id"], request["id"])
+            self.assertEqual(result["status"], "package_binding_mismatch")
+            self.assertFalse((root / "demo.txt").exists())
+
+    def test_rejects_package_hash_binding_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            executor, package, request = self._package_and_request(root)
+            request["metadata"]["package_sha256"] = "0" * 64
+            executor.approval._save([request])
+            executor.approval.approve(request["id"])
+            result = executor.execute(package["package_id"], request["id"])
+            self.assertEqual(result["status"], "package_hash_binding_mismatch")
+
+    def test_rejects_path_traversal_and_protected_paths(self):
+        for unsafe_path in ("../escape.txt", ".git/config", "data/evil.txt", "/absolute.txt"):
+            with self.subTest(path=unsafe_path):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    executor, package, request = self._package_and_request(root, path=unsafe_path)
+                    executor.approval.approve(request["id"])
+                    with self.assertRaises(ValueError):
+                        executor.execute(package["package_id"], request["id"])
 
 
 if __name__ == "__main__":
