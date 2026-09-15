@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, asdict
@@ -64,24 +65,12 @@ class AutonomousCycle:
         return {"sandbox": str(sandbox), "files": builder.build(files)}
 
     def _run_tests(self) -> Dict[str, Any]:
-        # The cycle may use an isolated temporary project root in tests. Run the
-        # repository's test suite from the source tree while keeping all cycle
-        # artifacts (sandbox/state/packages) under the requested project root.
-        # Exclude this end-to-end cycle test from the nested suite to prevent
-        # recursive cycle -> tests -> cycle execution until the timeout.
-        script = (
-            "import unittest; "
-            "suite=unittest.defaultTestLoader.discover('tests'); "
-            "filtered=unittest.TestSuite(); "
-            "stack=[suite]; "
-            "while stack: "
-            " item=stack.pop(); "
-            " (stack.extend(item) if isinstance(item, unittest.TestSuite) else "
-            "  filtered.addTest(item) if 'test_autonomous_cycle_goal' not in item.id() else None); "
-            "result=unittest.TextTestRunner(verbosity=0).run(filtered); "
-            "raise SystemExit(0 if result.wasSuccessful() else 1)"
-        )
-        command = [sys.executable, "-c", script]
+        # Always run the repository suite from the source tree. The cycle's
+        # end-to-end test is skipped in the nested subprocess via an explicit
+        # environment flag, preventing recursive cycle -> tests -> cycle runs.
+        env = os.environ.copy()
+        env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
+        command = [sys.executable, "-m", "unittest", "discover", "-s", "tests"]
         try:
             completed = subprocess.run(
                 command,
@@ -90,6 +79,7 @@ class AutonomousCycle:
                 text=True,
                 timeout=90,
                 shell=False,
+                env=env,
             )
             return {
                 "passed": completed.returncode == 0,
