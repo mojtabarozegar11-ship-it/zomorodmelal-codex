@@ -14,17 +14,19 @@ from execution.execution_controller import ExecutionController
 class ChangePackageExecutor:
     """Promote only an owner-approved, hash-verified sandbox package."""
 
+    PROTECTED = {".git", "data", "sandbox", ".venv", "venv"}
+
     def __init__(self, root: str | Path | None = None) -> None:
         self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
         self.approval = ApprovalGateway() if root is None else ApprovalGatewayForRoot(self.root)
         self.execution = ExecutionController() if root is None else ExecutionControllerForRoot(self.root)
         self.packages = ChangePackage(self.root / "data" / "change_packages")
 
-    def _safe_target(self, relative: str) -> Path:
+    def _safe_relative(self, relative: str) -> Path:
         raw = Path(relative)
         if raw.is_absolute() or ".." in raw.parts or not raw.name:
             raise ValueError("package path must be relative and contained")
-        if raw.parts[0] in {".git", "data", "sandbox"}:
+        if raw.parts[0] in self.PROTECTED:
             raise ValueError("protected project path cannot be promoted")
         target = (self.root / raw).resolve()
         if self.root not in target.parents:
@@ -53,39 +55,42 @@ class ChangePackageExecutor:
         if metadata.get("package_sha256") != package.get("package_sha256"):
             return {"success": False, "status": "package_hash_binding_mismatch", "request_id": request_id}
 
-        sandbox_rel = package.get("sandbox_rel")
+        sandbox_rel = str(package.get("sandbox_rel") or "")
         if not sandbox_rel:
             return {"success": False, "status": "sandbox_source_missing", "request_id": request_id}
-        sandbox = (self.root / str(sandbox_rel)).resolve()
+        sandbox = (self.root / sandbox_rel).resolve()
         if self.root not in sandbox.parents or not sandbox.is_dir():
             return {"success": False, "status": "sandbox_source_invalid", "request_id": request_id}
 
-        files = package.get("files", [])
         verified: list[str] = []
-        for item in files:
+        for item in package.get("files", []):
             relative = str(item["path"])
+            self._safe_relative(relative)
             source = (sandbox / relative).resolve()
-            self._safe_target(relative)
             if sandbox not in source.parents or not source.is_file():
                 raise FileNotFoundError(relative)
             content = source.read_bytes()
             if len(content) != int(item["size"]):
                 raise ValueError(f"size mismatch: {relative}")
-            if hashlib.sha256(content).hexdigest() != item["sha256"]:
+            if hashlib.sha256(content).hexdigest() != str(item["sha256"]):
                 raise ValueError(f"hash mismatch: {relative}")
             verified.append(relative)
 
+        existed_before = {relative: self._safe_relative(relative).is_file() for relative in verified}
         backup = self.execution.backup(verified)
-        existed_before = {relative: self._safe_target(relative).is_file() for relative in verified}
         promoted: list[str] = []
         try:
             for relative in verified:
                 source = (sandbox / relative).resolve()
-                target = self._safe_target(relative)
+                target = self._safe_relative(relative)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 temp = target.with_name(target.name + ".master-agent.tmp")
-                shutil.copy2(source, temp)
-                os.replace(temp, target)
+                try:
+                    shutil.copy2(source, temp)
+                    os.replace(temp, target)
+                finally:
+                    if temp.exists():
+                        temp.unlink()
                 promoted.append(relative)
             self.execution._log("package_promote", "completed", {
                 "request_id": request_id,
@@ -95,15 +100,17 @@ class ChangePackageExecutor:
                 "backup": backup,
             })
         except Exception:
-            for relative in promoted:
-                target = self._safe_target(relative)
+            for relative in reversed(promoted):
+                target = self._safe_relative(relative)
                 backup_file = Path(backup) / relative
                 if existed_before.get(relative) and backup_file.is_file():
                     shutil.copy2(backup_file, target)
                 else:
                     target.unlink(missing_ok=True)
             self.execution._log("package_promote", "rolled_back_after_failure", {
-                "request_id": request_id, "package_id": package_id, "backup": backup,
+                "request_id": request_id,
+                "package_id": package_id,
+                "backup": backup,
             })
             raise
 
