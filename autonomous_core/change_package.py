@@ -16,13 +16,18 @@ class ChangeItem:
 
 
 class ChangePackage:
-    """Creates an auditable, immutable description of a sandbox change set."""
+    """Creates an immutable, auditable description of sandbox changes."""
 
     def __init__(self, root: str | Path = "data/change_packages") -> None:
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def create(self, files: List[Dict[str, object]], reason: str) -> Dict[str, object]:
+    def create(
+        self,
+        files: List[Dict[str, object]],
+        reason: str,
+        sandbox_rel: str | None = None,
+    ) -> Dict[str, object]:
         items = [
             ChangeItem(
                 path=str(item["path"]),
@@ -37,13 +42,13 @@ class ChangePackage:
             "status": "awaiting_owner_approval",
             "owner_approval_required": True,
             "real_changes_allowed": False,
+            "sandbox_rel": sandbox_rel,
             "files": [asdict(item) for item in items],
         }
         canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
         payload["package_sha256"] = hashlib.sha256(canonical).hexdigest()
-        package_id = payload["package_sha256"][:16]
-        payload["package_id"] = package_id
-        (self.root / f"{package_id}.json").write_text(
+        payload["package_id"] = payload["package_sha256"][:16]
+        (self.root / f"{payload['package_id']}.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         return payload
@@ -53,3 +58,25 @@ class ChangePackage:
         if not path.exists():
             raise FileNotFoundError(package_id)
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def verify_integrity(self, package: Dict[str, object]) -> bool:
+        stored = str(package.get("package_sha256", ""))
+        if not stored:
+            return False
+        canonical_payload = {
+            key: package[key]
+            for key in (
+                "reason",
+                "created_at",
+                "status",
+                "owner_approval_required",
+                "real_changes_allowed",
+                "sandbox_rel",
+                "files",
+            )
+            if key in package
+        }
+        digest = hashlib.sha256(
+            json.dumps(canonical_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        return digest == stored and str(package.get("package_id", "")) == stored[:16]
