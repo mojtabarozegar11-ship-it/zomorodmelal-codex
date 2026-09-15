@@ -7,213 +7,82 @@ from datetime import datetime
 class ExecutionController:
 
     def __init__(self):
-        self.root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..")
-        )
-
-        self.data_dir = os.path.join(
-            self.root, "data"
-        )
-
-        self.sandbox_dir = os.path.join(
-            self.root,
-            "sandbox",
-            "execution_workspace"
-        )
-
-        self.log_file = os.path.join(
-            self.data_dir,
-            "execution_log.json"
-        )
-
+        self.root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        self.data_dir = os.path.join(self.root, "data")
+        self.sandbox_dir = os.path.join(self.root, "sandbox", "execution_workspace")
+        self.log_file = os.path.join(self.data_dir, "execution_log.json")
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.sandbox_dir, exist_ok=True)
-
         if not os.path.exists(self.log_file):
             self._save_logs([])
 
     def _load_logs(self):
         try:
-            with open(
-                self.log_file,
-                "r",
-                encoding="utf-8"
-            ) as f:
+            with open(self.log_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
 
     def _save_logs(self, logs):
-        with open(
-            self.log_file,
-            "w",
-            encoding="utf-8"
-        ) as f:
-            json.dump(
-                logs,
-                f,
-                ensure_ascii=False,
-                indent=2
-            )
+        with open(self.log_file, "w", encoding="utf-8") as f:
+            json.dump(logs, f, ensure_ascii=False, indent=2)
 
     def _log(self, action, status, details=None):
         logs = self._load_logs()
-
         logs.append({
             "id": len(logs) + 1,
             "action": action,
             "status": status,
             "details": details or {},
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
         })
-
         self._save_logs(logs)
 
-    def backup(self):
-        backup_root = os.path.join(
-            self.data_dir,
-            "execution_backups"
-        )
-
-        os.makedirs(
-            backup_root,
-            exist_ok=True
-        )
-
-        name = (
-            "backup_" +
-            datetime.now().strftime(
-                "%Y%m%d_%H%M%S"
-            )
-        )
-
-        destination = os.path.join(
-            backup_root,
-            name
-        )
-
-        os.makedirs(
-            destination,
-            exist_ok=True
-        )
-
-        self._log(
-            "backup",
-            "created",
-            {"path": destination}
-        )
-
+    def backup(self, files=None):
+        backup_root = os.path.join(self.data_dir, "execution_backups")
+        os.makedirs(backup_root, exist_ok=True)
+        name = "backup_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        destination = os.path.join(backup_root, name)
+        os.makedirs(destination, exist_ok=True)
+        copied = []
+        for relative_path in files or []:
+            source = os.path.abspath(os.path.join(self.root, relative_path))
+            if not source.startswith(self.root + os.sep) or not os.path.isfile(source):
+                continue
+            target = os.path.join(destination, relative_path)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.copy2(source, target)
+            copied.append(relative_path)
+        self._log("backup", "created", {"path": destination, "files": copied})
         return destination
 
     def prepare_sandbox(self, files=None):
         prepared = []
-
-        if not files:
-            self._log(
-                "sandbox_prepare",
-                "ready",
-                {"files": []}
-            )
-            return prepared
-
-        for relative_path in files:
-
-            source = os.path.abspath(
-                os.path.join(
-                    self.root,
-                    relative_path
-                )
-            )
-
-            if not source.startswith(
-                self.root + os.sep
-            ):
-                raise ValueError(
-                    "Path خارج از پروژه مجاز است."
-                )
-
+        for relative_path in files or []:
+            source = os.path.abspath(os.path.join(self.root, relative_path))
+            if not source.startswith(self.root + os.sep):
+                raise ValueError("Path خارج از پروژه مجاز است.")
             if not os.path.isfile(source):
                 continue
-
-            destination = os.path.join(
-                self.sandbox_dir,
-                relative_path
-            )
-
-            os.makedirs(
-                os.path.dirname(destination),
-                exist_ok=True
-            )
-
-            shutil.copy2(
-                source,
-                destination
-            )
-
-            prepared.append(
-                relative_path
-            )
-
-        self._log(
-            "sandbox_prepare",
-            "ready",
-            {"files": prepared}
-        )
-
+            destination = os.path.join(self.sandbox_dir, relative_path)
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+            shutil.copy2(source, destination)
+            prepared.append(relative_path)
+        self._log("sandbox_prepare", "ready", {"files": prepared})
         return prepared
 
-    def execute(
-        self,
-        request_id,
-        action,
-        approved=False,
-        files=None
-    ):
-        """
-        اجرای کنترل‌شده.
-
-        approved باید از مسیر تأیید معتبر مالک
-        دریافت شده باشد.
-        """
-
+    def execute(self, request_id, action, approved=False, files=None):
         if not approved:
-
-            self._log(
-                action,
-                "blocked",
-                {
-                    "request_id": request_id,
-                    "reason": "owner_approval_required"
-                }
-            )
-
-            return {
-                "success": False,
-                "request_id": request_id,
-                "status": "blocked",
-                "message": "تأیید مالک لازم است."
-            }
-
-        # ابتدا Sandbox
-        prepared = self.prepare_sandbox(
-            files
-        )
-
-        # سپس Backup
-        backup_path = self.backup()
-
-        # این نسخه هنوز انتقال خودکار فایل
-        # به محیط اصلی را انجام نمی‌دهد.
-        self._log(
-            action,
-            "approved_staged",
-            {
-                "request_id": request_id,
-                "backup": backup_path,
-                "sandbox_files": prepared
-            }
-        )
-
+            self._log(action, "blocked", {"request_id": request_id, "reason": "owner_approval_required"})
+            return {"success": False, "request_id": request_id, "status": "blocked", "message": "تأیید مالک لازم است."}
+        prepared = self.prepare_sandbox(files)
+        backup_path = self.backup(files)
+        self._log(action, "approved_staged", {
+            "request_id": request_id,
+            "backup": backup_path,
+            "sandbox_files": prepared,
+            "real_deployment": False,
+        })
         return {
             "success": True,
             "request_id": request_id,
@@ -222,50 +91,20 @@ class ExecutionController:
             "backup_path": backup_path,
             "sandbox_files": prepared,
             "real_deployment": False,
-            "message": (
-                "تأیید شد؛ عملیات در مرحله "
-                "Sandbox/Stage قرار گرفت."
-            )
+            "message": "تأیید شد؛ عملیات در Sandbox/Stage قرار گرفت.",
         }
 
     def status(self):
-
         return {
             "execution_controller": True,
             "sandbox_enabled": True,
             "backup_enabled": True,
             "audit_log_enabled": True,
             "owner_approval_required": True,
-            "real_deployment": False
+            "real_deployment": False,
         }
 
 
 if __name__ == "__main__":
-
     controller = ExecutionController()
-
-    print("⚙️ Execution Controller")
-
-    print(
-        json.dumps(
-            controller.status(),
-            ensure_ascii=False,
-            indent=2
-        )
-    )
-
-    print("\n🔐 تست بدون تأیید مالک:")
-
-    result = controller.execute(
-        request_id=0,
-        action="test_action",
-        approved=False
-    )
-
-    print(
-        json.dumps(
-            result,
-            ensure_ascii=False,
-            indent=2
-        )
-    )
+    print(json.dumps(controller.status(), ensure_ascii=False, indent=2))
