@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +7,7 @@ from autonomous_core.autonomous_cycle import AutonomousCycle
 
 
 class AutonomousCycleGoalTests(unittest.TestCase):
+    @unittest.skipIf(os.getenv("AUTONOMOUS_CYCLE_INNER_TESTS") == "1", "outer autonomous-cycle test")
     def test_website_goal_creates_approval_bound_site_package(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
