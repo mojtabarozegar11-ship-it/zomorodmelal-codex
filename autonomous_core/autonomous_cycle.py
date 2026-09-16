@@ -41,11 +41,11 @@ class CycleReport:
 class AutonomousCycle:
     PHASES = ("discover", "research", "plan", "build", "test", "verify", "approval", "deploy", "learn", "evolve")
     FULL_TEST_INTERVAL = 10
+    DEEP_DISCOVERY_INTERVAL = 10
+    SITE_CHECK_INTERVAL = 10
     FAST_TEST_MODULES = (
         "tests.test_master_core",
         "tests.test_autonomous_cycle_goal",
-        "tests.test_supervisor",
-        "tests.test_master_agent_100_runtime",
     )
 
     def __init__(self, project_root: str | Path | None = None) -> None:
@@ -63,7 +63,22 @@ class AutonomousCycle:
         self.decision_engine = AutonomousDecisionEngine(self.project_root)
         self.orchestrator = AgentOrchestrator(self.project_root)
 
-    def _persist_project_discovery(self, core: Dict[str, Any]) -> None:
+    @staticmethod
+    def _read_json(path: Path) -> Dict[str, Any] | None:
+        try:
+            if path.exists():
+                value = json.loads(path.read_text(encoding="utf-8"))
+                return value if isinstance(value, dict) else None
+        except (OSError, ValueError, TypeError):
+            return None
+        return None
+
+    def _persist_project_discovery(self, core: Dict[str, Any], force: bool = False) -> Dict[str, Any] | None:
+        path = self.project_root / "data" / "project_discovery.json"
+        if not force:
+            cached = self._read_json(path)
+            if cached is not None:
+                return cached
         files = []
         audits = {x["file"]: x for x in self.master.audit_python()}
         for relative in self.master.discover_project():
@@ -79,10 +94,18 @@ class AutonomousCycle:
             "owner_approval_required": True,
             "real_changes_allowed": False,
         }
-        path = self.project_root / "data" / "project_discovery.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(path)
+        return snapshot
+
+    def _site_snapshot(self, cycle: int) -> Dict[str, Any]:
+        path = self.project_root / "data" / "site_discovery.json"
+        cached = self._read_json(path)
+        if cached is not None and cycle % self.SITE_CHECK_INTERVAL != 0:
+            return cached
+        return self.site_connector.discover()
 
     def _sandbox_build(self, core: Dict[str, Any], goal: str | None) -> Dict[str, Any]:
         sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"
@@ -122,7 +145,7 @@ class AutonomousCycle:
                 cwd=self.source_root,
                 capture_output=True,
                 text=True,
-                timeout=90,
+                timeout=30,
                 shell=False,
                 env=env,
             )
@@ -142,7 +165,7 @@ class AutonomousCycle:
                 "passed": False,
                 "returncode": None,
                 "stdout": str(exc.stdout or "")[-8000:],
-                "stderr": "test suite timed out after 90 seconds",
+                "stderr": "test suite timed out after 30 seconds",
                 "failure_kind": "timeout",
                 "scope": test_scope,
                 "modules": modules,
@@ -165,8 +188,10 @@ class AutonomousCycle:
 
     def run(self, goal: str | None = None) -> Dict[str, Any]:
         core = self.master.run_cycle(goal)
-        self._persist_project_discovery(core)
-        site_snapshot = self.site_connector.discover()
+        cycle = core["cycle"]
+        force_discovery = cycle % self.DEEP_DISCOVERY_INTERVAL == 0
+        self._persist_project_discovery(core, force=force_discovery)
+        site_snapshot = self._site_snapshot(cycle)
         decision = self.decision_engine.assess()
         effective_goal = goal or decision.get("decision")
         agent_plan = self.orchestrator.route(effective_goal)
@@ -175,38 +200,38 @@ class AutonomousCycle:
         build_result = test_result = package = approval_request = repair_mission = None
 
         if core.get("syntax_errors"):
-            repair_mission = self._repair_mission(effective_goal, {"failure_kind": "syntax_error"}, core["cycle"])
+            repair_mission = self._repair_mission(effective_goal, {"failure_kind": "syntax_error"}, cycle)
             pending.append("fix_syntax_errors")
         else:
             try:
                 build_result = self._sandbox_build(core, effective_goal)
                 completed.append("build")
-                test_result = self._run_tests(core["cycle"])
+                test_result = self._run_tests(cycle)
                 self.testing.record_test(
-                    f"autonomous_cycle_{core['cycle']}", test_result["passed"],
+                    f"autonomous_cycle_{cycle}", test_result["passed"],
                     "Sandbox build plus adaptive autonomous regression testing.", diagnostics=test_result,
                 )
                 if test_result["passed"]:
                     completed.extend(["test", "verify"])
                     sandbox_rel = str(Path(build_result["sandbox"]).relative_to(self.project_root))
-                    package = self.packages.create(build_result["files"], f"Autonomous cycle {core['cycle']} verified sandbox change set", sandbox_rel=sandbox_rel)
+                    package = self.packages.create(build_result["files"], f"Autonomous cycle {cycle} verified sandbox change set", sandbox_rel=sandbox_rel)
                     approval_request = self.approval.request(
-                        "change_package_deploy", f"انتقال بسته تغییر چرخه {core['cycle']} به محیط اصلی",
-                        metadata={"package_id": package["package_id"], "package_sha256": package["package_sha256"], "cycle": core["cycle"], "goal": effective_goal},
+                        "change_package_deploy", f"انتقال بسته تغییر چرخه {cycle} به محیط اصلی",
+                        metadata={"package_id": package["package_id"], "package_sha256": package["package_sha256"], "cycle": cycle, "goal": effective_goal},
                     )
                     if approval_request.get("status") == "waiting_approval": pending.append(f"approval:{approval_request['id']}:change_package_deploy")
                     elif approval_request.get("status") == "approved": completed.append("approval_already_granted")
                 else:
-                    repair_mission = self._repair_mission(effective_goal, test_result, core["cycle"])
+                    repair_mission = self._repair_mission(effective_goal, test_result, cycle)
                     pending.append("self_repair")
             except (OSError, TypeError, ValueError) as exc:
-                repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, core["cycle"])
+                repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, cycle)
                 pending.append(f"build_error: {exc}")
 
         evolution = self.self_evolution.evaluate(test_result, len(self.orchestrator.factory.list_agents()))
         completed.extend(["learn", "evolve"])
         report = CycleReport(
-            core["cycle"],
+            cycle,
             "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "evolve"),
             effective_goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat(),
         )
