@@ -5,10 +5,15 @@ import json
 import os
 import time
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+from .access_manager import AccessManager
+from .activation_gate import ActivationGate
+from .agent_factory import AgentFactory
 
 
 class MasterCore:
-    """Master Agent kernel with a lightweight hot path and owner-gated safety."""
+    """Master Agent kernel with cached discovery and a safe hot path."""
 
     VERSION = "15.0.0"
     MAX_GENERATION = 15
@@ -21,14 +26,20 @@ class MasterCore:
     REQUIRED_CAPABILITIES = {"planning", "research", "memory", "knowledge_management", "evaluation", "sandbox_execution", "automated_testing", "rollback", "owner_approval", "execution_control", "orchestration", "agent_generation", "evolution"}
 
     def __init__(self, root=None):
-        self.root = os.path.abspath(root or os.path.join(os.path.dirname(__file__), "..")); self.data_dir = os.path.join(self.root, "data"); self.sandbox_dir = os.path.join(self.root, "sandbox", "autonomous_workspace")
-        self.state_file = os.path.join(self.data_dir, "master_core_state.json"); self.mission_file = os.path.join(self.data_dir, "master_mission_queue.json"); self.discovery_file = os.path.join(self.data_dir, "project_discovery.json")
-        self._discovery_cache = None; self._discovery_cache_at = 0.0; self._persisted_discovery_cache = None; self._persisted_discovery_cache_at = 0.0; self._hot_cache = None; self._hot_cache_at = 0.0
+        self.root = os.path.abspath(root or os.path.join(os.path.dirname(__file__), ".."))
+        self.data_dir = os.path.join(self.root, "data")
+        self.sandbox_dir = os.path.join(self.root, "sandbox", "autonomous_workspace")
+        self.state_file = os.path.join(self.data_dir, "master_core_state.json")
+        self.mission_file = os.path.join(self.data_dir, "master_mission_queue.json")
+        self.discovery_file = os.path.join(self.data_dir, "project_discovery.json")
+        self._discovery_cache = None; self._discovery_cache_at = 0.0
+        self._persisted_discovery_cache = None; self._persisted_discovery_cache_at = 0.0
+        self._hot_cache = None; self._hot_cache_at = 0.0
         os.makedirs(self.data_dir, exist_ok=True); os.makedirs(self.sandbox_dir, exist_ok=True)
-        from .access_manager import AccessManager
-        from .activation_gate import ActivationGate
-        from .agent_factory import AgentFactory
-        self.access_manager = AccessManager(self.root); self.activation_gate = ActivationGate(self.root, self.access_manager); self.agent_factory = AgentFactory(self.root); self.state = self._load_state()
+        self.access_manager = AccessManager(self.root)
+        self.activation_gate = ActivationGate(self.root, self.access_manager)
+        self.agent_factory = AgentFactory(self.root)
+        self.state = self._load_state()
 
     def _defaults(self):
         return {"version": self.VERSION, "cycles": 0, "generation": 1, "phase": "observe", "goals": [], "agents": [], "capabilities": [], "proposals": [], "access_requests": [], "activation_checks": [], "mission_history": [], "learning": [], "failures": [], "last_cycle": None, "last_decision": None, "last_result": None}
@@ -44,7 +55,8 @@ class MasterCore:
         return state
 
     def _load_state(self):
-        if not os.path.exists(self.state_file): state = self._defaults(); self._save_state(state); return state
+        if not os.path.exists(self.state_file):
+            state = self._defaults(); self._save_state(state); return state
         try:
             with open(self.state_file, "r", encoding="utf-8") as f: return self._normalize_state(json.load(f))
         except Exception: return self._defaults()
@@ -58,7 +70,7 @@ class MasterCore:
 
     def _write_json(self, path, value):
         tmp = path + ".tmp"
-        with open(path + ".tmp", "w", encoding="utf-8") as f: json.dump(value, f, ensure_ascii=False, indent=2)
+        with open(tmp, "w", encoding="utf-8") as f: json.dump(value, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
 
     def set_goal(self, goal):
@@ -66,22 +78,26 @@ class MasterCore:
         if not goal: raise ValueError("goal is required")
         for item in reversed(self.state["goals"]):
             if item.get("text") == goal and item.get("status") == "active": return item
-        item = {"id": max((int(x.get("id", 0)) for x in self.state["goals"]), default=0) + 1, "text": goal, "status": "active", "created_at": datetime.now(timezone.utc).isoformat()}; self.state["goals"].append(item); self._save_state(); return item
+        item = {"id": max((int(x.get("id", 0)) for x in self.state["goals"]), default=0) + 1, "text": goal, "status": "active", "created_at": datetime.now(timezone.utc).isoformat()}
+        self.state["goals"].append(item); self._save_state(); return item
 
     def _load_persisted_discovery(self, force=False):
         now = time.monotonic()
-        if not force and self._persisted_discovery_cache is not None and now - self._persisted_discovery_cache_at < self.PERSISTED_DISCOVERY_CACHE_SECONDS: return self._persisted_discovery_cache
+        if not force and self._persisted_discovery_cache is not None and now - self._persisted_discovery_cache_at < self.PERSISTED_DISCOVERY_CACHE_SECONDS:
+            return self._persisted_discovery_cache
         if not force and os.path.exists(self.discovery_file):
             try:
                 if time.time() - os.path.getmtime(self.discovery_file) < self.PERSISTED_DISCOVERY_CACHE_SECONDS:
                     with open(self.discovery_file, "r", encoding="utf-8") as f: value = json.load(f)
-                    if isinstance(value, dict) and isinstance(value.get("files"), list): self._persisted_discovery_cache = value; self._persisted_discovery_cache_at = now; return value
+                    if isinstance(value, dict) and isinstance(value.get("files"), list):
+                        self._persisted_discovery_cache = value; self._persisted_discovery_cache_at = now; return value
             except (OSError, ValueError, TypeError): pass
         return None
 
     def discover_project(self, force=False):
         now = time.monotonic()
-        if not force and self._discovery_cache is not None and now - self._discovery_cache_at < self.DISCOVERY_CACHE_SECONDS: return list(self._discovery_cache)
+        if not force and self._discovery_cache is not None and now - self._discovery_cache_at < self.DISCOVERY_CACHE_SECONDS:
+            return list(self._discovery_cache)
         persisted = self._load_persisted_discovery(force)
         if persisted is not None:
             self._discovery_cache = sorted(str(x.get("path")) for x in persisted.get("files", []) if isinstance(x, dict) and x.get("path")); self._discovery_cache_at = now; return list(self._discovery_cache)
@@ -133,7 +149,9 @@ class MasterCore:
         requests = [self.access_manager.request(cap, goal) for cap in self.required_access_for_goal(goal)]; self.state["access_requests"] = self.access_manager.status()["requests"]; return requests
     def check_activation(self, request_id, capability, scope="minimum_required"):
         decision = self.activation_gate.authorize(request_id, capability, scope); self.state["activation_checks"].append({**decision, "checked_at": datetime.now(timezone.utc).isoformat()}); self._save_state(); return decision
-    def create_proposals(self, missing, designs): return [{"type": "capability_upgrade", "capability": c, "status": "proposal_only", "owner_approval_required": True} for c in missing] + [{"type": "agent_generation", "agent": d["name"], "capability": d["capability"], "status": "proposal_only", "owner_approval_required": True} for d in designs]
+    def create_proposals(self, missing, designs):
+        proposals = [{"type": "capability_upgrade", "capability": c, "status": "proposal_only", "owner_approval_required": True} for c in missing] + [{"type": "agent_generation", "agent": d["name"], "capability": d["capability"], "status": "proposal_only", "owner_approval_required": True} for d in designs]
+        self.state["proposals"] = proposals; return proposals
 
     def choose_next_mission(self, goal, audit, missing):
         failures = [x for x in audit if not x["syntax_ok"]]
@@ -159,10 +177,25 @@ class MasterCore:
         if not goal and self._hot_cache is not None and self._hot_cache.get("key") == cache_key and now - self._hot_cache.get("at", 0.0) < self.HOT_PATH_SECONDS:
             result = dict(self._hot_cache["result"]); result["cycle"] = self.state["cycles"] + 1; result["fast_path"] = True; self.state["cycles"] += 1; self.state["last_cycle"] = result["cycle"]; self.state["last_result"] = result; self._save_state(); return result
         self.state["cycles"] += 1; cycle = self.state["cycles"]
-        audit = self.audit_python(); syntax_errors = [x for x in audit if not x["syntax_ok"]]
-        capabilities = self.discover_capabilities(); agents = self.discover_agents(); missing = self.analyze_gaps(); designs = self.design_agents(missing); access = self.discover_access_requirements(); goal_access = self.request_goal_access(active_goal) if active_goal else []
-        mission = self.choose_next_mission(active_goal, audit, missing); self.ensure_agents_for_mission(mission); plan = self.plan_mission(mission)
-        test_ok = True if test_passed is None else bool(test_passed); learning = self._learn(mission, test_ok, {"cycle": cycle, "syntax_errors": len(syntax_errors)})
-        self.state["phase"] = "next_goal"; self.state["last_cycle"] = cycle; self.state["last_decision"] = mission
-        result = {"cycle": cycle, "goal": active_goal, "audit": audit, "syntax_errors": syntax_errors, "capabilities": capabilities, "agents": agents, "missing_capabilities": missing, "agent_designs": designs, "access": access, "goal_access": goal_access, "mission": mission, "next_mission": mission, "plan": plan, "execution": {"mode": "sandbox_only", "real_world_changes": False, "owner_approval_required": True}, "test": {"passed": test_ok}, "learning": learning, "safety": {"owner_approval_required": True, "real_changes_allowed": False}}
-        self.state["last_result"] = result; self._hot_cache = {"key": cache_key, "at": now, "result": dict(result)}; self._save_state(); return result
+        self.state["phase"] = "observe"
+        audit = self.audit_python(); capabilities = self.discover_capabilities(); agents = self.discover_agents()
+        self.state["phase"] = "diagnose"; missing = self.analyze_gaps(); designs = self.design_agents(missing)
+        access = self.discover_access_requirements(); goal_access = self.request_goal_access(active_goal)
+        self.state["phase"] = "prioritize"; mission = self.choose_next_mission(active_goal, audit, missing)
+        self.state["phase"] = "delegate"; delegated = self.ensure_agents_for_mission(mission)
+        self.state["phase"] = "plan"; plan = self.plan_mission(mission)
+        self.state["phase"] = "execute"; execution = {"status": "sandbox_planned", "safe": True, "real_world_action": False}
+        self.state["phase"] = "test"; test_state = "pending" if test_passed is None else ("passed" if test_passed else "failed")
+        self.state["phase"] = "repair" if test_passed is False else "verify"
+        if test_passed is False:
+            self.state["failures"].append({"mission": mission["id"], "timestamp": datetime.now(timezone.utc).isoformat()}); self.state["failures"] = self.state["failures"][-100:]
+        success = test_passed is True
+        self.state["phase"] = "learn"; learning = self._learn(mission, success, {"test": test_state})
+        self.state["phase"] = "evolve"; proposals = self.create_proposals(missing, designs)
+        self.state["phase"] = "next_goal"
+        result = {"cycle": cycle, "generation": self.state["generation"], "phase": self.state["phase"], "goal": active_goal, "mission": mission, "next_mission": mission, "audit": audit, "capabilities": capabilities, "agents": agents, "delegated": delegated, "missing_capabilities": missing, "designs": designs, "access": access, "goal_access": goal_access, "plan": plan, "execution": execution, "test": {"state": test_state, "passed": success}, "learning": learning, "proposals": proposals, "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
+        self.state["last_cycle"] = cycle; self.state["last_decision"] = mission; self.state["last_result"] = result
+        self.state["mission_history"].append({"cycle": cycle, "mission": mission, "test": test_state}); self.state["mission_history"] = self.state["mission_history"][-200:]
+        self._write_json(self.mission_file, {"current": mission, "plan": plan, "queue": [mission]}); self._save_state()
+        self._hot_cache = {"key": cache_key, "result": dict(result), "at": now}; self._hot_cache_at = now
+        return result
