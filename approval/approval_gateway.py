@@ -1,39 +1,67 @@
 import json
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
 
 class ApprovalGateway:
-    """Persistent approval boundary; supports isolated project roots for tests."""
+    """Persistent approval boundary with a bounded read cache."""
+
+    CACHE_SECONDS = 3.0
 
     def __init__(self, root=None):
         self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
         self.data_dir = self.root / "data"
         self.file = self.data_dir / "approval_requests.json"
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self._cache = None
+        self._cache_mtime_ns = None
+        self._cache_size = None
+        self._cache_at = 0.0
         if not self.file.exists():
             self._save([])
 
-    def _load(self):
+    def _load(self, force=False):
         try:
+            stat = self.file.stat()
+            now = time.monotonic()
+            if (not force and self._cache is not None
+                    and self._cache_mtime_ns == stat.st_mtime_ns
+                    and self._cache_size == stat.st_size
+                    and now - self._cache_at < self.CACHE_SECONDS):
+                return self._cache
             with self.file.open("r", encoding="utf-8") as f:
                 data = json.load(f)
-            return data if isinstance(data, list) else []
+            value = data if isinstance(data, list) else []
+            self._cache = value
+            self._cache_mtime_ns = stat.st_mtime_ns
+            self._cache_size = stat.st_size
+            self._cache_at = now
+            return value
         except Exception:
-            return []
+            return self._cache or []
 
     def _save(self, requests):
         tmp = self.file.with_name(self.file.name + ".tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(requests, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.file)
+        try:
+            stat = self.file.stat()
+            self._cache = requests
+            self._cache_mtime_ns = stat.st_mtime_ns
+            self._cache_size = stat.st_size
+            self._cache_at = time.monotonic()
+        except OSError:
+            self._cache = requests
+            self._cache_mtime_ns = None
+            self._cache_size = None
+            self._cache_at = time.monotonic()
 
     def request(self, action, reason, metadata=None):
         metadata = metadata or {}
-        requests = self._load()
-        # Reuse an equivalent active request so autonomous polling cannot create
-        # duplicate approval prompts for the same package/action.
+        requests = list(self._load())
         for existing in requests:
             if existing.get("action") != action:
                 continue
@@ -43,14 +71,9 @@ class ApprovalGateway:
                 return existing
         next_id = max((int(r.get("id", 0)) for r in requests), default=0) + 1
         request = {
-            "id": next_id,
-            "action": action,
-            "reason": reason,
-            "metadata": metadata,
-            "status": "waiting_approval",
-            "approved": False,
-            "created_at": datetime.now().isoformat(),
-            "approved_at": None,
+            "id": next_id, "action": action, "reason": reason, "metadata": metadata,
+            "status": "waiting_approval", "approved": False,
+            "created_at": datetime.now().isoformat(), "approved_at": None,
         }
         requests.append(request)
         self._save(requests)
@@ -63,7 +86,7 @@ class ApprovalGateway:
         return None
 
     def approve(self, request_id):
-        requests = self._load()
+        requests = list(self._load(force=True))
         for request in requests:
             if request.get("id") != request_id:
                 continue
@@ -77,7 +100,7 @@ class ApprovalGateway:
         return None
 
     def reject(self, request_id):
-        requests = self._load()
+        requests = list(self._load(force=True))
         for request in requests:
             if request.get("id") != request_id:
                 continue
@@ -94,7 +117,7 @@ class ApprovalGateway:
         return bool(request and request.get("status") == "approved" and request.get("approved") is True)
 
     def get_all(self):
-        return self._load()
+        return list(self._load())
 
     def get_waiting(self):
         return [r for r in self._load() if r.get("status") == "waiting_approval"]
