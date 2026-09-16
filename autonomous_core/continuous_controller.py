@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
+
+from autonomous_core.mission_executor import MissionExecutor
 
 
 class ContinuousController:
@@ -17,6 +18,7 @@ class ContinuousController:
         self.root = Path(root).resolve()
         self.path = self.root / "data" / "continuous_controller.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.executor = MissionExecutor(self.root)
 
     def _load(self) -> Dict[str, Any]:
         try:
@@ -45,6 +47,8 @@ class ContinuousController:
         else:
             attempts = int(state.get("repair_attempts", 0)) + 1
             action = "self_repair" if attempts <= self.MAX_REPAIR_ATTEMPTS else "quarantine_and_escalate"
+
+        execution = self.executor.execute_next()
         snapshot = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cycle": report.get("cycle"),
@@ -54,6 +58,7 @@ class ContinuousController:
             "max_repair_attempts": self.MAX_REPAIR_ATTEMPTS,
             "tests_passed": passed,
             "pending": pending,
+            "mission_execution": execution,
             "owner_approval_required": True,
             "real_changes_allowed": False,
             "sandbox_only": True,
@@ -64,12 +69,14 @@ class ContinuousController:
     def next_action(self) -> Dict[str, Any]:
         state = self._load()
         action = state.get("action", "continue")
+        execution = state.get("mission_execution") or {}
         return {
             "action": action,
             "repair_attempts": int(state.get("repair_attempts", 0)),
             "max_repair_attempts": self.MAX_REPAIR_ATTEMPTS,
             "retry_delay_seconds": self.RETRY_DELAY_SECONDS if action == "self_repair" else 0.0,
             "automatic": action in {"continue", "self_repair"},
+            "mission_execution": execution,
             "owner_approval_required": True,
             "real_changes_allowed": False,
         }
