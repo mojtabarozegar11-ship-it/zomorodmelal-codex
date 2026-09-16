@@ -11,7 +11,11 @@ from .supervisor import AutonomousSupervisor
 class MasterAgent100Supervisor(AutonomousSupervisor):
     """Supervisor whose default autonomous cycle is controlled by Master Agent 100."""
 
-    def __init__(self, project_root=None, interval_seconds=300, cycle_factory=None):
+    DEFAULT_INTERVAL_SECONDS = 15
+
+    def __init__(self, project_root=None, interval_seconds=None, cycle_factory=None):
+        if interval_seconds is None:
+            interval_seconds = self.DEFAULT_INTERVAL_SECONDS
         super().__init__(
             project_root=project_root,
             interval_seconds=interval_seconds,
@@ -33,7 +37,7 @@ class MasterAgent100Supervisor(AutonomousSupervisor):
 def _parse_args():
     parser = argparse.ArgumentParser(description="Run Master Agent 100 safe autonomous supervisor")
     parser.add_argument("--goal", default=os.environ.get("MASTER_AGENT_GOAL"))
-    parser.add_argument("--interval", type=int, default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", "300")))
+    parser.add_argument("--interval", type=int, default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", "15")))
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--stop", action="store_true")
     parser.add_argument("--status", action="store_true")
