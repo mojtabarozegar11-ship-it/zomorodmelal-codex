@@ -4,7 +4,7 @@ import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from autonomous_core.agent_factory import AgentFactory
 
@@ -14,16 +14,16 @@ class AgentOrchestrator:
 
     ROUTE_CACHE_SECONDS = 15.0
 
-    def __init__(self, root: str | Path) -> None:
+    def __init__(self, root: Union[str, Path]) -> None:
         self.root = Path(root).resolve()
         self.factory = AgentFactory(self.root)
         self.path = self.root / "data" / "agent_orchestration.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._route_cache: Dict[str, Any] | None = None
-        self._route_cache_key: str | None = None
+        self._route_cache: Optional[Dict[str, Any]] = None
+        self._route_cache_key: Optional[str] = None
         self._route_cache_at = 0.0
 
-    def route(self, goal: str | None) -> Dict[str, Any]:
+    def route(self, goal: Optional[str]) -> Dict[str, Any]:
         cache_key = str(goal or "").strip().lower() or "general autonomous improvement"
         now = time.monotonic()
         if (self._route_cache is not None and self._route_cache_key == cache_key
@@ -31,8 +31,8 @@ class AgentOrchestrator:
             return dict(self._route_cache)
 
         text = cache_key
-        roles = []
-        mapping = {
+        roles: List[str] = []
+        mapping: Dict[str, Tuple[str, ...]] = {
             "research": ("research",),
             "site": ("website", "engineering", "testing", "security"),
             "website": ("website", "engineering", "testing", "security"),
