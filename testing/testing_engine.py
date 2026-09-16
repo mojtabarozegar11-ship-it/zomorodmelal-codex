@@ -8,8 +8,6 @@ from typing import Any, Dict, List, Optional
 
 
 class TestingEngine:
-    """Persistent test history with a small in-process read cache."""
-
     def __init__(self, file_path="data/test_results.json"):
         self.file_path = Path(file_path)
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -17,25 +15,25 @@ class TestingEngine:
             self.file_path.write_text("[]", encoding="utf-8")
         self._results_cache: Optional[List[Dict[str, Any]]] = None
         self._results_mtime_ns: Optional[int] = None
+        self._results_size: Optional[int] = None
 
-    def _read_results(self) -> List[Dict[str, Any]]:
+    def _load_results(self) -> List[Dict[str, Any]]:
         try:
-            mtime_ns = self.file_path.stat().st_mtime_ns
-        except OSError:
-            mtime_ns = None
-        if self._results_cache is not None and mtime_ns == self._results_mtime_ns:
-            return list(self._results_cache)
-        try:
+            stat = self.file_path.stat()
+            if (self._results_cache is not None and self._results_mtime_ns == stat.st_mtime_ns
+                    and self._results_size == stat.st_size):
+                return self._results_cache
             value = json.loads(self.file_path.read_text(encoding="utf-8"))
+            results = value if isinstance(value, list) else []
+            self._results_cache = results
+            self._results_mtime_ns = stat.st_mtime_ns
+            self._results_size = stat.st_size
+            return results
         except (OSError, ValueError, TypeError):
-            value = []
-        results = value if isinstance(value, list) else []
-        self._results_cache = list(results)
-        self._results_mtime_ns = mtime_ns
-        return list(results)
+            return self._results_cache or []
 
     def record_test(self, name, passed, details="", diagnostics=None):
-        results = self._read_results()
+        results = list(self._load_results())
         diagnostics = diagnostics or {}
         result = {
             "id": len(results) + 1,
@@ -55,17 +53,21 @@ class TestingEngine:
         tmp.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.file_path)
         try:
-            self._results_mtime_ns = self.file_path.stat().st_mtime_ns
+            stat = self.file_path.stat()
+            self._results_cache = results
+            self._results_mtime_ns = stat.st_mtime_ns
+            self._results_size = stat.st_size
         except OSError:
+            self._results_cache = results
             self._results_mtime_ns = None
-        self._results_cache = list(results)
+            self._results_size = None
         return result
 
     def get_results(self):
-        return self._read_results()
+        return list(self._load_results())
 
     def latest_failure(self):
-        for result in reversed(self._read_results()):
+        for result in reversed(self._load_results()):
             if not result.get("passed"):
                 return result
         return None
