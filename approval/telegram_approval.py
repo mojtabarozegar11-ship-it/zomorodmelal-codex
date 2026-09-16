@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -39,7 +39,9 @@ class TelegramApproval:
         raw = "%s:%s:%s" % (request_id, action, secret)
         return hmac.new(secret.encode("utf-8"), raw.encode("utf-8"), hashlib.sha256).hexdigest()[:24]
 
-    def _callback_data(self, request_id: int, action: str) -> str:
+    def build_callback(self, request_id: int, action: str) -> str:
+        if action not in {"approve", "reject"}:
+            raise ValueError("unsupported approval action")
         return "ma:%s:%s:%s" % (request_id, action, self._callback_token(request_id, action))
 
     def notify(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -54,27 +56,11 @@ class TelegramApproval:
             "Approve or reject this request."
         ) % (request_id, request.get("action", ""), request.get("reason", ""))
         keyboard = json.dumps({"inline_keyboard": [[
-            {"text": "Approve", "callback_data": self._callback_data(request_id, "approve")},
-            {"text": "Reject", "callback_data": self._callback_data(request_id, "reject")},
+            {"text": "Approve", "callback_data": self.build_callback(request_id, "approve")},
+            {"text": "Reject", "callback_data": self.build_callback(request_id, "reject")},
         ]]})
         result = self._call("sendMessage", {"chat_id": self.owner_chat_id, "text": text, "reply_markup": keyboard})
         return {"ok": bool(result.get("ok")), "status": "sent" if result.get("ok") else "send_failed", "request_id": request_id}
-
-    def _valid_callback(self, callback: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        message = callback.get("message") or {}
-        chat = message.get("chat") or {}
-        if str(chat.get("id")) != self.owner_chat_id:
-            return None
-        data = str(callback.get("data", ""))
-        parts = data.split(":")
-        if len(parts) != 4 or parts[0] != "ma" or parts[1] not in {"approve", "reject"}:
-            return None
-        try:
-            request_id = int(parts[1])
-        except ValueError:
-            return None
-        # Correct compact format is ma:<id>:<action>:<token>.
-        return None
 
     def handle_callback(self, callback: Dict[str, Any]) -> Dict[str, Any]:
         """Validate owner callback and apply exactly one pending decision."""
@@ -92,15 +78,9 @@ class TelegramApproval:
             request_id = int(parts[1])
         except ValueError:
             return {"success": False, "status": "invalid_request_id"}
-        expected = self._callback_token(request_id, parts[2])
-        if not hmac.compare_digest(parts[3], expected):
+        if not hmac.compare_digest(parts[3], self._callback_token(request_id, parts[2])):
             return {"success": False, "status": "invalid_token", "request_id": request_id}
         request = self.gateway.approve(request_id) if parts[2] == "approve" else self.gateway.reject(request_id)
         if request is None:
             return {"success": False, "status": "request_not_found", "request_id": request_id}
         return {"success": True, "status": request.get("status"), "request_id": request_id}
-
-    def build_callback(self, request_id: int, action: str) -> str:
-        if action not in {"approve", "reject"}:
-            raise ValueError("unsupported approval action")
-        return self._callback_data(request_id, action)
