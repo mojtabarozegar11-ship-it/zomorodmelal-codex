@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.agent_orchestrator import AgentOrchestrator
@@ -47,6 +47,7 @@ class AutonomousCycle:
     SITE_CHECK_INTERVAL = 10
     TEST_CACHE_SECONDS = 120.0
     DISCOVERY_CACHE_SECONDS = 15.0
+    JSON_CACHE_SECONDS = 15.0
     FAST_TEST_TIMEOUT = 8
     FULL_TEST_TIMEOUT = 30
     FAST_TEST_MODULES = ("tests.test_master_core", "tests.test_autonomous_cycle_goal")
@@ -70,13 +71,26 @@ class AutonomousCycle:
         self._discovery_cache_at = 0.0
         self._site_cache: Optional[Dict[str, Any]] = None
         self._site_cache_at = 0.0
+        self._json_cache: Dict[str, Tuple[int, int, float, Dict[str, Any]]] = {}
 
-    @staticmethod
-    def _read_json(path: Path) -> Optional[Dict[str, Any]]:
+    def _read_json(self, path: Path) -> Optional[Dict[str, Any]]:
+        key = str(path)
+        now = time.monotonic()
         try:
-            if path.exists():
-                value = json.loads(path.read_text(encoding="utf-8"))
-                return value if isinstance(value, dict) else None
+            stat = path.stat()
+        except OSError:
+            self._json_cache.pop(key, None)
+            return None
+        cached = self._json_cache.get(key)
+        if cached is not None:
+            mtime_ns, size, cached_at, value = cached
+            if mtime_ns == stat.st_mtime_ns and size == stat.st_size and now - cached_at < self.JSON_CACHE_SECONDS:
+                return dict(value)
+        try:
+            value = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+            if isinstance(value, dict):
+                self._json_cache[key] = (stat.st_mtime_ns, stat.st_size, now, dict(value))
+                return value
         except (OSError, ValueError, TypeError):
             return None
         return None
@@ -89,9 +103,7 @@ class AutonomousCycle:
         if not force:
             cached = self._read_json(path)
             if cached is not None:
-                self._discovery_cache = dict(cached)
-                self._discovery_cache_at = now
-                return cached
+                self._discovery_cache = dict(cached); self._discovery_cache_at = now; return cached
         files = []
         audits = {x["file"]: x for x in self.master.audit_python()}
         for relative in self.master.discover_project():
@@ -106,8 +118,8 @@ class AutonomousCycle:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(path)
-        self._discovery_cache = dict(snapshot)
-        self._discovery_cache_at = now
+        self._json_cache.pop(str(path), None)
+        self._discovery_cache = dict(snapshot); self._discovery_cache_at = now
         return snapshot
 
     def _site_snapshot(self, cycle: int) -> Dict[str, Any]:
@@ -117,12 +129,9 @@ class AutonomousCycle:
         path = self.project_root / "data" / "site_discovery.json"
         cached = self._read_json(path)
         if cached is not None and cycle % self.SITE_CHECK_INTERVAL != 0:
-            self._site_cache = dict(cached)
-            self._site_cache_at = now
-            return cached
+            self._site_cache = dict(cached); self._site_cache_at = now; return cached
         result = self.site_connector.discover()
-        self._site_cache = dict(result)
-        self._site_cache_at = now
+        self._site_cache = dict(result); self._site_cache_at = now
         return result
 
     def _sandbox_build(self, core: Dict[str, Any], goal: Optional[str]) -> Dict[str, Any]:
@@ -148,9 +157,7 @@ class AutonomousCycle:
         for relative in sorted(paths):
             try:
                 stat = (self.project_root / relative).stat()
-                h.update(relative.encode("utf-8"))
-                h.update(str(stat.st_mtime_ns).encode("ascii"))
-                h.update(str(stat.st_size).encode("ascii"))
+                h.update(relative.encode("utf-8")); h.update(str(stat.st_mtime_ns).encode("ascii")); h.update(str(stat.st_size).encode("ascii"))
             except OSError:
                 h.update((relative + ":missing").encode("utf-8"))
         return h.hexdigest()
@@ -161,118 +168,67 @@ class AutonomousCycle:
         cached = self._read_json(self.test_cache_file)
         if not cached or cached.get("fingerprint") != fingerprint or not cached.get("passed"):
             return None
-        try:
-            age = datetime.now(timezone.utc).timestamp() - float(cached.get("timestamp", 0))
-        except (TypeError, ValueError):
-            return None
-        if age < 0 or age > self.TEST_CACHE_SECONDS:
-            return None
-        result = dict(cached.get("result") or {})
-        result.update({"cached": True, "scope": "cached regression result"})
-        return result
+        try: age = datetime.now(timezone.utc).timestamp() - float(cached.get("timestamp", 0))
+        except (TypeError, ValueError): return None
+        if age < 0 or age > self.TEST_CACHE_SECONDS: return None
+        result = dict(cached.get("result") or {}); result.update({"cached": True, "scope": "cached regression result"}); return result
 
     def _store_test(self, fingerprint: str, result: Dict[str, Any]) -> None:
-        if not result.get("passed"):
-            return
+        if not result.get("passed"): return
         self.test_cache_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {"timestamp": datetime.now(timezone.utc).timestamp(), "fingerprint": fingerprint, "passed": True, "result": result}
-        tmp = self.test_cache_file.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        tmp.replace(self.test_cache_file)
+        tmp = self.test_cache_file.with_suffix(".tmp"); tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"); tmp.replace(self.test_cache_file)
+        self._json_cache.pop(str(self.test_cache_file), None)
 
     def _run_tests(self, cycle: int = 0, goal: Optional[str] = None) -> Dict[str, Any]:
         fingerprint = self._test_fingerprint(goal)
         cached = self._cached_test(fingerprint, cycle)
-        if cached is not None:
-            return cached
-        env = os.environ.copy()
-        env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
-        modules = self._test_modules_for_cycle(cycle)
-        fast = bool(modules)
+        if cached is not None: return cached
+        env = os.environ.copy(); env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
+        modules = self._test_modules_for_cycle(cycle); fast = bool(modules)
         command = [sys.executable, "-m", "unittest"]
-        if fast:
-            command.extend(modules)
-            scope = "fast regression suite"
-        else:
-            command.extend(["discover", "-s", "tests"])
-            scope = "full test suite"
+        if fast: command.extend(modules); scope = "fast regression suite"
+        else: command.extend(["discover", "-s", "tests"]); scope = "full test suite"
         timeout = self.FAST_TEST_TIMEOUT if fast else self.FULL_TEST_TIMEOUT
         try:
-            completed = subprocess.run(command, cwd=self.source_root, capture_output=True, text=True,
-                                       timeout=timeout, shell=False, env=env)
-            result = {"passed": completed.returncode == 0, "returncode": completed.returncode,
-                      "stdout": completed.stdout[-8000:], "stderr": completed.stderr[-8000:],
-                      "failure_kind": "test_failure" if completed.returncode else "none", "scope": scope, "modules": modules, "cached": False,
-                      "timeout_seconds": timeout}
+            completed = subprocess.run(command, cwd=self.source_root, capture_output=True, text=True, timeout=timeout, shell=False, env=env)
+            result = {"passed": completed.returncode == 0, "returncode": completed.returncode, "stdout": completed.stdout[-8000:], "stderr": completed.stderr[-8000:], "failure_kind": "test_failure" if completed.returncode else "none", "scope": scope, "modules": modules, "cached": False, "timeout_seconds": timeout}
         except subprocess.TimeoutExpired as exc:
-            result = {"passed": False, "returncode": None, "stdout": str(exc.stdout or "")[-8000:],
-                      "stderr": "test suite timed out after %d seconds" % timeout, "failure_kind": "timeout", "scope": scope, "modules": modules, "cached": False,
-                      "timeout_seconds": timeout}
-        self._store_test(fingerprint, result)
-        return result
+            result = {"passed": False, "returncode": None, "stdout": str(exc.stdout or "")[-8000:], "stderr": "test suite timed out after %d seconds" % timeout, "failure_kind": "timeout", "scope": scope, "modules": modules, "cached": False, "timeout_seconds": timeout}
+        self._store_test(fingerprint, result); return result
 
     def _repair_mission(self, goal: Optional[str], test_result: Dict[str, Any], cycle: int) -> Dict[str, Any]:
         plan = self.orchestrator.route(f"repair: {goal or 'autonomous test failure'}")
-        mission = {"cycle": cycle, "type": "self_repair", "status": "queued_for_sandbox_repair", "goal": goal,
-                   "failure_kind": test_result.get("failure_kind"), "returncode": test_result.get("returncode"),
-                   "stdout": str(test_result.get("stdout", ""))[-8000:], "stderr": str(test_result.get("stderr", ""))[-8000:],
-                   "agent_plan": plan, "owner_approval_required": True, "real_world_changes": False,
-                   "created_at": datetime.now(timezone.utc).isoformat()}
-        path = self.project_root / "data" / "self_repair_mission.json"
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(mission, ensure_ascii=False, indent=2), encoding="utf-8")
-        tmp.replace(path)
-        return mission
+        mission = {"cycle": cycle, "type": "self_repair", "status": "queued_for_sandbox_repair", "goal": goal, "failure_kind": test_result.get("failure_kind"), "returncode": test_result.get("returncode"), "stdout": str(test_result.get("stdout", ""))[-8000:], "stderr": str(test_result.get("stderr", ""))[-8000:], "agent_plan": plan, "owner_approval_required": True, "real_world_changes": False, "created_at": datetime.now(timezone.utc).isoformat()}
+        path = self.project_root / "data" / "self_repair_mission.json"; tmp = path.with_suffix(".tmp"); tmp.write_text(json.dumps(mission, ensure_ascii=False, indent=2), encoding="utf-8"); tmp.replace(path); self._json_cache.pop(str(path), None); return mission
 
     def run(self, goal: Optional[str] = None) -> Dict[str, Any]:
-        core = self.master.run_cycle(goal)
-        cycle = core["cycle"]
+        core = self.master.run_cycle(goal); cycle = core["cycle"]
         self._persist_project_discovery(core, force=cycle % self.DEEP_DISCOVERY_INTERVAL == 0)
-        site_snapshot = self._site_snapshot(cycle)
-        decision = self.decision_engine.assess()
-        effective_goal = goal or decision.get("decision")
-        agent_plan = self.orchestrator.route(effective_goal)
-        pending: List[str] = []
-        completed = ["discover", "research", "plan", "agent_orchestration"]
+        site_snapshot = self._site_snapshot(cycle); decision = self.decision_engine.assess(); effective_goal = goal or decision.get("decision")
+        agent_plan = self.orchestrator.route(effective_goal); pending: List[str] = []; completed = ["discover", "research", "plan", "agent_orchestration"]
         build_result = test_result = package = approval_request = repair_mission = None
         cached_probe = self._cached_test(self._test_fingerprint(effective_goal), cycle)
-
         if core.get("syntax_errors"):
-            repair_mission = self._repair_mission(effective_goal, {"failure_kind": "syntax_error"}, cycle)
-            pending.append("fix_syntax_errors")
+            repair_mission = self._repair_mission(effective_goal, {"failure_kind": "syntax_error"}, cycle); pending.append("fix_syntax_errors")
         elif cached_probe is not None:
-            test_result = cached_probe
-            completed.extend(["test", "verify", "no_change_fast_path"])
+            test_result = cached_probe; completed.extend(["test", "verify", "no_change_fast_path"])
         else:
             try:
-                build_result = self._sandbox_build(core, effective_goal)
-                completed.append("build")
-                test_result = self._run_tests(cycle, effective_goal)
+                build_result = self._sandbox_build(core, effective_goal); completed.append("build"); test_result = self._run_tests(cycle, effective_goal)
                 self.testing.record_test(f"autonomous_cycle_{cycle}", test_result["passed"], "Sandbox build plus adaptive autonomous regression testing.", diagnostics=test_result)
                 if test_result["passed"]:
-                    completed.extend(["test", "verify"])
-                    sandbox_rel = str(Path(build_result["sandbox"]).relative_to(self.project_root))
-                    package = self.packages.create(build_result["files"], f"Autonomous cycle {cycle} verified sandbox change set", sandbox_rel=sandbox_rel)
-                    approval_request = self.approval.request("change_package_deploy", f"انتقال بسته تغییر چرخه {cycle} به محیط اصلی",
-                        metadata={"package_id": package["package_id"], "package_sha256": package["package_sha256"], "cycle": cycle, "goal": effective_goal})
-                    if approval_request.get("status") == "waiting_approval":
-                        pending.append(f"approval:{approval_request['id']}:change_package_deploy")
-                    elif approval_request.get("status") == "approved":
-                        completed.append("approval_already_granted")
+                    completed.extend(["test", "verify"]); sandbox_rel = str(Path(build_result["sandbox"]).relative_to(self.project_root)); package = self.packages.create(build_result["files"], f"Autonomous cycle {cycle} verified sandbox change set", sandbox_rel=sandbox_rel)
+                    approval_request = self.approval.request("change_package_deploy", f"انتقال بسته تغییر چرخه {cycle} به محیط اصلی", metadata={"package_id": package["package_id"], "package_sha256": package["package_sha256"], "cycle": cycle, "goal": effective_goal})
+                    if approval_request.get("status") == "waiting_approval": pending.append(f"approval:{approval_request['id']}:change_package_deploy")
+                    elif approval_request.get("status") == "approved": completed.append("approval_already_granted")
                 else:
-                    repair_mission = self._repair_mission(effective_goal, test_result, cycle)
-                    pending.append("self_repair")
+                    repair_mission = self._repair_mission(effective_goal, test_result, cycle); pending.append("self_repair")
             except (OSError, TypeError, ValueError) as exc:
-                repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, cycle)
-                pending.append(f"build_error: {exc}")
-        evolution = self.self_evolution.evaluate(test_result, len(self.orchestrator.factory.list_agents()))
-        completed.extend(["learn", "evolve"])
-        report = CycleReport(cycle, "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "evolve"),
-                             effective_goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat())
-        return {"report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan,
-                "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution,
-                "package": package, "approval_request": approval_request,
-                "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
+                repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, cycle); pending.append(f"build_error: {exc}")
+        evolution = self.self_evolution.evaluate(test_result, len(self.orchestrator.factory.list_agents())); completed.extend(["learn", "evolve"])
+        report = CycleReport(cycle, "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "evolve"), effective_goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat())
+        return {"report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan, "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution, "package": package, "approval_request": approval_request, "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
 
 
 if __name__ == "__main__":
