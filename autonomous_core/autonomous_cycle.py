@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,6 +46,7 @@ class AutonomousCycle:
     DEEP_DISCOVERY_INTERVAL = 10
     SITE_CHECK_INTERVAL = 10
     TEST_CACHE_SECONDS = 120.0
+    DISCOVERY_CACHE_SECONDS = 15.0
     FAST_TEST_MODULES = ("tests.test_master_core", "tests.test_autonomous_cycle_goal")
 
     def __init__(self, project_root: Optional[Path] = None) -> None:
@@ -62,6 +64,10 @@ class AutonomousCycle:
         self.decision_engine = AutonomousDecisionEngine(self.project_root)
         self.orchestrator = AgentOrchestrator(self.project_root)
         self.test_cache_file = self.project_root / "data" / "autonomous_test_cache.json"
+        self._discovery_cache: Optional[Dict[str, Any]] = None
+        self._discovery_cache_at = 0.0
+        self._site_cache: Optional[Dict[str, Any]] = None
+        self._site_cache_at = 0.0
 
     @staticmethod
     def _read_json(path: Path) -> Optional[Dict[str, Any]]:
@@ -74,10 +80,15 @@ class AutonomousCycle:
         return None
 
     def _persist_project_discovery(self, core: Dict[str, Any], force: bool = False) -> Optional[Dict[str, Any]]:
+        now = time.monotonic()
+        if not force and self._discovery_cache is not None and now - self._discovery_cache_at < self.DISCOVERY_CACHE_SECONDS:
+            return dict(self._discovery_cache)
         path = self.project_root / "data" / "project_discovery.json"
         if not force:
             cached = self._read_json(path)
             if cached is not None:
+                self._discovery_cache = dict(cached)
+                self._discovery_cache_at = now
                 return cached
         files = []
         audits = {x["file"]: x for x in self.master.audit_python()}
@@ -93,14 +104,24 @@ class AutonomousCycle:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(path)
+        self._discovery_cache = dict(snapshot)
+        self._discovery_cache_at = now
         return snapshot
 
     def _site_snapshot(self, cycle: int) -> Dict[str, Any]:
+        now = time.monotonic()
+        if self._site_cache is not None and now - self._site_cache_at < self.DISCOVERY_CACHE_SECONDS and cycle % self.SITE_CHECK_INTERVAL != 0:
+            return dict(self._site_cache)
         path = self.project_root / "data" / "site_discovery.json"
         cached = self._read_json(path)
         if cached is not None and cycle % self.SITE_CHECK_INTERVAL != 0:
+            self._site_cache = dict(cached)
+            self._site_cache_at = now
             return cached
-        return self.site_connector.discover()
+        result = self.site_connector.discover()
+        self._site_cache = dict(result)
+        self._site_cache_at = now
+        return result
 
     def _sandbox_build(self, core: Dict[str, Any], goal: Optional[str]) -> Dict[str, Any]:
         sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"
@@ -120,7 +141,7 @@ class AutonomousCycle:
 
     def _test_fingerprint(self, goal: Optional[str]) -> str:
         h = hashlib.sha256(str(goal or "").encode("utf-8"))
-        snapshot = self._read_json(self.project_root / "data" / "project_discovery.json") or {}
+        snapshot = self._discovery_cache or self._read_json(self.project_root / "data" / "project_discovery.json") or {}
         paths = [x.get("path") for x in snapshot.get("files", []) if isinstance(x, dict) and x.get("path")]
         for relative in sorted(paths):
             try:
@@ -133,8 +154,7 @@ class AutonomousCycle:
         return h.hexdigest()
 
     def _cached_test(self, fingerprint: str, cycle: int) -> Optional[Dict[str, Any]]:
-        full_tests = cycle % self.FULL_TEST_INTERVAL == 0 or os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower() in {"1", "true", "yes", "on"}
-        if full_tests:
+        if cycle % self.FULL_TEST_INTERVAL == 0 or os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower() in {"1", "true", "yes", "on"}:
             return None
         cached = self._read_json(self.test_cache_file)
         if not cached or cached.get("fingerprint") != fingerprint or not cached.get("passed"):
