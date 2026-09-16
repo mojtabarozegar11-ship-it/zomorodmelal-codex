@@ -134,17 +134,42 @@ class AutonomousSupervisor:
         return results
 
     def run_once(self, goal: str | None = None) -> Dict[str, Any]:
-        """Run one safe cycle even when an older deployment approval is waiting.
-
-        Approval remains mandatory for real deployment. A pending approval is
-        reported as pending state, but it does not freeze unrelated sandbox work.
-        """
+        """Run one safe cycle while respecting deployment-approval blocking."""
         promoted = self._resume_approved_packages()
         waiting = self._waiting_approvals()
         pending_before_cycle = [
             f"approval:{r.get('id')}:{r.get('action')}" for r in waiting
             if r.get("action") == "change_package_deploy"
         ]
+
+        # A waiting deployment approval is a hard safety boundary: do not start
+        # another cycle until the owner resolves it. Other approval types do not
+        # freeze unrelated sandbox work.
+        if pending_before_cycle:
+            report = {
+                "cycle": None,
+                "phase": "approval",
+                "goal": goal,
+                "completed": [],
+                "pending": pending_before_cycle,
+                "owner_approval_required": True,
+                "real_changes_allowed": False,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            result = {"report": report, "tests": None, "package": None,
+                      "approval_request": None, "safety": {
+                          "sandbox_only": True,
+                          "generated_code_executed": False,
+                          "remote_site_write": False,
+                          "real_deployment": False,
+                          "owner_approval_required": True,
+                      }}
+            self._save_state(self._base_state(
+                status="blocked", pid=os.getpid(), last_cycle=None,
+                last_phase="approval", last_goal=goal, blocked=True,
+                pending=pending_before_cycle, approval_pending=True, resumed=promoted,
+            ))
+            return result
 
         try:
             result = self.cycle_factory(self.project_root).run(goal)
@@ -158,13 +183,14 @@ class AutonomousSupervisor:
         report = result.get("report", {})
         cycle_pending = report.get("pending", [])
         all_pending = list(dict.fromkeys(pending_before_cycle + list(cycle_pending)))
+        blocked = any(str(item).startswith("approval:") for item in all_pending)
         self._save_state(self._base_state(
-            status="running",
+            status="blocked" if blocked else "running",
             pid=os.getpid(),
             last_cycle=report.get("cycle"),
             last_phase=report.get("phase"),
             last_goal=report.get("goal"),
-            blocked=False,
+            blocked=blocked,
             pending=all_pending,
             approval_pending=bool(all_pending),
             resumed=promoted,
