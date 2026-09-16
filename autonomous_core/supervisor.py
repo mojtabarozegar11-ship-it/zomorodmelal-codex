@@ -130,12 +130,10 @@ class AutonomousSupervisor:
         return results
 
     def run_once(self, goal: str | None = None) -> Dict[str, Any]:
-        # First resume work that the owner has already approved.
         promoted = self._resume_approved_packages()
         waiting = self._waiting_approvals()
         deployment_waiting = self._deployment_approvals(waiting)
 
-        # Only a waiting deployment approval pauses autonomous safe work.
         if deployment_waiting:
             pending = [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting]
             self._save_state(self._base_state(
@@ -157,13 +155,14 @@ class AutonomousSupervisor:
             raise
         report = result.get("report", {})
         pending = report.get("pending", [])
-        # A cycle may legitimately report owner approval as its next phase while
-        # the supervisor remains able to continue safe sandbox work. Only the
-        # deployment gate above is a supervisor-level blocker.
+        # A pending item produced by the current cycle is a genuine cycle-level
+        # gate (for example, owner approval required before real changes). This
+        # remains blocked even though unrelated pre-existing approvals do not
+        # freeze the supervisor before the cycle starts.
         self._save_state(self._base_state(
-            status="running",
+            status="blocked" if pending else "running",
             pid=os.getpid(), last_cycle=report.get("cycle"), last_phase=report.get("phase"),
-            last_goal=report.get("goal"), blocked=False, pending=pending,
+            last_goal=report.get("goal"), blocked=bool(pending), pending=pending,
             resumed=promoted))
         return result
 
