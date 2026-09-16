@@ -7,17 +7,12 @@ from .master_core import MasterCore
 
 
 class MasterCore30(MasterCore):
-    """Master Agent extension covering generations 16 through 30.
-
-    This layer extends the existing generation-15 kernel without weakening its
-    sandbox and owner-approval boundaries. It adds explicit quality control,
-    resilience, governance, observability, optimization and long-horizon
-    autonomy states. Real-world actions remain owner-gated.
-    """
+    """Master Agent extension covering generations 16 through 30."""
 
     VERSION = "30.0.0"
     MAX_GENERATION = 30
-    GENERATIONS = dict(MasterCore.GENERATIONS, **{
+    GENERATIONS = MasterCore.GENERATIONS.copy()
+    GENERATIONS.update({
         16: "self_verification_and_quality_control",
         17: "failure_pattern_learning",
         18: "adaptive_recovery",
@@ -50,12 +45,7 @@ class MasterCore30(MasterCore):
     }
 
     def _learn(self, mission, success, evidence=None):
-        """Record learning without double-advancing the generation.
-
-        The parent cycle performs the single generation transition after this
-        method returns. Keeping the increment here disabled fixes the previous
-        double-advance behavior.
-        """
+        """Record learning without double-advancing the generation."""
         event = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "mission": mission["id"],
@@ -69,7 +59,6 @@ class MasterCore30(MasterCore):
         return event
 
     def advanced_capabilities(self) -> Dict[str, Any]:
-        """Return the explicit capabilities represented by generations 16-30."""
         return {
             "generation_range": [16, 30],
             "features": [self.GENERATIONS[n] for n in range(16, 31)],
@@ -78,7 +67,6 @@ class MasterCore30(MasterCore):
         }
 
     def quality_gate(self, test_passed=None, verification_passed=None):
-        """Require explicit evidence before a mission can be considered successful."""
         if test_passed is not True:
             return {"passed": False, "reason": "trusted_test_not_passed"}
         if verification_passed is not True:
@@ -86,7 +74,6 @@ class MasterCore30(MasterCore):
         return {"passed": True, "reason": "test_and_verification_passed"}
 
     def resilience_decision(self, failures: int, repeated_failure: bool = False):
-        """Select a safe recovery mode; never authorize a real-world mutation."""
         if repeated_failure:
             action = "checkpoint_rollback_and_replan"
         elif failures > 0:
@@ -101,7 +88,6 @@ class MasterCore30(MasterCore):
         }
 
     def governance_status(self):
-        """Expose the immutable governance boundary for generations 16-30."""
         return {
             "master_core": True,
             "version": self.VERSION,
