@@ -54,7 +54,6 @@ class AutonomousSupervisor:
             return "running"
 
     def status(self) -> Dict[str, Any]:
-        """Return a read-only runtime snapshot suitable for CLI or Telegram reporting."""
         state: Dict[str, Any] = {}
         try:
             state = json.loads(self.state_path.read_text(encoding="utf-8"))
@@ -105,18 +104,18 @@ class AutonomousSupervisor:
         temp.replace(self.state_path)
 
     def _base_state(self, **values: Any) -> Dict[str, Any]:
-        return {"owner_approval_required": True, "real_changes_allowed": False,
-                "updated_at": datetime.now(timezone.utc).isoformat(), **values}
+        return {
+            "owner_approval_required": True,
+            "real_changes_allowed": False,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            **values,
+        }
 
     def _waiting_approvals(self) -> list[Dict[str, Any]]:
         return self.approval.get_waiting()
 
-    def _deployment_approvals(self, waiting: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-        """Return only approvals that must pause autonomous safe work."""
-        return [r for r in waiting if r.get("action") == "change_package_deploy"]
-
     def _resume_approved_packages(self) -> list[Dict[str, Any]]:
-        """Execute only already-approved package promotions, never request approval here."""
+        """Execute only already-approved package promotions."""
         results: list[Dict[str, Any]] = []
         for request in self.approval.get_all():
             if request.get("action") != "change_package_deploy" or request.get("status") != "approved":
@@ -125,45 +124,45 @@ class AutonomousSupervisor:
             package_id = metadata.get("package_id")
             if not package_id:
                 continue
-            result = self.package_executor.execute(package_id, int(request["id"]))
-            results.append(result)
+            results.append(self.package_executor.execute(package_id, int(request["id"])))
         return results
 
     def run_once(self, goal: str | None = None) -> Dict[str, Any]:
+        """Run one safe cycle even when an older deployment approval is waiting.
+
+        Approval remains mandatory for real deployment. A pending approval is
+        reported as pending state, but it does not freeze unrelated sandbox work.
+        """
         promoted = self._resume_approved_packages()
         waiting = self._waiting_approvals()
-        deployment_waiting = self._deployment_approvals(waiting)
-
-        if deployment_waiting:
-            pending = [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting]
-            self._save_state(self._base_state(
-                status="waiting_owner_approval", pid=os.getpid(), blocked=True,
-                pending=pending, resumed=promoted))
-            return {"report": {"cycle": None, "phase": "approval", "goal": goal,
-                                "completed": ["resume_approved_packages"] if promoted else [],
-                                "pending": pending, "owner_approval_required": True,
-                                "real_changes_allowed": False,
-                                "timestamp": datetime.now(timezone.utc).isoformat()},
-                    "promoted": promoted, "waiting_approvals": waiting}
+        pending_before_cycle = [
+            f"approval:{r.get('id')}:{r.get('action')}" for r in waiting
+            if r.get("action") == "change_package_deploy"
+        ]
 
         try:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
-            self._save_state(self._base_state(status="error", blocked=True,
-                                               error_type=type(exc).__name__, error=str(exc),
-                                               pid=os.getpid()))
+            self._save_state(self._base_state(
+                status="error", blocked=True, error_type=type(exc).__name__,
+                error=str(exc), pid=os.getpid(), pending=pending_before_cycle,
+            ))
             raise
+
         report = result.get("report", {})
-        pending = report.get("pending", [])
-        # A pending item produced by the current cycle is a genuine cycle-level
-        # gate (for example, owner approval required before real changes). This
-        # remains blocked even though unrelated pre-existing approvals do not
-        # freeze the supervisor before the cycle starts.
+        cycle_pending = report.get("pending", [])
+        all_pending = list(dict.fromkeys(pending_before_cycle + list(cycle_pending)))
         self._save_state(self._base_state(
-            status="blocked" if pending else "running",
-            pid=os.getpid(), last_cycle=report.get("cycle"), last_phase=report.get("phase"),
-            last_goal=report.get("goal"), blocked=bool(pending), pending=pending,
-            resumed=promoted))
+            status="running",
+            pid=os.getpid(),
+            last_cycle=report.get("cycle"),
+            last_phase=report.get("phase"),
+            last_goal=report.get("goal"),
+            blocked=False,
+            pending=all_pending,
+            approval_pending=bool(all_pending),
+            resumed=promoted,
+        ))
         return result
 
     def run_forever(self, goal: str | None = None) -> None:
