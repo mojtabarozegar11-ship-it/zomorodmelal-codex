@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple, Union
 
 
 class AutonomousDecisionEngine:
     """Choose the safest useful next mission from local evidence."""
 
-    def __init__(self, root: str | Path) -> None:
+    CACHE_SECONDS = 15.0
+
+    def __init__(self, root: Union[str, Path]) -> None:
         self.root = Path(root).resolve()
         self.path = self.root / "data" / "autonomous_decisions.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._cache: Optional[Dict[str, Any]] = None
+        self._cache_key: Optional[Tuple[Tuple[str, int, int], ...]] = None
+        self._cache_at = 0.0
 
     def _load_json(self, name: str, default: Any) -> Any:
         try:
@@ -20,7 +26,37 @@ class AutonomousDecisionEngine:
         except (OSError, ValueError, TypeError):
             return default
 
+    def _evidence_key(self) -> Tuple[Tuple[str, int, int], ...]:
+        names = (
+            "project_discovery.json",
+            "autonomous_goal_engine.json",
+            "autonomous_mission_queue.json",
+            "test_results.json",
+            "self_repair_mission.json",
+            "agent_registry.json",
+        )
+        key = []
+        for name in names:
+            path = self.root / "data" / name
+            try:
+                stat = path.stat()
+                key.append((name, stat.st_mtime_ns, stat.st_size))
+            except OSError:
+                key.append((name, 0, 0))
+        return tuple(key)
+
     def assess(self) -> Dict[str, Any]:
+        now = time.monotonic()
+        evidence_key = self._evidence_key()
+        if (
+            self._cache is not None
+            and self._cache_key == evidence_key
+            and now - self._cache_at < self.CACHE_SECONDS
+        ):
+            result = dict(self._cache)
+            result["fast_path"] = True
+            return result
+
         discovery = self._load_json("project_discovery.json", {})
         goal_state = self._load_json("autonomous_goal_engine.json", {})
         mission_state = self._load_json("autonomous_mission_queue.json", {})
@@ -80,4 +116,7 @@ class AutonomousDecisionEngine:
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.path)
+        self._cache = dict(result)
+        self._cache_key = evidence_key
+        self._cache_at = now
         return result
