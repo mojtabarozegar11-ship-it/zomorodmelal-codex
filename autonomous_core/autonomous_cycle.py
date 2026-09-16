@@ -47,6 +47,8 @@ class AutonomousCycle:
     SITE_CHECK_INTERVAL = 10
     TEST_CACHE_SECONDS = 120.0
     DISCOVERY_CACHE_SECONDS = 15.0
+    FAST_TEST_TIMEOUT = 8
+    FULL_TEST_TIMEOUT = 30
     FAST_TEST_MODULES = ("tests.test_master_core", "tests.test_autonomous_cycle_goal")
 
     def __init__(self, project_root: Optional[Path] = None) -> None:
@@ -186,21 +188,26 @@ class AutonomousCycle:
         env = os.environ.copy()
         env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
         modules = self._test_modules_for_cycle(cycle)
+        fast = bool(modules)
         command = [sys.executable, "-m", "unittest"]
-        if modules:
+        if fast:
             command.extend(modules)
             scope = "fast regression suite"
         else:
             command.extend(["discover", "-s", "tests"])
             scope = "full test suite"
+        timeout = self.FAST_TEST_TIMEOUT if fast else self.FULL_TEST_TIMEOUT
         try:
-            completed = subprocess.run(command, cwd=self.source_root, capture_output=True, text=True, timeout=30, shell=False, env=env)
+            completed = subprocess.run(command, cwd=self.source_root, capture_output=True, text=True,
+                                       timeout=timeout, shell=False, env=env)
             result = {"passed": completed.returncode == 0, "returncode": completed.returncode,
                       "stdout": completed.stdout[-8000:], "stderr": completed.stderr[-8000:],
-                      "failure_kind": "test_failure" if completed.returncode else "none", "scope": scope, "modules": modules, "cached": False}
+                      "failure_kind": "test_failure" if completed.returncode else "none", "scope": scope, "modules": modules, "cached": False,
+                      "timeout_seconds": timeout}
         except subprocess.TimeoutExpired as exc:
             result = {"passed": False, "returncode": None, "stdout": str(exc.stdout or "")[-8000:],
-                      "stderr": "test suite timed out after 30 seconds", "failure_kind": "timeout", "scope": scope, "modules": modules, "cached": False}
+                      "stderr": "test suite timed out after %d seconds" % timeout, "failure_kind": "timeout", "scope": scope, "modules": modules, "cached": False,
+                      "timeout_seconds": timeout}
         self._store_test(fingerprint, result)
         return result
 
