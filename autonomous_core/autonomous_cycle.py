@@ -65,9 +65,6 @@ class AutonomousCycle:
         return {"sandbox": str(sandbox), "files": builder.build(files)}
 
     def _run_tests(self) -> Dict[str, Any]:
-        # Always run the repository suite from the source tree. The cycle's
-        # end-to-end test is skipped in the nested subprocess via an explicit
-        # environment flag, preventing recursive cycle -> tests -> cycle runs.
         env = os.environ.copy()
         env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
         command = [sys.executable, "-m", "unittest", "discover", "-s", "tests"]
@@ -111,18 +108,53 @@ class AutonomousCycle:
                 if test_result["passed"]:
                     completed.extend(["test", "verify"])
                     sandbox_rel = str(Path(build_result["sandbox"]).relative_to(self.project_root))
-                    package = self.packages.create(build_result["files"], f"Autonomous cycle {core['cycle']} verified sandbox change set", sandbox_rel=sandbox_rel)
-                    approval_request = self.approval.request("change_package_deploy", f"انتقال بسته تغییر چرخه {core['cycle']} به محیط اصلی",
-                        metadata={"package_id": package["package_id"], "package_sha256": package["package_sha256"], "cycle": core["cycle"], "goal": goal})
+                    package = self.packages.create(
+                        build_result["files"],
+                        f"Autonomous cycle {core['cycle']} verified sandbox change set",
+                        sandbox_rel=sandbox_rel,
+                    )
+                    approval_request = self.approval.request(
+                        "change_package_deploy",
+                        f"انتقال بسته تغییر چرخه {core['cycle']} به محیط اصلی",
+                        metadata={
+                            "package_id": package["package_id"],
+                            "package_sha256": package["package_sha256"],
+                            "cycle": core["cycle"],
+                            "goal": goal,
+                        },
+                    )
+                    if approval_request.get("status") == "waiting_approval":
+                        pending.append(f"approval:{approval_request['id']}:change_package_deploy")
+                    elif approval_request.get("status") == "approved":
+                        completed.append("approval_already_granted")
                 else:
                     pending.append("fix_failing_tests")
             except (OSError, TypeError, ValueError) as exc:
                 pending.append(f"build_error: {exc}")
-        pending.extend(["owner_approval_for_real_changes", "controlled_deployment", "post_deployment_learning"])
-        report = CycleReport(core["cycle"], "approval", goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat())
-        return {"report": report.to_dict(), "core": core, "build": build_result, "tests": test_result,
-                "package": package, "approval_request": approval_request,
-                "safety": {"sandbox_only": True, "generated_code_executed": False, "real_deployment": False, "owner_approval_required": True}}
+        report = CycleReport(
+            core["cycle"],
+            "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "learn"),
+            goal,
+            completed,
+            pending,
+            True,
+            False,
+            datetime.now(timezone.utc).isoformat(),
+        )
+        return {
+            "report": report.to_dict(),
+            "core": core,
+            "build": build_result,
+            "tests": test_result,
+            "package": package,
+            "approval_request": approval_request,
+            "safety": {
+                "sandbox_only": True,
+                "generated_code_executed": False,
+                "real_deployment": False,
+                "owner_approval_required": True,
+            },
+        }
 
 
 if __name__ == "__main__":
