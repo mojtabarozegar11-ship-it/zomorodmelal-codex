@@ -23,6 +23,7 @@ class MasterCore:
     VERSION = "15.0.0"
     MAX_GENERATION = 15
     DISCOVERY_CACHE_SECONDS = 5.0
+    PERSISTED_DISCOVERY_CACHE_SECONDS = 60.0
     PHASES = [
         "observe", "diagnose", "prioritize", "delegate", "plan", "execute",
         "test", "repair", "verify", "learn", "evolve", "next_goal",
@@ -56,8 +57,11 @@ class MasterCore:
         self.sandbox_dir = os.path.join(self.root, "sandbox", "autonomous_workspace")
         self.state_file = os.path.join(self.data_dir, "master_core_state.json")
         self.mission_file = os.path.join(self.data_dir, "master_mission_queue.json")
+        self.discovery_file = os.path.join(self.data_dir, "project_discovery.json")
         self._discovery_cache = None
         self._discovery_cache_at = 0.0
+        self._persisted_discovery_cache = None
+        self._persisted_discovery_cache_at = 0.0
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.sandbox_dir, exist_ok=True)
         self.access_manager = AccessManager(self.root)
@@ -109,15 +113,34 @@ class MasterCore:
                 "status": "active", "created_at": datetime.now(timezone.utc).isoformat()}
         self.state["goals"].append(item); self._save_state(); return item
 
-    def discover_project(self, force=False):
-        """Return project files from a short-lived cache.
+    def _load_persisted_discovery(self, force=False):
+        now = time.monotonic()
+        if not force and self._persisted_discovery_cache is not None and now - self._persisted_discovery_cache_at < self.PERSISTED_DISCOVERY_CACHE_SECONDS:
+            return self._persisted_discovery_cache
+        if not force and os.path.exists(self.discovery_file):
+            try:
+                mtime = os.path.getmtime(self.discovery_file)
+                if now - mtime < self.PERSISTED_DISCOVERY_CACHE_SECONDS:
+                    with open(self.discovery_file, "r", encoding="utf-8") as f:
+                        value = json.load(f)
+                    if isinstance(value, dict) and isinstance(value.get("files"), list):
+                        self._persisted_discovery_cache = value
+                        self._persisted_discovery_cache_at = now
+                        return value
+            except (OSError, ValueError, TypeError):
+                pass
+        return None
 
-        Discovery is read-only, so caching it for a few seconds removes repeated
-        os.walk calls inside one autonomous cycle while still picking up changes
-        quickly. A caller can force an immediate refresh after a structural change.
-        """
+    def discover_project(self, force=False):
+        """Return project files from memory or the recent persisted snapshot."""
         now = time.monotonic()
         if not force and self._discovery_cache is not None and now - self._discovery_cache_at < self.DISCOVERY_CACHE_SECONDS:
+            return list(self._discovery_cache)
+        persisted = self._load_persisted_discovery(force=force)
+        if persisted is not None:
+            files = [str(item.get("path")) for item in persisted.get("files", []) if isinstance(item, dict) and item.get("path")]
+            self._discovery_cache = sorted(files)
+            self._discovery_cache_at = now
             return list(self._discovery_cache)
         files = []
         ignored = {".git", "__pycache__", ".venv", "venv", "node_modules", ".mypy_cache", ".pytest_cache"}
@@ -131,6 +154,15 @@ class MasterCore:
         return list(files)
 
     def audit_python(self):
+        persisted = self._load_persisted_discovery()
+        if persisted is not None:
+            audited = []
+            for item in persisted.get("files", []):
+                if not isinstance(item, dict) or not str(item.get("path", "")).endswith(".py"):
+                    continue
+                audited.append({"file": item["path"], "syntax_ok": bool(item.get("syntax_ok", True)), "error": item.get("error")})
+            if audited:
+                return audited
         results = []
         for relative in self.discover_project():
             if not relative.endswith(".py"): continue
@@ -242,28 +274,18 @@ class MasterCore:
         if test_passed is False:
             self.state["failures"].append({"mission": mission["id"], "timestamp": datetime.now(timezone.utc).isoformat()}); self.state["failures"] = self.state["failures"][-100:]
         success = test_passed is True
-        self.state["phase"] = "learn"; learning = self._learn(mission, success, {"test": test_state})
-        self.state["phase"] = "evolve"
-        if success and self.state["generation"] < self.MAX_GENERATION: self.state["generation"] += 1
-        self.state["phase"] = "next_goal"; self.state["last_decision"] = mission
-        self.state["mission_history"].append({"cycle": self.state["cycles"], **mission, "test": test_state}); self.state["mission_history"] = self.state["mission_history"][-200:]
-        self.state["last_cycle"] = datetime.now(timezone.utc).isoformat(); self.state["last_result"] = {"mission": mission["id"], "test": test_state, "generation": self.state["generation"]}
+        self.state["phase"] = "learn"; learning = self._learn(mission, success, {"test_state": test_state})
+        self.state["phase"] = "evolve"; self.state["last_cycle"] = self.state["cycles"]
+        self.state["last_decision"] = mission
+        result = {"cycle": self.state["cycles"], "goal": active_goal, "mission": mission, "next_mission": mission,
+                  "plan": plan, "execution": execution, "test": test_state, "learning": learning,
+                  "capabilities": capabilities, "agents": agents, "delegated": delegated,
+                  "missing_capabilities": missing, "designs": designs, "access": access, "goal_access": goal_access,
+                  "generation": self.state["generation"], "phase": self.state["phase"],
+                  "syntax_errors": [x for x in audit if not x["syntax_ok"]]}
+        self.state["last_result"] = result
+        self.state["mission_history"].append(result)
+        self.state["mission_history"] = self.state["mission_history"][-100:]
         self._save_state()
-        queue = {"current": mission, "plan": plan, "delegated_agents": delegated, "status": "ready_for_safe_execution", "owner_approval_required": True,
-                 "real_world_changes_allowed": False, "sandbox_only": True, "next_generation": self.state["generation"], "updated_at": datetime.now(timezone.utc).isoformat()}
-        self._write_json(self.mission_file, queue)
-        next_mission = {"id": "continuous.improvement", "priority": 50, "roles": ["general", "testing"], "reason": "continue autonomous improvement"}
-        return {"version": self.VERSION, "cycle": self.state["cycles"], "generation": self.state["generation"], "phase": self.state["phase"], "goal": active_goal,
-                "files": len(self.discover_project()), "python_files": len(audit), "syntax_errors": [x for x in audit if not x["syntax_ok"]], "capabilities": capabilities,
-                "missing_capabilities": missing, "agents": agents, "delegated_agents": delegated, "new_agent_designs": designs, "access_requirements": access,
-                "goal_access_requirements": [x["capability"] for x in goal_access], "proposals": self.create_proposals(missing, designs), "mission": mission,
-                "plan": plan, "execution": execution, "test": test_state, "learning": learning, "next_mission": next_mission,
-                "owner_approval_required": True, "real_changes_allowed": False, "sandbox_only": True}
-
-    def status(self):
-        self.state = self._normalize_state(self.state)
-        return {"master_core": True, "version": self.VERSION, "max_generation": self.MAX_GENERATION, "generation": self.state.get("generation", 1),
-                "phase": self.state.get("phase", "observe"), "cycles": self.state.get("cycles", 0), "goals": len(self.state.get("goals", [])),
-                "agents": len(self.state.get("agents", [])), "capabilities": len(self.state.get("capabilities", [])), "missions": len(self.state.get("mission_history", [])),
-                "learning_events": len(self.state.get("learning", [])), "failures": len(self.state.get("failures", [])), "owner_approval_required": True,
-                "real_changes_allowed": False, "sandbox_only": True, "generations": self.GENERATIONS}
+        self._write_json(self.mission_file, {"updated_at": datetime.now(timezone.utc).isoformat(), "current": mission, "history": self.state["mission_history"][-20:]})
+        return result
