@@ -62,6 +62,12 @@ class TelegramApproval:
         result = self._call("sendMessage", {"chat_id": self.owner_chat_id, "text": text, "reply_markup": keyboard})
         return {"ok": bool(result.get("ok")), "status": "sent" if result.get("ok") else "send_failed", "request_id": request_id}
 
+    def answer_callback(self, callback_id: str, text: str = "Processed") -> Dict[str, Any]:
+        if not self.enabled:
+            return {"ok": False, "status": "disabled"}
+        result = self._call("answerCallbackQuery", {"callback_query_id": callback_id, "text": str(text)[:200]})
+        return {"ok": bool(result.get("ok")), "status": "answered" if result.get("ok") else "answer_failed"}
+
     def handle_callback(self, callback: Dict[str, Any]) -> Dict[str, Any]:
         """Validate owner callback and apply exactly one pending decision."""
         if not self.enabled:
