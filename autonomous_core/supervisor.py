@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from approval.approval_gateway import ApprovalGateway
-from autonomous_core.autonomous_cycle import AutonomousCycle
+from autonomous_core.autonomous_cycle_100 import AutonomousCycle100
 from controller.change_package_executor import ChangePackageExecutor
 
 
@@ -21,10 +21,10 @@ class AutonomousSupervisor:
     """Continuously advance safe autonomous cycles with observable runtime health."""
 
     def __init__(self, project_root: str | Path | None = None, interval_seconds: int = 60,
-                 cycle_factory: Callable[[Path], AutonomousCycle] | None = None) -> None:
+                 cycle_factory: Callable[[Path], AutonomousCycle100] | None = None) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parent.parent).resolve()
         self.interval_seconds = max(1, int(interval_seconds))
-        self.cycle_factory = cycle_factory or AutonomousCycle
+        self.cycle_factory = cycle_factory or AutonomousCycle100
         self.state_path = self.project_root / "data" / "supervisor_state.json"
         self.lock_path = self.project_root / "data" / "supervisor.lock"
         self.control_path = self.project_root / "data" / "supervisor_control.json"
@@ -75,6 +75,9 @@ class AutonomousSupervisor:
             "updated_at": state.get("updated_at"),
             "blocked": bool(state.get("blocked", False)),
             "pending": state.get("pending", []),
+            "master_agent": "MasterAgent100",
+            "master_version": "100.0.0",
+            "max_generation": 100,
             "owner_approval_required": True,
             "real_changes_allowed": False,
         }
@@ -107,6 +110,9 @@ class AutonomousSupervisor:
         return {
             "owner_approval_required": True,
             "real_changes_allowed": False,
+            "master_agent": "MasterAgent100",
+            "master_version": "100.0.0",
+            "max_generation": 100,
             "updated_at": datetime.now(timezone.utc).isoformat(),
             **values,
         }
