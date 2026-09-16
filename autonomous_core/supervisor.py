@@ -135,6 +135,17 @@ class AutonomousSupervisor:
             results.append(self.package_executor.execute(package_id, int(request["id"])))
         return results
 
+    @staticmethod
+    def _is_approval_pending(report: Dict[str, Any]) -> bool:
+        """Treat both explicit approval phase and legacy approval markers as blocked."""
+        if report.get("phase") == "approval":
+            return True
+        for item in report.get("pending", []) or []:
+            marker = str(item).lower()
+            if marker.startswith("approval:") or "owner_approval" in marker or "approval_pending" in marker:
+                return True
+        return False
+
     def run_once(self, goal: Optional[str] = None) -> Dict[str, Any]:
         """Run one safe cycle while respecting deployment-approval blocking."""
         promoted = self._resume_approved_packages()
@@ -175,14 +186,14 @@ class AutonomousSupervisor:
             ))
             raise
         report = result.get("report", {})
-        cycle_pending = report.get("pending", [])
+        cycle_pending = report.get("pending", []) or []
         all_pending = list(dict.fromkeys(pending_before_cycle + list(cycle_pending)))
-        blocked = any(str(item).startswith("approval:") for item in all_pending)
+        blocked = self._is_approval_pending(report) or bool(pending_before_cycle)
         self._save_state(self._base_state(
             status="blocked" if blocked else "running", pid=os.getpid(),
             last_cycle=report.get("cycle"), last_phase=report.get("phase"),
             last_goal=report.get("goal"), blocked=blocked, pending=all_pending,
-            approval_pending=bool(all_pending), resumed=promoted,
+            approval_pending=blocked, resumed=promoted,
         ))
         return result
 
