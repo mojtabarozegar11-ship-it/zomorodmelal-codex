@@ -5,7 +5,7 @@ from ai_engine.provider_registry import ProviderRegistry
 class MasterCore:
     def __init__(self):
         self.name = "Master Agent Core"
-        self.version = "0.3.0"
+        self.version = "0.4.0"
         self.owner_approval_required = True
         self.auto_execution = False
         self.self_evolution = False
@@ -46,6 +46,25 @@ class MasterCore:
                 "request_owner_approval",
                 "execute_only_after_approval"
             ]
+        }
+
+    def execute(self, action):
+        if self.owner_approval_required and not action.get("approved", False):
+            return {
+                "status": "blocked",
+                "message": "Owner approval required",
+                "action": action,
+            }
+
+        task = action.get("task") or action.get("goal") or str(action)
+        task_type = action.get("task_type", "general")
+
+        result = self.think(task, task_type)
+
+        return {
+            "status": "completed",
+            "task": task,
+            "result": result,
         }
 
 
