@@ -20,6 +20,41 @@ class FakeUpdate:
         self.callback_query.edit_message_text = AsyncMock()
 
 
+class FakeAccessManager:
+    def __init__(self):
+        self.calls = []
+
+    def approve(self, request_id):
+        self.calls.append(("approve", request_id))
+        return {
+            "request_id": request_id,
+            "capability": "web_research",
+            "resource": "internet_research",
+            "risk_level": "low",
+            "access_level": "read",
+            "goal": "research market",
+            "scope": "minimum_required",
+            "status": "approved_pending_activation",
+            "credentials_acquired": False,
+            "activated": False,
+        }
+
+    def revoke(self, request_id):
+        self.calls.append(("revoke", request_id))
+        return {
+            "request_id": request_id,
+            "capability": "web_research",
+            "resource": "internet_research",
+            "risk_level": "low",
+            "access_level": "read",
+            "goal": "research market",
+            "scope": "minimum_required",
+            "status": "revoked",
+            "credentials_acquired": False,
+            "activated": False,
+        }
+
+
 class TelegramSecurityTests(unittest.TestCase):
     def test_owner_check_rejects_non_owner(self):
         old_owner = main.OWNER_ID
@@ -52,6 +87,40 @@ class TelegramSecurityTests(unittest.TestCase):
                 "❌ درخواست دسترسی نامعتبر است."
             )
         finally:
+            main.OWNER_ID = old_owner
+
+    def test_access_callback_approval_does_not_activate_credentials(self):
+        old_owner = main.OWNER_ID
+        old_manager = main.access_manager
+        try:
+            main.OWNER_ID = 12345
+            main.access_manager = FakeAccessManager()
+            update = FakeUpdate(12345, "access:approve:req-1")
+            asyncio.run(main.access_callback(update, None))
+            update.callback_query.edit_message_text.assert_awaited_once()
+            message = update.callback_query.edit_message_text.await_args.args[0]
+            self.assertIn("اعتبارنامه هنوز فعال نشده است", message)
+            self.assertIn("اعتبارنامه فعال: خیر", message)
+            self.assertEqual(main.access_manager.calls, [("approve", "req-1")])
+        finally:
+            main.access_manager = old_manager
+            main.OWNER_ID = old_owner
+
+    def test_access_callback_revoke_reports_no_active_credentials(self):
+        old_owner = main.OWNER_ID
+        old_manager = main.access_manager
+        try:
+            main.OWNER_ID = 12345
+            main.access_manager = FakeAccessManager()
+            update = FakeUpdate(12345, "access:revoke:req-2")
+            asyncio.run(main.access_callback(update, None))
+            update.callback_query.edit_message_text.assert_awaited_once()
+            message = update.callback_query.edit_message_text.await_args.args[0]
+            self.assertIn("هیچ اعتبارنامه‌ای فعال نشد", message)
+            self.assertIn("اعتبارنامه فعال: خیر", message)
+            self.assertEqual(main.access_manager.calls, [("revoke", "req-2")])
+        finally:
+            main.access_manager = old_manager
             main.OWNER_ID = old_owner
 
 
