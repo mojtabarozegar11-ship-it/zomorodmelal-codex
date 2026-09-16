@@ -53,11 +53,23 @@ class SupervisorTests(unittest.TestCase):
             supervisor = AutonomousSupervisor(root, cycle_factory=FakeCycle)
             result = supervisor.run_once("research market")
             self.assertEqual(result["report"]["cycle"], 1)
+            self.assertEqual(result["mission_executor"]["status"], "idle")
             state = (root / "data" / "supervisor_state.json").read_text(encoding="utf-8")
             self.assertIn('"blocked": true', state)
             self.assertIn('"owner_approval_required": true', state)
             self.assertIn('"real_changes_allowed": false', state)
             self.assertIn('"status": "blocked"', state)
+
+    def test_run_once_executes_safe_queued_mission_before_cycle(self):
+        SafeCycle.calls = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            supervisor = AutonomousSupervisor(root, cycle_factory=SafeCycle)
+            supervisor.mission_executor.queue.enqueue({"id": "safe.followup", "type": "improvement", "status": "ready"})
+            result = supervisor.run_once("research market")
+            self.assertEqual(result["mission_executor"]["status"], "completed")
+            self.assertEqual(result["report"]["cycle"], 1)
+            self.assertFalse(result["mission_executor"]["real_world_changes"])
 
     def test_run_once_persists_error_state(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -144,6 +156,7 @@ class SupervisorTests(unittest.TestCase):
             self.assertIsNone(result["report"]["cycle"])
             self.assertEqual(result["report"]["phase"], "approval")
             self.assertEqual(FakeCycle.calls, 0)
+            self.assertIsNone(result["mission_executor"])
             self.assertTrue(supervisor.status()["blocked"])
 
 
