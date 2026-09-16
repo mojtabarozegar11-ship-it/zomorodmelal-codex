@@ -5,9 +5,11 @@ class AIRouter:
     def choose(self, task_type="general"):
         priority = {
             "coding": ["deepseek", "openai"],
-            "research": ["deepseek", "openai"],
-            "reasoning": ["openai", "deepseek"],
-            "general": ["openai", "deepseek"],
+            "research": ["gemini", "deepseek", "openai"],
+            "reasoning": ["openai", "claude", "deepseek"],
+            "documents": ["claude", "gemini", "openai"],
+            "content": ["openai", "claude", "deepseek"],
+            "general": ["openai", "deepseek", "gemini", "claude"],
         }
 
         for name in priority.get(task_type, priority["general"]):
