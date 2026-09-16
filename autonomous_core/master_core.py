@@ -9,7 +9,19 @@ from .access_manager import AccessManager
 
 
 class MasterCore:
-    VERSION = "1.1.3"
+    VERSION = "1.1.4"
+
+    GOAL_ACCESS_RULES = {
+        "web_research": ("research", "تحقیق", "جستجو", "خبر", "بازار", "اطلاعات"),
+        "github_repo": ("github", "repository", "repo", "کد", "code", "مخزن"),
+        "telegram_bot": ("telegram", "تلگرام", "bot", "ربات"),
+        "hosting": ("deploy", "deployment", "hosting", "publish", "استقرار", "هاست", "انتشار"),
+        "payments": ("payment", "payments", "پرداخت", "فروش", "درآمد", "تراکنش"),
+        "email": ("email", "e-mail", "ایمیل", "پست الکترونیک"),
+        "calendar": ("calendar", "schedule", "تقویم", "زمانبندی", "برنامه زمانی"),
+        "secrets": ("secret", "secrets", "credential", "credentials", "کلید api", "رمز", "اعتبارنامه"),
+        "browser_automation": ("browser", "automation", "اتوماسیون مرورگر", "مرورگر"),
+    }
 
     def __init__(self, root=None):
         self.root = os.path.abspath(root or os.path.join(os.path.dirname(__file__), ".."))
@@ -103,6 +115,22 @@ class MasterCore:
         self.state["access_requests"] = requirements
         return requirements
 
+    def required_access_for_goal(self, goal):
+        text = str(goal or "").strip().lower()
+        required = []
+        for capability, keywords in self.GOAL_ACCESS_RULES.items():
+            if any(keyword.lower() in text for keyword in keywords):
+                required.append(capability)
+        return sorted(set(required))
+
+    def request_goal_access(self, goal):
+        goal = str(goal or "").strip()
+        if not goal:
+            return []
+        requests = [self.access_manager.request(capability, goal) for capability in self.required_access_for_goal(goal)]
+        self.state["access_requests"] = self.access_manager.status()["requests"]
+        return requests
+
     def create_proposals(self, missing, designs):
         self.state = self._normalize_state(self.state)
         proposals=[{"type":"capability_upgrade","capability":c,"status":"proposal_only","owner_approval_required":True} for c in missing]
@@ -112,10 +140,11 @@ class MasterCore:
     def run_cycle(self, goal=None):
         self.state = self._normalize_state(self.state)
         if goal: self.set_goal(goal)
+        active_goal = goal or (self.state["goals"][-1]["text"] if self.state["goals"] else None)
         self.state["cycles"] += 1
-        audit=self.audit_python(); capabilities=self.discover_capabilities(); agents=self.discover_agents(); missing=self.analyze_gaps(); designs=self.design_agents(missing); access=self.discover_access_requirements(); proposals=self.create_proposals(missing,designs)
+        audit=self.audit_python(); capabilities=self.discover_capabilities(); agents=self.discover_agents(); missing=self.analyze_gaps(); designs=self.design_agents(missing); access=self.discover_access_requirements(); goal_access=self.request_goal_access(active_goal); proposals=self.create_proposals(missing,designs)
         self.state["last_cycle"]=datetime.now().isoformat(); self._save_state()
-        return {"version":self.VERSION,"cycle":self.state["cycles"],"goal":goal or (self.state["goals"][-1]["text"] if self.state["goals"] else None),"files":len(self.discover_project()),"python_files":len(audit),"syntax_errors":[x for x in audit if not x["syntax_ok"]],"capabilities":capabilities,"missing_capabilities":missing,"agents":agents,"new_agent_designs":designs,"access_requirements":access,"proposals":proposals,"owner_approval_required":True,"real_changes_allowed":False,"sandbox_only":True}
+        return {"version":self.VERSION,"cycle":self.state["cycles"],"goal":active_goal,"files":len(self.discover_project()),"python_files":len(audit),"syntax_errors":[x for x in audit if not x["syntax_ok"]],"capabilities":capabilities,"missing_capabilities":missing,"agents":agents,"new_agent_designs":designs,"access_requirements":access,"goal_access_requirements":[x["capability"] for x in goal_access],"access_requests_created":goal_access,"proposals":proposals,"owner_approval_required":True,"real_changes_allowed":False,"sandbox_only":True}
 
     def status(self):
         self.state = self._normalize_state(self.state)
