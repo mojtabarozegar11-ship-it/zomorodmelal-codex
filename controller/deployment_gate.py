@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 from approval.approval_gateway import ApprovalGateway
+from approval.telegram_approval import TelegramApproval
 from autonomous_core.change_package import ChangePackage
 from controller.change_package_executor import ChangePackageExecutor
 from deployment.host_adapter import HostDeploymentAdapter
@@ -16,6 +17,7 @@ class DeploymentGate:
     def __init__(self, root: Optional[Union[str, Path]] = None) -> None:
         self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
         self.approval = ApprovalGateway(self.root)
+        self.telegram = TelegramApproval(self.root)
         self.packages = ChangePackage(self.root / "data" / "change_packages")
         self.executor = ChangePackageExecutor(self.root)
         self.adapter = HostDeploymentAdapter()
@@ -29,9 +31,11 @@ class DeploymentGate:
             {"package_id": package_id, "package_sha256": package.get("package_sha256"),
              "target": os.environ.get("MASTER_AGENT_DEPLOY_TARGET", "production")},
         )
+        notification = self.telegram.notify(request)
         return {"status": request.get("status"), "request_id": request.get("id"),
                 "package_id": package_id, "package_sha256": package.get("package_sha256"),
-                "owner_approval_required": True, "external_deployment": self.adapter.enabled}
+                "owner_approval_required": True, "telegram": notification,
+                "external_deployment": self.adapter.enabled}
 
     def deploy(self, package_id: str, request_id: int) -> Dict[str, Any]:
         request = self.approval.get(request_id)
@@ -55,6 +59,7 @@ class DeploymentGate:
 
     def status(self) -> Dict[str, Any]:
         return {"enabled": True, "owner_approval_required": True, "package_hash_binding": True,
+                "telegram_enabled": self.telegram.enabled,
                 "external_deployment": self.adapter.enabled,
                 "external_target_configured": bool(os.environ.get("MASTER_AGENT_DEPLOY_TARGET")),
                 "adapter_configured": bool(self.adapter.command),
