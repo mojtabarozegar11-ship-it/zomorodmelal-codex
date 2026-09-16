@@ -6,7 +6,7 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.autonomous_cycle_100 import AutonomousCycle100
@@ -20,8 +20,8 @@ class SupervisorAlreadyRunning(RuntimeError):
 class AutonomousSupervisor:
     """Continuously advance safe autonomous cycles with observable runtime health."""
 
-    def __init__(self, project_root: str | Path | None = None, interval_seconds: int = 60,
-                 cycle_factory: Callable[[Path], AutonomousCycle100] | None = None) -> None:
+    def __init__(self, project_root: Optional[Union[str, Path]] = None, interval_seconds: int = 60,
+                 cycle_factory: Optional[Callable[[Path], AutonomousCycle100]] = None) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parent.parent).resolve()
         self.interval_seconds = max(1, int(interval_seconds))
         self.cycle_factory = cycle_factory or AutonomousCycle100
@@ -117,12 +117,12 @@ class AutonomousSupervisor:
             **values,
         }
 
-    def _waiting_approvals(self) -> list[Dict[str, Any]]:
+    def _waiting_approvals(self) -> List[Dict[str, Any]]:
         return self.approval.get_waiting()
 
-    def _resume_approved_packages(self) -> list[Dict[str, Any]]:
+    def _resume_approved_packages(self) -> List[Dict[str, Any]]:
         """Execute only already-approved package promotions."""
-        results: list[Dict[str, Any]] = []
+        results: List[Dict[str, Any]] = []
         for request in self.approval.get_all():
             if request.get("action") != "change_package_deploy" or request.get("status") != "approved":
                 continue
@@ -133,7 +133,7 @@ class AutonomousSupervisor:
             results.append(self.package_executor.execute(package_id, int(request["id"])))
         return results
 
-    def run_once(self, goal: str | None = None) -> Dict[str, Any]:
+    def run_once(self, goal: Optional[str] = None) -> Dict[str, Any]:
         """Run one safe cycle while respecting deployment-approval blocking."""
         promoted = self._resume_approved_packages()
         waiting = self._waiting_approvals()
@@ -197,7 +197,7 @@ class AutonomousSupervisor:
         ))
         return result
 
-    def run_forever(self, goal: str | None = None) -> None:
+    def run_forever(self, goal: Optional[str] = None) -> None:
         self._acquire_lock()
         try:
             self.stop_requested = self.desired_state() == "stopped"
