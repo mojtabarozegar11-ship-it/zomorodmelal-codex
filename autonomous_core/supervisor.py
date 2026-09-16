@@ -16,7 +16,7 @@ class SupervisorAlreadyRunning(RuntimeError):
 
 
 class AutonomousSupervisor:
-    """Continuously advance safe autonomous cycles with a single-process lock."""
+    """Continuously advance safe autonomous cycles with observable runtime health."""
 
     def __init__(self, project_root: str | Path | None = None, interval_seconds: int = 60,
                  cycle_factory: Callable[[Path], AutonomousCycle] | None = None) -> None:
@@ -48,6 +48,33 @@ class AutonomousSupervisor:
             return data.get("desired_state", "running")
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return "running"
+
+    def status(self) -> Dict[str, Any]:
+        """Return a read-only runtime snapshot suitable for CLI or Telegram reporting."""
+        state: Dict[str, Any] = {}
+        try:
+            state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            pass
+        lock_exists = self.lock_path.exists()
+        status = state.get("status", "stopped")
+        if lock_exists and status == "stopped":
+            status = "starting"
+        return {
+            "status": status,
+            "desired_state": self.desired_state(),
+            "lock_present": lock_exists,
+            "pid": state.get("pid"),
+            "last_cycle": state.get("last_cycle"),
+            "last_phase": state.get("last_phase"),
+            "last_goal": state.get("last_goal"),
+            "last_error": state.get("error"),
+            "updated_at": state.get("updated_at"),
+            "blocked": bool(state.get("blocked", False)),
+            "pending": state.get("pending", []),
+            "owner_approval_required": True,
+            "real_changes_allowed": False,
+        }
 
     def _acquire_lock(self) -> None:
         self.lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,13 +109,14 @@ class AutonomousSupervisor:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
             self._save_state(self._base_state(status="error", blocked=True,
-                                               error_type=type(exc).__name__, error=str(exc)))
+                                               error_type=type(exc).__name__, error=str(exc),
+                                               pid=os.getpid()))
             raise
         report = result.get("report", {})
         pending = report.get("pending", [])
         self._save_state(self._base_state(
             status="blocked" if pending else "running",
-            last_cycle=report.get("cycle"), last_phase=report.get("phase"),
+            pid=os.getpid(), last_cycle=report.get("cycle"), last_phase=report.get("phase"),
             last_goal=report.get("goal"), blocked=bool(pending), pending=pending))
         return result
 
@@ -96,23 +124,26 @@ class AutonomousSupervisor:
         self._acquire_lock()
         try:
             self.stop_requested = self.desired_state() == "stopped"
+            self._save_state(self._base_state(status="starting", pid=os.getpid(), blocked=False, pending=[]))
             while not self.stop_requested:
                 try:
                     result = self.run_once(goal)
                 except Exception:
                     time.sleep(self.interval_seconds)
+                    if self.desired_state() == "stopped":
+                        self.stop_requested = True
                     continue
                 report = result.get("report", {})
                 pending = report.get("pending", [])
                 if pending:
                     self._save_state(self._base_state(
-                        status="waiting_owner_approval", last_cycle=report.get("cycle"),
-                        last_phase=report.get("phase"), last_goal=report.get("goal"),
-                        blocked=True, pending=pending))
+                        status="waiting_owner_approval", pid=os.getpid(),
+                        last_cycle=report.get("cycle"), last_phase=report.get("phase"),
+                        last_goal=report.get("goal"), blocked=True, pending=pending))
                 time.sleep(self.interval_seconds)
                 if self.desired_state() == "stopped":
                     self.stop_requested = True
-            self._save_state(self._base_state(status="stopped", blocked=False, pending=[]))
+            self._save_state(self._base_state(status="stopped", pid=None, blocked=False, pending=[]))
         finally:
             self._release_lock()
 
@@ -124,14 +155,18 @@ def _parse_args() -> argparse.Namespace:
                         default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", "300")))
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--stop", action="store_true", help="request a running supervisor to stop")
+    parser.add_argument("--status", action="store_true", help="show current supervisor runtime status")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
     supervisor = AutonomousSupervisor(interval_seconds=args.interval)
-    if args.stop:
+    if args.status:
+        print(json.dumps(supervisor.status(), ensure_ascii=False, indent=2))
+    elif args.stop:
         supervisor.set_desired_state("stopped")
+        print(json.dumps(supervisor.status(), ensure_ascii=False, indent=2))
     elif args.once:
         supervisor.run_once(args.goal)
     else:
