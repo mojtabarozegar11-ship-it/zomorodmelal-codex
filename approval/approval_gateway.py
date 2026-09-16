@@ -30,13 +30,23 @@ class ApprovalGateway:
         os.replace(tmp, self.file)
 
     def request(self, action, reason, metadata=None):
+        metadata = metadata or {}
         requests = self._load()
+        # Reuse an equivalent active request so autonomous polling cannot create
+        # duplicate approval prompts for the same package/action.
+        for existing in requests:
+            if existing.get("action") != action:
+                continue
+            if existing.get("status") not in {"waiting_approval", "approved"}:
+                continue
+            if (existing.get("metadata") or {}) == metadata:
+                return existing
         next_id = max((int(r.get("id", 0)) for r in requests), default=0) + 1
         request = {
             "id": next_id,
             "action": action,
             "reason": reason,
-            "metadata": metadata or {},
+            "metadata": metadata,
             "status": "waiting_approval",
             "approved": False,
             "created_at": datetime.now().isoformat(),
