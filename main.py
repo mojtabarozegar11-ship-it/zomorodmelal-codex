@@ -7,9 +7,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-if PROJECT_ROOT not in sys.path: sys.path.insert(0, PROJECT_ROOT)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from approval.approval_gateway import ApprovalGateway
+from autonomous_core.access_manager import AccessManager
 from autonomous_core.autonomous_cycle import AutonomousCycle
 from controller.change_package_executor import ChangePackageExecutor
 from execution.execution_controller import ExecutionController
@@ -25,6 +27,7 @@ executor = ExecutionController()
 package_executor = ChangePackageExecutor()
 planner = Planner()
 autonomous_cycle = AutonomousCycle(PROJECT_ROOT)
+access_manager = AccessManager(PROJECT_ROOT)
 
 
 def is_owner(update: Update) -> bool:
@@ -32,14 +35,29 @@ def is_owner(update: Update) -> bool:
     return user is not None and user.id == OWNER_ID
 
 
+def access_message(item: dict) -> str:
+    return (
+        "🔑 درخواست دسترسی\n\n"
+        f"🆔 {item['request_id']}\n"
+        f"⚙️ قابلیت: {item['capability']}\n"
+        f"📦 منبع: {item.get('resource') or '—'}\n"
+        f"🛡️ سطح ریسک: {item.get('risk_level') or '—'}\n"
+        f"🔐 سطح دسترسی: {item.get('access_level') or '—'}\n"
+        f"🎯 هدف: {item.get('goal') or '—'}\n"
+        f"📌 محدوده: {item.get('scope') or '—'}\n"
+        f"📊 وضعیت: {item.get('status') or '—'}\n"
+        f"🔒 اعتبارنامه فعال: {'بله' if item.get('credentials_acquired') else 'خیر'}"
+    )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update): return
-    await update.message.reply_text("🧠 Master Agent فعال شد.\n\n👑 مالک\n🔐 تأیید مالک: فعال\n🛡️ Execution Controller: فعال\n\nدستورها:\n/goal متن هدف\n/cycle [هدف] اجرای چرخه امن\n/status وضعیت سیستم\n/tasks اهداف\n/approvals تأییدها\n/help راهنما")
+    await update.message.reply_text("🧠 Master Agent فعال شد.\n\n👑 مالک\n🔐 تأیید مالک: فعال\n🛡️ Execution Controller: فعال\n🔑 Access Manager: فعال\n\nدستورها:\n/goal متن هدف\n/cycle [هدف] اجرای چرخه امن\n/status وضعیت سیستم\n/tasks اهداف\n/approvals تأییدها\n/access دسترسی‌ها\n/help راهنما")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update): return
-    await update.message.reply_text("📚 راهنما\n\n/goal ثبت هدف\n/cycle [هدف] چرخه امن و ساخت بسته\n/status وضعیت\n/tasks اهداف\n/approvals درخواست‌های تأیید")
+    await update.message.reply_text("📚 راهنما\n\n/goal ثبت هدف\n/cycle [هدف] چرخه امن و ساخت بسته\n/status وضعیت\n/tasks اهداف\n/approvals درخواست‌های تأیید\n/access مدیریت درخواست‌های دسترسی")
 
 
 async def cycle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -52,7 +70,8 @@ async def cycle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = autonomous_cycle.run(goal_text)
         report, safety = result["report"], result["safety"]
         package, approval = result.get("package"), result.get("approval_request")
-        completed = "، ".join(report["completed"]) or "—"; pending = "، ".join(report["pending"]) or "—"
+        completed = "، ".join(report["completed"]) or "—"
+        pending = "، ".join(report["pending"]) or "—"
         package_text = (f"\n📦 بسته: {package['package_id']}\n🔐 درخواست تأیید: {approval['id']}\n⏳ تأیید مالک برای انتقال لازم است." if package and approval else "\n📦 بسته ساخته نشد؛ چرخه نیازمند بررسی است.")
         await update.message.reply_text(f"🧠 چرخه امن\n\n🎯 هدف: {goal_text}\n🔄 چرخه: {report['cycle']}\n📍 مرحله: {report['phase']}\n\n✅ انجام‌شده: {completed}\n⏳ باقی‌مانده: {pending}\n🔐 تأیید مالک: فعال\n🛡️ Sandbox: فعال\n🚫 تغییر واقعی قبل از تأیید: {'مجاز' if safety['real_changes_allowed'] else 'غیرمجاز'}{package_text}")
     except Exception as exc:
@@ -64,7 +83,8 @@ async def goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update): return
     text = " ".join(context.args).strip()
     if not text:
-        await update.message.reply_text("❗ مثال:\n/goal ساخت و توسعه سایت شرکت"); return
+        await update.message.reply_text("❗ مثال:\n/goal ساخت و توسعه سایت شرکت")
+        return
     plan = planner.create_plan(text)
     item = autonomous_cycle.master.set_goal(text)
     plan_text = "\n".join(f"{i}. {action}" for i, action in enumerate(plan["actions"], 1))
@@ -75,59 +95,149 @@ async def goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update): return
     s = autonomous_cycle.master.status()
-    await update.message.reply_text(f"🧠 وضعیت Master Agent\n\n🟢 سیستم: فعال\n🎯 اهداف ثبت‌شده در Core: {s.get('goals', 0)}\n🔄 چرخه‌ها: {s['cycles']}\n🔐 تأیید مالک: فعال\n🛡️ Execution Controller: فعال\n📦 Change Package: فعال\n🔄 Autonomous Cycle: فعال\n🧪 اجرای کد تولیدشده: غیرفعال\n🧬 خودسازی: کنترل‌شده")
+    a = access_manager.status()
+    await update.message.reply_text(f"🧠 وضعیت Master Agent\n\n🟢 سیستم: فعال\n🎯 اهداف ثبت‌شده در Core: {s.get('goals', 0)}\n🔄 چرخه‌ها: {s['cycles']}\n🔐 تأیید مالک: فعال\n🛡️ Execution Controller: فعال\n📦 Change Package: فعال\n🔄 Autonomous Cycle: فعال\n🔑 Access Manager: فعال ({a.get('total', 0)} درخواست)\n🧪 اجرای کد تولیدشده: غیرفعال\n🧬 خودسازی: کنترل‌شده")
 
 
 async def tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update): return
     stored = autonomous_cycle.master.state.get("goals", [])
-    if not stored: await update.message.reply_text("📋 هنوز هدفی ثبت نشده است."); return
+    if not stored:
+        await update.message.reply_text("📋 هنوز هدفی ثبت نشده است.")
+        return
     await update.message.reply_text("📋 اهداف ذخیره‌شده:\n\n" + "\n".join(f"#{x['id']} — {x['status']}\n{x['text']}\n" for x in stored))
 
 
 async def approvals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_owner(update): return
     waiting = gateway.get_waiting()
-    if not waiting: await update.message.reply_text("📭 درخواست تأیید در انتظار وجود ندارد."); return
+    if not waiting:
+        await update.message.reply_text("📭 درخواست تأیید در انتظار وجود ندارد.")
+        return
     for item in waiting:
-        metadata=item.get("metadata") or {}; package_line=f"📦 بسته: {metadata['package_id']}\n" if metadata.get("package_id") else ""
-        message=f"🔐 درخواست تأیید مالک\n\n🆔 {item['id']}\n⚙️ {item['action']}\n📝 {item.get('reason','')}\n{package_line}\nآیا اجازه اجرا می‌دهید?"
-        keyboard=[[InlineKeyboardButton("✅ تأیید",callback_data=f"approve:{item['id']}"),InlineKeyboardButton("❌ رد",callback_data=f"reject:{item['id']}")]]
-        await update.message.reply_text(message,reply_markup=InlineKeyboardMarkup(keyboard))
+        metadata = item.get("metadata") or {}
+        package_line = f"📦 بسته: {metadata['package_id']}\n" if metadata.get("package_id") else ""
+        message = f"🔐 درخواست تأیید مالک\n\n🆔 {item['id']}\n⚙️ {item['action']}\n📝 {item.get('reason','')}\n{package_line}\nآیا اجازه اجرا می‌دهید?"
+        keyboard = [[InlineKeyboardButton("✅ تأیید", callback_data=f"approve:{item['id']}"), InlineKeyboardButton("❌ رد", callback_data=f"reject:{item['id']}")]]
+        await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(keyboard))
+
+
+async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_owner(update): return
+    items = access_manager.status().get("requests", [])
+    if not items:
+        await update.message.reply_text("🔑 هیچ درخواست دسترسی ثبت نشده است.")
+        return
+    for item in items:
+        status = item.get("status")
+        if status not in {"waiting_owner_approval", "approved_pending_activation"}:
+            continue
+        keyboard = []
+        if status == "waiting_owner_approval":
+            keyboard = [[InlineKeyboardButton("✅ تأیید دسترسی", callback_data=f"access:approve:{item['request_id']}"), InlineKeyboardButton("❌ لغو", callback_data=f"access:revoke:{item['request_id']}")]]
+        else:
+            keyboard = [[InlineKeyboardButton("🚫 لغو دسترسی", callback_data=f"access:revoke:{item['request_id']}")]]
+        await update.message.reply_text(access_message(item), reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 async def approval_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query=update.callback_query
+    query = update.callback_query
     if query is None: return
-    if query.from_user.id != OWNER_ID: await query.answer("⛔ فقط مالک اجازه دارد.",show_alert=True); return
+    if query.from_user.id != OWNER_ID:
+        await query.answer("⛔ فقط مالک اجازه دارد.", show_alert=True)
+        return
     await query.answer()
-    try: action, request_id_text=query.data.split(":"); request_id=int(request_id_text)
-    except (ValueError,AttributeError): await query.edit_message_text("❌ درخواست نامعتبر است."); return
-    request=gateway.get(request_id)
-    if request is None: await query.edit_message_text("❌ درخواست پیدا نشد."); return
-    if request["status"] != "waiting_approval": await query.edit_message_text(f"ℹ️ درخواست {request_id} قبلاً تعیین تکلیف شده است."); return
-    if action == "reject": gateway.reject(request_id); await query.edit_message_text(f"❌ درخواست {request_id} رد شد.\nهیچ اجرایی انجام نشد."); return
-    if action != "approve": await query.edit_message_text("❌ اقدام نامعتبر است."); return
-    metadata=request.get("metadata") or {}; package_id=metadata.get("package_id")
-    approved=gateway.approve(request_id)
-    if not approved: await query.edit_message_text("❌ تأیید انجام نشد."); return
+    try:
+        parts = query.data.split(":")
+        if len(parts) != 2:
+            raise ValueError
+        action, request_id_text = parts
+        request_id = int(request_id_text)
+    except (ValueError, AttributeError):
+        await query.edit_message_text("❌ درخواست نامعتبر است.")
+        return
+    request = gateway.get(request_id)
+    if request is None:
+        await query.edit_message_text("❌ درخواست پیدا نشد.")
+        return
+    if request["status"] != "waiting_approval":
+        await query.edit_message_text(f"ℹ️ درخواست {request_id} قبلاً تعیین تکلیف شده است.")
+        return
+    if action == "reject":
+        gateway.reject(request_id)
+        await query.edit_message_text(f"❌ درخواست {request_id} رد شد.\nهیچ اجرایی انجام نشد.")
+        return
+    if action != "approve":
+        await query.edit_message_text("❌ اقدام نامعتبر است.")
+        return
+    metadata = request.get("metadata") or {}
+    package_id = metadata.get("package_id")
+    approved = gateway.approve(request_id)
+    if not approved:
+        await query.edit_message_text("❌ تأیید انجام نشد.")
+        return
     if request["action"] == "change_package_deploy" and package_id:
-        try: result=package_executor.execute(package_id,request_id)
-        except Exception as exc: logging.exception("Package promotion failed"); await query.edit_message_text(f"⛔ تأیید ثبت شد اما انتقال متوقف شد.\n\nخطا: {exc}"); return
-        if result.get("success"): await query.edit_message_text(f"✅ درخواست {request_id} تأیید و بسته منتقل شد.\n\n📦 {package_id}\n💾 Backup: {result['backup_path']}\n📁 فایل‌ها: {', '.join(result['promoted_files']) or '—'}\n🛡️ کد تولیدشده اجرا نشد.")
-        else: await query.edit_message_text(f"⛔ انتقال انجام نشد.\n\nوضعیت: {result.get('status')}")
+        try:
+            result = package_executor.execute(package_id, request_id)
+        except Exception as exc:
+            logging.exception("Package promotion failed")
+            await query.edit_message_text(f"⛔ تأیید ثبت شد اما انتقال متوقف شد.\n\nخطا: {exc}")
+            return
+        if result.get("success"):
+            await query.edit_message_text(f"✅ درخواست {request_id} تأیید و بسته منتقل شد.\n\n📦 {package_id}\n💾 Backup: {result['backup_path']}\n📁 فایل‌ها: {', '.join(result['promoted_files']) or '—'}\n🛡️ کد تولیدشده اجرا نشد.")
+        else:
+            await query.edit_message_text(f"⛔ انتقال انجام نشد.\n\nوضعیت: {result.get('status')}")
         return
     await query.edit_message_text(f"✅ درخواست {request_id} تأیید شد؛ اما بسته تغییر ندارد.\n⛔ اجرای واقعی انجام نشد.")
 
 
+async def access_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if query is None: return
+    if query.from_user.id != OWNER_ID:
+        await query.answer("⛔ فقط مالک اجازه دارد.", show_alert=True)
+        return
+    await query.answer()
+    try:
+        parts = query.data.split(":")
+        if len(parts) != 3 or parts[0] != "access":
+            raise ValueError
+        action, request_id = parts[1], parts[2]
+    except (ValueError, AttributeError):
+        await query.edit_message_text("❌ درخواست دسترسی نامعتبر است.")
+        return
+    try:
+        if action == "approve":
+            item = access_manager.approve(request_id)
+            text = "✅ دسترسی برای مرحله فعال‌سازی تأیید شد.\n🔒 اعتبارنامه هنوز فعال نشده است."
+        elif action == "revoke":
+            item = access_manager.revoke(request_id)
+            text = "🚫 دسترسی لغو شد.\n🔒 هیچ اعتبارنامه‌ای فعال نشد."
+        else:
+            await query.edit_message_text("❌ اقدام نامعتبر است.")
+            return
+    except (KeyError, ValueError) as exc:
+        await query.edit_message_text(f"⛔ عملیات انجام نشد.\n\n{exc}")
+        return
+    await query.edit_message_text(text + "\n\n" + access_message(item))
+
+
 def main():
-    if not TOKEN: raise RuntimeError("TELEGRAM_BOT_TOKEN تنظیم نشده است.")
-    if OWNER_ID == 0: raise RuntimeError("OWNER_ID تنظیم نشده است.")
-    app=Application.builder().token(TOKEN).build()
-    for command,handler in (("start",start),("help",help_command),("cycle",cycle),("goal",goal),("status",status),("tasks",tasks),("approvals",approvals)): app.add_handler(CommandHandler(command,handler))
+    if not TOKEN:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN تنظیم نشده است.")
+    if OWNER_ID == 0:
+        raise RuntimeError("OWNER_ID تنظیم نشده است.")
+    app = Application.builder().token(TOKEN).build()
+    for command, handler in (("start", start), ("help", help_command), ("cycle", cycle), ("goal", goal), ("status", status), ("tasks", tasks), ("approvals", approvals), ("access", access)):
+        app.add_handler(CommandHandler(command, handler))
+    app.add_handler(CallbackQueryHandler(access_callback, pattern=r"^access:"))
     app.add_handler(CallbackQueryHandler(approval_callback))
-    print("🧠 Master Agent Telegram Bot is running..."); print("🔐 Owner Approval: ACTIVE"); print("📦 Change Package Promotion: ACTIVE")
+    print("🧠 Master Agent Telegram Bot is running...")
+    print("🔐 Owner Approval: ACTIVE")
+    print("📦 Change Package Promotion: ACTIVE")
+    print("🔑 Access Manager: ACTIVE")
     app.run_polling()
 
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()
