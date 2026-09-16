@@ -20,7 +20,9 @@ class SupervisorAlreadyRunning(RuntimeError):
 class AutonomousSupervisor:
     """Continuously advance safe autonomous cycles with observable runtime health."""
 
-    def __init__(self, project_root: Optional[Union[str, Path]] = None, interval_seconds: int = 60,
+    DEFAULT_INTERVAL_SECONDS = 15
+
+    def __init__(self, project_root: Optional[Union[str, Path]] = None, interval_seconds: int = DEFAULT_INTERVAL_SECONDS,
                  cycle_factory: Optional[Callable[[Path], AutonomousCycle100]] = None) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parent.parent).resolve()
         self.interval_seconds = max(1, int(interval_seconds))
@@ -141,10 +143,6 @@ class AutonomousSupervisor:
             f"approval:{r.get('id')}:{r.get('action')}" for r in waiting
             if r.get("action") == "change_package_deploy"
         ]
-
-        # A waiting deployment approval is a hard safety boundary: do not start
-        # another cycle until the owner resolves it. Other approval types do not
-        # freeze unrelated sandbox work.
         if pending_before_cycle:
             report = {
                 "cycle": None,
@@ -158,10 +156,8 @@ class AutonomousSupervisor:
             }
             result = {"report": report, "tests": None, "package": None,
                       "approval_request": None, "safety": {
-                          "sandbox_only": True,
-                          "generated_code_executed": False,
-                          "remote_site_write": False,
-                          "real_deployment": False,
+                          "sandbox_only": True, "generated_code_executed": False,
+                          "remote_site_write": False, "real_deployment": False,
                           "owner_approval_required": True,
                       }}
             self._save_state(self._base_state(
@@ -170,7 +166,6 @@ class AutonomousSupervisor:
                 pending=pending_before_cycle, approval_pending=True, resumed=promoted,
             ))
             return result
-
         try:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
@@ -179,21 +174,15 @@ class AutonomousSupervisor:
                 error=str(exc), pid=os.getpid(), pending=pending_before_cycle,
             ))
             raise
-
         report = result.get("report", {})
         cycle_pending = report.get("pending", [])
         all_pending = list(dict.fromkeys(pending_before_cycle + list(cycle_pending)))
         blocked = any(str(item).startswith("approval:") for item in all_pending)
         self._save_state(self._base_state(
-            status="blocked" if blocked else "running",
-            pid=os.getpid(),
-            last_cycle=report.get("cycle"),
-            last_phase=report.get("phase"),
-            last_goal=report.get("goal"),
-            blocked=blocked,
-            pending=all_pending,
-            approval_pending=bool(all_pending),
-            resumed=promoted,
+            status="blocked" if blocked else "running", pid=os.getpid(),
+            last_cycle=report.get("cycle"), last_phase=report.get("phase"),
+            last_goal=report.get("goal"), blocked=blocked, pending=all_pending,
+            approval_pending=bool(all_pending), resumed=promoted,
         ))
         return result
 
@@ -222,7 +211,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the safe autonomous supervisor")
     parser.add_argument("--goal", default=os.environ.get("MASTER_AGENT_GOAL"))
     parser.add_argument("--interval", type=int,
-                        default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", "300")))
+                        default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", str(AutonomousSupervisor.DEFAULT_INTERVAL_SECONDS))))
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--stop", action="store_true", help="request a running supervisor to stop")
     parser.add_argument("--status", action="store_true", help="show current supervisor runtime status")
