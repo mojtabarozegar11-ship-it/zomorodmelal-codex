@@ -5,9 +5,11 @@ import json
 import os
 from datetime import datetime
 
+from .access_manager import AccessManager
+
 
 class MasterCore:
-    VERSION = "1.1.2"
+    VERSION = "1.1.3"
 
     def __init__(self, root=None):
         self.root = os.path.abspath(root or os.path.join(os.path.dirname(__file__), ".."))
@@ -16,6 +18,7 @@ class MasterCore:
         self.state_file = os.path.join(self.data_dir, "master_core_state.json")
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.sandbox_dir, exist_ok=True)
+        self.access_manager = AccessManager(self.root)
         self.state = self._load_state()
 
     def _defaults(self):
@@ -23,47 +26,33 @@ class MasterCore:
 
     def _normalize_state(self, state):
         defaults = self._defaults()
-        if not isinstance(state, dict):
-            state = {}
+        if not isinstance(state, dict): state = {}
         for key, value in defaults.items():
-            if key not in state or state[key] is None:
-                state[key] = value.copy() if isinstance(value, list) else value
+            if key not in state or state[key] is None: state[key] = value.copy() if isinstance(value, list) else value
         state["version"] = self.VERSION
         return state
 
     def _load_state(self):
         if not os.path.exists(self.state_file):
-            state = self._defaults()
-            self._save_state(state)
-            return state
+            state = self._defaults(); self._save_state(state); return state
         try:
-            with open(self.state_file, "r", encoding="utf-8") as f:
-                return self._normalize_state(json.load(f))
-        except Exception:
-            return self._defaults()
+            with open(self.state_file, "r", encoding="utf-8") as f: return self._normalize_state(json.load(f))
+        except Exception: return self._defaults()
 
     def _save_state(self, state=None):
-        if state is not None:
-            self.state = self._normalize_state(state)
-        else:
-            self.state = self._normalize_state(self.state)
+        if state is not None: self.state = self._normalize_state(state)
+        else: self.state = self._normalize_state(self.state)
         tmp = self.state_file + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(self.state, f, ensure_ascii=False, indent=2)
+        with open(tmp, "w", encoding="utf-8") as f: json.dump(self.state, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.state_file)
 
     def set_goal(self, goal):
-        self.state = self._normalize_state(self.state)
-        goal = str(goal).strip()
-        if not goal:
-            raise ValueError("goal is required")
+        self.state = self._normalize_state(self.state); goal = str(goal).strip()
+        if not goal: raise ValueError("goal is required")
         for item in reversed(self.state["goals"]):
-            if item.get("text") == goal and item.get("status") == "active":
-                return item
+            if item.get("text") == goal and item.get("status") == "active": return item
         item = {"id": max((int(x.get("id", 0)) for x in self.state["goals"]), default=0) + 1, "text": goal, "status": "active", "created_at": datetime.now().isoformat()}
-        self.state["goals"].append(item)
-        self._save_state()
-        return item
+        self.state["goals"].append(item); self._save_state(); return item
 
     def discover_project(self):
         files=[]; ignored={".git","__pycache__",".venv","venv","node_modules"}
@@ -93,8 +82,7 @@ class MasterCore:
         self.state["capabilities"]=sorted(capabilities); return sorted(capabilities)
 
     def discover_agents(self):
-        self.state = self._normalize_state(self.state)
-        agents=[]; agent_dir=os.path.join(self.root,"agents")
+        self.state = self._normalize_state(self.state); agents=[]; agent_dir=os.path.join(self.root,"agents")
         if os.path.isdir(agent_dir):
             for name in os.listdir(agent_dir):
                 if name.endswith(".py"): agents.append({"name":name[:-3],"source":"agents","status":"discovered"})
@@ -111,11 +99,9 @@ class MasterCore:
 
     def discover_access_requirements(self):
         self.state = self._normalize_state(self.state)
-        req=[]; caps=self.state.get("capabilities",[])
-        if "research" in caps: req.append({"resource":"internet_research","level":"read","status":"identified","owner_approval_required":True})
-        if "execution_control" in caps: req.append({"resource":"execution_environment","level":"restricted","status":"identified","owner_approval_required":True})
-        if "orchestration" in caps: req.append({"resource":"agent_runtime","level":"restricted","status":"identified","owner_approval_required":True})
-        self.state["access_requests"]=req; return req
+        requirements = self.access_manager.discover(self.state.get("capabilities", []))
+        self.state["access_requests"] = requirements
+        return requirements
 
     def create_proposals(self, missing, designs):
         self.state = self._normalize_state(self.state)
@@ -133,4 +119,4 @@ class MasterCore:
 
     def status(self):
         self.state = self._normalize_state(self.state)
-        return {"master_core":True,"version":self.VERSION,"cycles":self.state.get("cycles",0),"goals":len(self.state.get("goals",[])),"agents":len(self.state.get("agents",[])),"capabilities":len(self.state.get("capabilities",[])),"proposals":len(self.state.get("proposals",[])),"owner_approval_required":True,"real_changes_allowed":False,"sandbox_only":True}
+        return {"master_core":True,"version":self.VERSION,"cycles":self.state.get("cycles",0),"goals":len(self.state.get("goals",[])),"agents":len(self.state.get("agents",[])),"capabilities":len(self.state.get("capabilities",[])),"proposals":len(self.state.get("proposals",[])),"access_requests":len(self.state.get("access_requests",[])),"owner_approval_required":True,"real_changes_allowed":False,"sandbox_only":True}
