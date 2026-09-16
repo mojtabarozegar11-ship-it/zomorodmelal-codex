@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict
 
+from approval.approval_gateway import ApprovalGateway
 from autonomous_core.autonomous_cycle import AutonomousCycle
+from controller.change_package_executor import ChangePackageExecutor
 
 
 class SupervisorAlreadyRunning(RuntimeError):
@@ -28,6 +30,8 @@ class AutonomousSupervisor:
         self.control_path = self.project_root / "data" / "supervisor_control.json"
         self.stop_requested = False
         self._lock_owned = False
+        self.approval = ApprovalGateway(self.project_root)
+        self.package_executor = ChangePackageExecutor(self.project_root)
 
     def request_stop(self) -> None:
         self.stop_requested = True
@@ -104,7 +108,38 @@ class AutonomousSupervisor:
         return {"owner_approval_required": True, "real_changes_allowed": False,
                 "updated_at": datetime.now(timezone.utc).isoformat(), **values}
 
+    def _waiting_approvals(self) -> list[Dict[str, Any]]:
+        return self.approval.get_waiting()
+
+    def _resume_approved_packages(self) -> list[Dict[str, Any]]:
+        """Execute only already-approved package promotions, never request approval here."""
+        results: list[Dict[str, Any]] = []
+        for request in self.approval.get_all():
+            if request.get("action") != "change_package_deploy" or request.get("status") != "approved":
+                continue
+            metadata = request.get("metadata") or {}
+            package_id = metadata.get("package_id")
+            if not package_id:
+                continue
+            result = self.package_executor.execute(package_id, int(request["id"]))
+            results.append(result)
+        return results
+
     def run_once(self, goal: str | None = None) -> Dict[str, Any]:
+        # First resume work that the owner has already approved.
+        promoted = self._resume_approved_packages()
+        waiting = self._waiting_approvals()
+        if waiting:
+            self._save_state(self._base_state(
+                status="waiting_owner_approval", pid=os.getpid(), blocked=True,
+                pending=[f"approval:{r.get('id')}:{r.get('action')}" for r in waiting],
+                resumed=promoted))
+            return {"report": {"cycle": None, "phase": "approval", "goal": goal,
+                                "completed": ["resume_approved_packages"] if promoted else [],
+                                "pending": [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting],
+                                "owner_approval_required": True, "real_changes_allowed": False,
+                                "timestamp": datetime.now(timezone.utc).isoformat()},
+                    "promoted": promoted, "waiting_approvals": waiting}
         try:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
@@ -117,7 +152,8 @@ class AutonomousSupervisor:
         self._save_state(self._base_state(
             status="blocked" if pending else "running",
             pid=os.getpid(), last_cycle=report.get("cycle"), last_phase=report.get("phase"),
-            last_goal=report.get("goal"), blocked=bool(pending), pending=pending))
+            last_goal=report.get("goal"), blocked=bool(pending), pending=pending,
+            resumed=promoted))
         return result
 
     def run_forever(self, goal: str | None = None) -> None:
@@ -127,19 +163,12 @@ class AutonomousSupervisor:
             self._save_state(self._base_state(status="starting", pid=os.getpid(), blocked=False, pending=[]))
             while not self.stop_requested:
                 try:
-                    result = self.run_once(goal)
+                    self.run_once(goal)
                 except Exception:
                     time.sleep(self.interval_seconds)
                     if self.desired_state() == "stopped":
                         self.stop_requested = True
                     continue
-                report = result.get("report", {})
-                pending = report.get("pending", [])
-                if pending:
-                    self._save_state(self._base_state(
-                        status="waiting_owner_approval", pid=os.getpid(),
-                        last_cycle=report.get("cycle"), last_phase=report.get("phase"),
-                        last_goal=report.get("goal"), blocked=True, pending=pending))
                 time.sleep(self.interval_seconds)
                 if self.desired_state() == "stopped":
                     self.stop_requested = True
