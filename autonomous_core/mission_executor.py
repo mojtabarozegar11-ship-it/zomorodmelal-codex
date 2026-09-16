@@ -36,6 +36,13 @@ class MissionExecutor:
 
         mission_id = str(mission.get("id"))
         mission_type = str(mission.get("type", "improvement"))
+        if mission_type in {"approval", "deploy"} or str(mission.get("status")) == "awaiting_owner_approval":
+            result = {"status": "waiting_owner_approval", "mission": mission_id,
+                      "owner_approval_required": True, "real_world_changes": False, "sandbox_only": True,
+                      "timestamp": datetime.now(timezone.utc).isoformat()}
+            self._save(result)
+            return result
+
         attempt = int(mission.get("attempt", 0) or 0) + 1
         if mission_type == "self_repair":
             if attempt > self.MAX_REPAIR_ATTEMPTS:
