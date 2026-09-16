@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.autonomous_cycle_100 import AutonomousCycle100
+from autonomous_core.continuous_controller import ContinuousController
 from controller.change_package_executor import ChangePackageExecutor
 
 
@@ -34,6 +35,7 @@ class AutonomousSupervisor:
         self._lock_owned = False
         self.approval = ApprovalGateway(self.project_root)
         self.package_executor = ChangePackageExecutor(self.project_root)
+        self.continuous = ContinuousController(self.project_root)
 
     def request_stop(self) -> None:
         self.stop_requested = True
@@ -65,6 +67,7 @@ class AutonomousSupervisor:
         status = state.get("status", "stopped")
         if lock_exists and status == "stopped":
             status = "starting"
+        continuous = self.continuous.next_action()
         return {
             "status": status,
             "desired_state": self.desired_state(),
@@ -77,6 +80,10 @@ class AutonomousSupervisor:
             "updated_at": state.get("updated_at"),
             "blocked": bool(state.get("blocked", False)),
             "pending": state.get("pending", []),
+            "continuous_action": continuous.get("action"),
+            "repair_attempts": continuous.get("repair_attempts", 0),
+            "max_repair_attempts": continuous.get("max_repair_attempts", 3),
+            "automatic_repair": continuous.get("automatic", False),
             "master_agent": "MasterAgent100",
             "master_version": "100.0.0",
             "max_generation": 100,
@@ -109,92 +116,69 @@ class AutonomousSupervisor:
         temp.replace(self.state_path)
 
     def _base_state(self, **values: Any) -> Dict[str, Any]:
-        return {
-            "owner_approval_required": True,
-            "real_changes_allowed": False,
-            "master_agent": "MasterAgent100",
-            "master_version": "100.0.0",
-            "max_generation": 100,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            **values,
-        }
+        return {"owner_approval_required": True, "real_changes_allowed": False,
+                "master_agent": "MasterAgent100", "master_version": "100.0.0", "max_generation": 100,
+                "updated_at": datetime.now(timezone.utc).isoformat(), **values}
 
     def _waiting_approvals(self) -> List[Dict[str, Any]]:
         return self.approval.get_waiting()
 
     def _resume_approved_packages(self) -> List[Dict[str, Any]]:
-        """Execute only already-approved package promotions."""
         results: List[Dict[str, Any]] = []
         for request in self.approval.get_all():
             if request.get("action") != "change_package_deploy" or request.get("status") != "approved":
                 continue
             metadata = request.get("metadata") or {}
             package_id = metadata.get("package_id")
-            if not package_id:
-                continue
-            results.append(self.package_executor.execute(package_id, int(request["id"])))
+            if package_id:
+                results.append(self.package_executor.execute(package_id, int(request["id"])))
         return results
 
     @staticmethod
     def _is_approval_pending(report: Dict[str, Any]) -> bool:
-        """Treat both explicit approval phase and legacy approval markers as blocked."""
         if report.get("phase") == "approval":
             return True
-        for item in report.get("pending", []) or []:
-            marker = str(item).lower()
-            if marker.startswith("approval:") or "owner_approval" in marker or "approval_pending" in marker:
-                return True
-        return False
+        return any(str(item).lower().startswith("approval:") or "owner_approval" in str(item).lower()
+                   or "approval_pending" in str(item).lower() for item in report.get("pending", []) or [])
 
     def run_once(self, goal: Optional[str] = None) -> Dict[str, Any]:
-        """Run one safe cycle while respecting deployment-approval blocking."""
         promoted = self._resume_approved_packages()
         waiting = self._waiting_approvals()
-        pending_before_cycle = [
-            f"approval:{r.get('id')}:{r.get('action')}" for r in waiting
-            if r.get("action") == "change_package_deploy"
-        ]
+        pending_before_cycle = [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting
+                                if r.get("action") == "change_package_deploy"]
         if pending_before_cycle:
-            report = {
-                "cycle": None,
-                "phase": "approval",
-                "goal": goal,
-                "completed": [],
-                "pending": pending_before_cycle,
-                "owner_approval_required": True,
-                "real_changes_allowed": False,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-            result = {"report": report, "tests": None, "package": None,
-                      "approval_request": None, "safety": {
-                          "sandbox_only": True, "generated_code_executed": False,
-                          "remote_site_write": False, "real_deployment": False,
-                          "owner_approval_required": True,
-                      }}
-            self._save_state(self._base_state(
-                status="blocked", pid=os.getpid(), last_cycle=None,
-                last_phase="approval", last_goal=goal, blocked=True,
-                pending=pending_before_cycle, approval_pending=True, resumed=promoted,
-            ))
+            report = {"cycle": None, "phase": "approval", "goal": goal, "completed": [],
+                      "pending": pending_before_cycle, "owner_approval_required": True,
+                      "real_changes_allowed": False, "timestamp": datetime.now(timezone.utc).isoformat()}
+            result = {"report": report, "tests": None, "package": None, "approval_request": None,
+                      "safety": {"sandbox_only": True, "generated_code_executed": False,
+                                  "remote_site_write": False, "real_deployment": False,
+                                  "owner_approval_required": True}}
+            continuous = self.continuous.observe(result)
+            self._save_state(self._base_state(status="blocked", pid=os.getpid(), last_cycle=None,
+                last_phase="approval", last_goal=goal, blocked=True, pending=pending_before_cycle,
+                approval_pending=True, continuous_action=continuous["action"],
+                repair_attempts=continuous["repair_attempts"], resumed=promoted))
             return result
         try:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
-            self._save_state(self._base_state(
-                status="error", blocked=True, error_type=type(exc).__name__,
+            error_result = {"report": {"phase": "error", "pending": ["supervisor_exception"], "goal": goal},
+                            "tests": {"passed": False, "failure_kind": "supervisor_exception", "stderr": str(exc)}}
+            continuous = self.continuous.observe(error_result)
+            self._save_state(self._base_state(status="error", blocked=True, error_type=type(exc).__name__,
                 error=str(exc), pid=os.getpid(), pending=pending_before_cycle,
-            ))
+                continuous_action=continuous["action"], repair_attempts=continuous["repair_attempts"]))
             raise
+        continuous = self.continuous.observe(result)
         report = result.get("report", {})
         cycle_pending = report.get("pending", []) or []
         all_pending = list(dict.fromkeys(pending_before_cycle + list(cycle_pending)))
         blocked = self._is_approval_pending(report) or bool(pending_before_cycle)
-        self._save_state(self._base_state(
-            status="blocked" if blocked else "running", pid=os.getpid(),
-            last_cycle=report.get("cycle"), last_phase=report.get("phase"),
-            last_goal=report.get("goal"), blocked=blocked, pending=all_pending,
-            approval_pending=blocked, resumed=promoted,
-        ))
+        self._save_state(self._base_state(status="blocked" if blocked else "running", pid=os.getpid(),
+            last_cycle=report.get("cycle"), last_phase=report.get("phase"), last_goal=report.get("goal"),
+            blocked=blocked, pending=all_pending, approval_pending=blocked,
+            continuous_action=continuous["action"], repair_attempts=continuous["repair_attempts"], resumed=promoted))
         return result
 
     def run_forever(self, goal: Optional[str] = None) -> None:
@@ -221,11 +205,10 @@ class AutonomousSupervisor:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the safe autonomous supervisor")
     parser.add_argument("--goal", default=os.environ.get("MASTER_AGENT_GOAL"))
-    parser.add_argument("--interval", type=int,
-                        default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", str(AutonomousSupervisor.DEFAULT_INTERVAL_SECONDS))))
+    parser.add_argument("--interval", type=int, default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", str(AutonomousSupervisor.DEFAULT_INTERVAL_SECONDS))))
     parser.add_argument("--once", action="store_true")
-    parser.add_argument("--stop", action="store_true", help="request a running supervisor to stop")
-    parser.add_argument("--status", action="store_true", help="show current supervisor runtime status")
+    parser.add_argument("--stop", action="store_true")
+    parser.add_argument("--status", action="store_true")
     return parser.parse_args()
 
 
