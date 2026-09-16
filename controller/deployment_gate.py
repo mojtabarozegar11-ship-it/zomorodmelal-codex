@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
@@ -8,38 +7,31 @@ from typing import Any, Dict, Optional, Union
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.change_package import ChangePackage
 from controller.change_package_executor import ChangePackageExecutor
+from deployment.host_adapter import HostDeploymentAdapter
 
 
 class DeploymentGate:
-    """Final boundary between verified project promotion and real deployment."""
+    """Final boundary between verified promotion and optional real host deployment."""
 
     def __init__(self, root: Optional[Union[str, Path]] = None) -> None:
         self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
         self.approval = ApprovalGateway(self.root)
         self.packages = ChangePackage(self.root / "data" / "change_packages")
         self.executor = ChangePackageExecutor(self.root)
+        self.adapter = HostDeploymentAdapter()
 
     def prepare(self, package_id: str, reason: str) -> Dict[str, Any]:
         package = self.packages.get(package_id)
         if not self.packages.verify_integrity(package):
             raise ValueError("change package integrity check failed")
         request = self.approval.request(
-            "production_deployment",
-            reason,
-            {
-                "package_id": package_id,
-                "package_sha256": package.get("package_sha256"),
-                "target": os.environ.get("MASTER_AGENT_DEPLOY_TARGET", "production"),
-            },
+            "production_deployment", reason,
+            {"package_id": package_id, "package_sha256": package.get("package_sha256"),
+             "target": os.environ.get("MASTER_AGENT_DEPLOY_TARGET", "production")},
         )
-        return {
-            "status": request.get("status"),
-            "request_id": request.get("id"),
-            "package_id": package_id,
-            "package_sha256": package.get("package_sha256"),
-            "owner_approval_required": True,
-            "external_deployment": False,
-        }
+        return {"status": request.get("status"), "request_id": request.get("id"),
+                "package_id": package_id, "package_sha256": package.get("package_sha256"),
+                "owner_approval_required": True, "external_deployment": self.adapter.enabled}
 
     def deploy(self, package_id: str, request_id: int) -> Dict[str, Any]:
         request = self.approval.get(request_id)
@@ -52,16 +44,18 @@ class DeploymentGate:
         if metadata.get("package_id") != package_id or metadata.get("package_sha256") != package.get("package_sha256"):
             return {"success": False, "status": "approval_binding_mismatch", "request_id": request_id}
 
-        # Project promotion is deliberately the only action this component can perform.
-        # External hosting deployment requires a separately configured adapter/secret.
-        return self.executor.execute(package_id, request_id)
+        promotion = self.executor.execute(package_id, request_id)
+        if not promotion.get("success"):
+            return promotion
+        if not self.adapter.enabled:
+            return dict(promotion, external_deployment=False, status="promoted_host_adapter_disabled")
+        remote = self.adapter.deploy()
+        return dict(promotion, external_deployment=True, external_result=remote.__dict__,
+                    status="deployed" if remote.success else "external_deployment_failed")
 
     def status(self) -> Dict[str, Any]:
-        return {
-            "enabled": True,
-            "owner_approval_required": True,
-            "package_hash_binding": True,
-            "external_deployment": False,
-            "external_target_configured": bool(os.environ.get("MASTER_AGENT_DEPLOY_TARGET")),
-            "message": "Production deployment remains disabled until an explicit host adapter is configured.",
-        }
+        return {"enabled": True, "owner_approval_required": True, "package_hash_binding": True,
+                "external_deployment": self.adapter.enabled,
+                "external_target_configured": bool(os.environ.get("MASTER_AGENT_DEPLOY_TARGET")),
+                "adapter_configured": bool(self.adapter.command),
+                "message": "External deployment requires explicit host configuration and owner approval."}
