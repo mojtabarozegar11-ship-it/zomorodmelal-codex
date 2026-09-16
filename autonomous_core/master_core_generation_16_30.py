@@ -100,12 +100,19 @@ class MasterCore30(MasterCore):
         }
 
     def status(self):
-        result = super().status()
-        result.update({
+        result = {
             "version": self.VERSION,
             "max_generation": self.MAX_GENERATION,
+            "cycles": int(self.state.get("cycles", 0)),
+            "generation": int(self.state.get("generation", 1)),
+            "phase": self.state.get("phase", "observe"),
+            "last_cycle": self.state.get("last_cycle"),
+            "last_decision": self.state.get("last_decision"),
+            "owner_approval_required": True,
+            "real_world_changes_allowed": False,
+            "sandbox_only": True,
+            "safety": dict(self.SAFETY_POLICY),
             "generation_16_30": {str(k): v for k, v in self.GENERATIONS.items() if k >= 16},
             "advanced_phases": list(self.ADVANCED_PHASES),
-            "safety": dict(self.SAFETY_POLICY),
-        })
+        }
         return result
