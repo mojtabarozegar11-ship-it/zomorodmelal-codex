@@ -39,24 +39,7 @@ jobs:
         run: |
           python -m compileall -q .
           python -m unittest discover -s tests -v
-      - name: Verify deployment gate
-        env:
-          PACKAGE_ID: ${{ inputs.package_id }}
-          REQUEST_ID: ${{ inputs.request_id }}
-        run: |
-          python - <<'PY'
-          import os
-          from controller.deployment_gate import DeploymentGate
-          gate = DeploymentGate('.')
-          status = gate.status()
-          assert status['owner_approval_required'] is True
-          assert status['package_hash_binding'] is True
-          print(status)
-          print('package_id=', os.environ['PACKAGE_ID'])
-          print('request_id=', os.environ['REQUEST_ID'])
-          PY
-      - name: Execute approved host adapter
-        if: ${{ vars.MASTER_AGENT_DEPLOY_ENABLED == 'true' }}
+      - name: Verify deployment configuration
         env:
           MASTER_AGENT_DEPLOY_ENABLED: ${{ vars.MASTER_AGENT_DEPLOY_ENABLED }}
           MASTER_AGENT_DEPLOY_COMMAND: ${{ secrets.MASTER_AGENT_DEPLOY_COMMAND }}
@@ -64,11 +47,16 @@ jobs:
           python - <<'PY'
           import os
           from deployment.host_adapter import HostDeploymentAdapter
-          result = HostDeploymentAdapter().deploy()
-          print(result)
-          if not result.success:
-              raise SystemExit('approved deployment adapter failed')
+          adapter = HostDeploymentAdapter()
+          print({"enabled": adapter.enabled, "command_configured": bool(adapter.command)})
+          if adapter.enabled and not adapter.command:
+              raise SystemExit('deployment is enabled but the host adapter command is missing')
           PY
-      - name: Safe stop when host adapter is not configured
-        if: ${{ vars.MASTER_AGENT_DEPLOY_ENABLED != 'true' }}
-        run: echo "Host adapter is disabled; no external deployment was performed."
+      - name: Production handoff
+        env:
+          PACKAGE_ID: ${{ inputs.package_id }}
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          echo "Production handoff requested for package ${PACKAGE_ID}, approval request ${REQUEST_ID}."
+          echo "The application DeploymentGate must verify the persisted owner approval and package hash binding before any external deployment."
+          echo "No external deployment is performed by this workflow unless that application-level gate is executed with the approved runtime state."
