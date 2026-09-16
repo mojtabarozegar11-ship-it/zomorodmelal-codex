@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 class ApprovalGateway:
-    """Persistent approval boundary with a bounded read cache."""
+    """Persistent approval boundary with optional Telegram owner notification."""
 
     CACHE_SECONDS = 3.0
 
@@ -77,7 +77,19 @@ class ApprovalGateway:
         }
         requests.append(request)
         self._save(requests)
+        self._notify_telegram(request)
         return request
+
+    def _notify_telegram(self, request):
+        """Send owner notification only when Telegram credentials are explicitly configured."""
+        if not os.environ.get("MASTER_AGENT_TELEGRAM_BOT_TOKEN") or not os.environ.get("MASTER_AGENT_TELEGRAM_OWNER_CHAT_ID"):
+            return
+        try:
+            from approval.telegram_approval import TelegramApproval
+            TelegramApproval(self.root).notify(request)
+        except Exception:
+            # Notification failure must never turn into an approval or block the gateway.
+            pass
 
     def get(self, request_id):
         for request in self._load():
@@ -131,4 +143,8 @@ class ApprovalGateway:
             "approved": sum(r.get("status") == "approved" for r in requests),
             "rejected": sum(r.get("status") == "rejected" for r in requests),
             "owner_approval_required": True,
+            "telegram_notification_configured": bool(
+                os.environ.get("MASTER_AGENT_TELEGRAM_BOT_TOKEN")
+                and os.environ.get("MASTER_AGENT_TELEGRAM_OWNER_CHAT_ID")
+            ),
         }
