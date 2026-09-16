@@ -17,6 +17,7 @@ class SandboxRepairEngine:
     MAX_FILES = 20
     MAX_BYTES_PER_FILE = 512 * 1024
     MAX_TEST_SECONDS = 20
+    ALLOWED_TEST_EXECUTABLES = {"python", "python3", "pytest", "unittest"}
 
     def __init__(self, root: Union[str, Path]) -> None:
         self.root = Path(root).resolve()
@@ -35,7 +36,7 @@ class SandboxRepairEngine:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         directory = self.snapshots / stamp
         directory.mkdir(parents=True, exist_ok=False)
-        manifest: List[Dict[str, Any]] = []
+        manifest = []
         for relative in paths:
             target = self._safe_path(relative)
             if target.exists() and target.is_file():
@@ -63,18 +64,35 @@ class SandboxRepairEngine:
     def _validate_plan(self, changes: List[Dict[str, Any]]) -> None:
         if not changes or len(changes) > self.MAX_FILES:
             raise ValueError("repair plan must contain 1..20 files")
+        seen = set()
         for change in changes:
             relative = str(change.get("path", ""))
             if not relative or relative.startswith("/"):
                 raise ValueError("repair paths must be relative")
+            if relative in seen:
+                raise ValueError("repair plan contains duplicate paths")
+            seen.add(relative)
             if not isinstance(change.get("content"), str):
                 raise ValueError("repair content must be text")
             if len(change["content"].encode("utf-8")) > self.MAX_BYTES_PER_FILE:
                 raise ValueError("repair file exceeds size limit")
             self._safe_path(relative)
 
+    def _validate_test_command(self, test_command: List[str]) -> List[str]:
+        if not isinstance(test_command, list) or not test_command:
+            raise ValueError("test command must be a non-empty list")
+        command = [str(item) for item in test_command]
+        executable = Path(command[0]).name.lower()
+        if executable not in self.ALLOWED_TEST_EXECUTABLES:
+            raise ValueError("test executable is not allowed in sandbox")
+        if any(item in {"&&", "||", ";", "|", ">", ">>", "<"} for item in command):
+            raise ValueError("shell operators are not allowed")
+        if any(".." in Path(item).parts for item in command[1:] if item):
+            raise ValueError("test command path traversal is not allowed")
+        return command
+
     def _verify(self, paths: List[str], test_command: Optional[List[str]]) -> Dict[str, Any]:
-        compile_errors: List[Dict[str, str]] = []
+        compile_errors = []
         for relative in paths:
             target = self._safe_path(relative)
             if target.suffix == ".py":
@@ -86,14 +104,14 @@ class SandboxRepairEngine:
             return {"passed": False, "kind": "compile", "errors": compile_errors}
         if not test_command:
             return {"passed": True, "kind": "compile_only", "returncode": 0}
-        if not isinstance(test_command, list) or not test_command:
-            return {"passed": False, "kind": "invalid_test_command"}
         try:
-            command = [str(item) for item in test_command]
+            command = self._validate_test_command(test_command)
             completed = subprocess.run(command, cwd=self.sandbox, capture_output=True, text=True,
                                        timeout=self.MAX_TEST_SECONDS, shell=False)
             return {"passed": completed.returncode == 0, "kind": "command", "returncode": completed.returncode,
                     "stdout": completed.stdout[-4000:], "stderr": completed.stderr[-4000:]}
+        except ValueError as exc:
+            return {"passed": False, "kind": "invalid_test_command", "error": str(exc)}
         except subprocess.TimeoutExpired as exc:
             return {"passed": False, "kind": "timeout", "error": str(exc)}
         except OSError as exc:
