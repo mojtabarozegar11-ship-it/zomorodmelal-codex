@@ -64,6 +64,9 @@ class AccessManager:
             raise ValueError(f"unknown capability: {capability}")
         spec = self.CATALOG[capability]
         items = self._load()
+        for item in items:
+            if item.get("capability") == capability and item.get("goal") == goal and item.get("scope") == scope and item.get("status") in {"waiting_owner_approval", "approved_pending_activation"}:
+                return item
         material = f"{capability}|{goal}|{scope}|{datetime.now(timezone.utc).isoformat()}"
         request_id = hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
         item = {
@@ -71,7 +74,9 @@ class AccessManager:
             "capability": capability,
             "resource": spec["resource"],
             "level": spec["level"],
+            "access_level": spec["level"],
             "risk": spec["risk"],
+            "risk_level": spec["risk"],
             "goal": goal,
             "scope": scope,
             "status": "waiting_owner_approval",
@@ -111,6 +116,7 @@ class AccessManager:
         return {
             "access_manager": True,
             "total": len(items),
+            "requests": items,
             "waiting_owner_approval": sum(x.get("status") == "waiting_owner_approval" for x in items),
             "approved_pending_activation": sum(x.get("status") == "approved_pending_activation" for x in items),
             "revoked": sum(x.get("status") == "revoked" for x in items),
