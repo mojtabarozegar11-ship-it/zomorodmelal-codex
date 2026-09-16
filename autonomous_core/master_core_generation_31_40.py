@@ -11,7 +11,8 @@ class MasterCore40(MasterCore30):
 
     VERSION = "40.0.0"
     MAX_GENERATION = 40
-    GENERATIONS = dict(MasterCore30.GENERATIONS, **{
+    GENERATIONS = dict(MasterCore30.GENERATIONS)
+    GENERATIONS.update({
         31: "causal_diagnosis_and_root_cause_analysis",
         32: "predictive_failure_prevention",
         33: "mission_dependency_resolution",
