@@ -16,6 +16,7 @@ from autonomous_core.agent_orchestrator import AgentOrchestrator
 from autonomous_core.autonomous_decision_engine import AutonomousDecisionEngine
 from autonomous_core.change_package import ChangePackage
 from autonomous_core.master_core import MasterCore
+from autonomous_core.mission_queue import MissionQueue
 from autonomous_core.safe_builder import SafeBuilder
 from autonomous_core.self_evolution_controller import SelfEvolutionController
 from autonomous_core.site_builder import SiteFeatureBuilder
@@ -62,6 +63,7 @@ class AutonomousCycle:
         self.self_evolution = SelfEvolutionController(self.project_root)
         self.approval = ApprovalGateway(self.project_root)
         self.packages = ChangePackage(self.project_root / "data" / "change_packages")
+        self.missions = MissionQueue(self.project_root)
         self.site_builder = SiteFeatureBuilder()
         self.site_connector = SiteConnector(self.project_root)
         self.decision_engine = AutonomousDecisionEngine(self.project_root)
@@ -203,14 +205,16 @@ class AutonomousCycle:
             except (OSError, TypeError, ValueError) as exc:
                 repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, cycle); pending.append(f"build_error: {exc}")
         evolution = self.self_evolution.evaluate(test_result, len(self.orchestrator.factory.list_agents())); completed.extend(["learn", "evolve"])
-        next_mission = core.get("next_mission") or (repair_mission if repair_mission is not None else {
+        proposed_next = core.get("next_mission") or (repair_mission if repair_mission is not None else {
             "id": "await_owner_approval" if pending else "continuous.improvement",
             "type": "approval" if pending else "improvement",
             "goal": effective_goal,
             "status": "awaiting_owner_approval" if pending else "ready",
         })
+        queued = self.missions.enqueue(proposed_next)
+        next_mission = self.missions.peek() or queued or proposed_next
         report = CycleReport(cycle, "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "evolve"), effective_goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat())
-        return {"report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan, "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution, "package": package, "approval_request": approval_request, "next_mission": next_mission, "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
+        return {"report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan, "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution, "package": package, "approval_request": approval_request, "next_mission": next_mission, "mission_queue": self.missions.pending(), "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
 
 
 if __name__ == "__main__":
