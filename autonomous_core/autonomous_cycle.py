@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.agent_orchestrator import AgentOrchestrator
@@ -28,7 +28,7 @@ from testing.testing_engine import TestingEngine
 class CycleReport:
     cycle: int
     phase: str
-    goal: str | None
+    goal: Optional[str]
     completed: List[str]
     pending: List[str]
     owner_approval_required: bool
@@ -47,7 +47,7 @@ class AutonomousCycle:
     TEST_CACHE_SECONDS = 120.0
     FAST_TEST_MODULES = ("tests.test_master_core", "tests.test_autonomous_cycle_goal")
 
-    def __init__(self, project_root: str | Path | None = None) -> None:
+    def __init__(self, project_root: Optional[Path] = None) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parent.parent).resolve()
         self.source_root = Path(__file__).resolve().parent.parent
         self.master = MasterCore(self.project_root)
@@ -64,7 +64,7 @@ class AutonomousCycle:
         self.test_cache_file = self.project_root / "data" / "autonomous_test_cache.json"
 
     @staticmethod
-    def _read_json(path: Path) -> Dict[str, Any] | None:
+    def _read_json(path: Path) -> Optional[Dict[str, Any]]:
         try:
             if path.exists():
                 value = json.loads(path.read_text(encoding="utf-8"))
@@ -73,7 +73,7 @@ class AutonomousCycle:
             return None
         return None
 
-    def _persist_project_discovery(self, core: Dict[str, Any], force: bool = False) -> Dict[str, Any] | None:
+    def _persist_project_discovery(self, core: Dict[str, Any], force: bool = False) -> Optional[Dict[str, Any]]:
         path = self.project_root / "data" / "project_discovery.json"
         if not force:
             cached = self._read_json(path)
@@ -102,7 +102,7 @@ class AutonomousCycle:
             return cached
         return self.site_connector.discover()
 
-    def _sandbox_build(self, core: Dict[str, Any], goal: str | None) -> Dict[str, Any]:
+    def _sandbox_build(self, core: Dict[str, Any], goal: Optional[str]) -> Dict[str, Any]:
         sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"
         builder = SafeBuilder(sandbox)
         files: Dict[str, str] = {"cycle_manifest.json": json.dumps({
@@ -118,7 +118,7 @@ class AutonomousCycle:
             return []
         return list(self.FAST_TEST_MODULES)
 
-    def _test_fingerprint(self, goal: str | None) -> str:
+    def _test_fingerprint(self, goal: Optional[str]) -> str:
         h = hashlib.sha256(str(goal or "").encode("utf-8"))
         snapshot = self._read_json(self.project_root / "data" / "project_discovery.json") or {}
         paths = [x.get("path") for x in snapshot.get("files", []) if isinstance(x, dict) and x.get("path")]
@@ -132,8 +132,9 @@ class AutonomousCycle:
                 h.update((relative + ":missing").encode("utf-8"))
         return h.hexdigest()
 
-    def _cached_test(self, fingerprint: str, cycle: int) -> Dict[str, Any] | None:
-        if cycle % self.FULL_TEST_INTERVAL == 0 or os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower() in {"1", "true", "yes", "on"}:
+    def _cached_test(self, fingerprint: str, cycle: int) -> Optional[Dict[str, Any]]:
+        full_tests = cycle % self.FULL_TEST_INTERVAL == 0 or os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower() in {"1", "true", "yes", "on"}
+        if full_tests:
             return None
         cached = self._read_json(self.test_cache_file)
         if not cached or cached.get("fingerprint") != fingerprint or not cached.get("passed"):
@@ -157,7 +158,7 @@ class AutonomousCycle:
         tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.test_cache_file)
 
-    def _run_tests(self, cycle: int = 0, goal: str | None = None) -> Dict[str, Any]:
+    def _run_tests(self, cycle: int = 0, goal: Optional[str] = None) -> Dict[str, Any]:
         fingerprint = self._test_fingerprint(goal)
         cached = self._cached_test(fingerprint, cycle)
         if cached is not None:
@@ -183,7 +184,7 @@ class AutonomousCycle:
         self._store_test(fingerprint, result)
         return result
 
-    def _repair_mission(self, goal: str | None, test_result: Dict[str, Any], cycle: int) -> Dict[str, Any]:
+    def _repair_mission(self, goal: Optional[str], test_result: Dict[str, Any], cycle: int) -> Dict[str, Any]:
         plan = self.orchestrator.route(f"repair: {goal or 'autonomous test failure'}")
         mission = {"cycle": cycle, "type": "self_repair", "status": "queued_for_sandbox_repair", "goal": goal,
                    "failure_kind": test_result.get("failure_kind"), "returncode": test_result.get("returncode"),
@@ -196,7 +197,7 @@ class AutonomousCycle:
         tmp.replace(path)
         return mission
 
-    def run(self, goal: str | None = None) -> Dict[str, Any]:
+    def run(self, goal: Optional[str] = None) -> Dict[str, Any]:
         core = self.master.run_cycle(goal)
         cycle = core["cycle"]
         self._persist_project_discovery(core, force=cycle % self.DEEP_DISCOVERY_INTERVAL == 0)
@@ -213,7 +214,6 @@ class AutonomousCycle:
             repair_mission = self._repair_mission(effective_goal, {"failure_kind": "syntax_error"}, cycle)
             pending.append("fix_syntax_errors")
         elif cached_probe is not None:
-            # True fast path: nothing changed, so do not rebuild, retest, repackage, or request approval.
             test_result = cached_probe
             completed.extend(["test", "verify", "no_change_fast_path"])
         else:
