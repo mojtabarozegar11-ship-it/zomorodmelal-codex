@@ -46,6 +46,30 @@ class SandboxRepairTests(unittest.TestCase):
                 engine.repair([{"path": "../outside.txt", "content": "unsafe"}])
             self.assertEqual(outside.read_text(encoding="utf-8"), "safe")
 
+    def test_unsafe_test_command_causes_rollback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "sandbox" / "demo.txt"
+            target.parent.mkdir()
+            target.write_text("safe", encoding="utf-8")
+            engine = SandboxRepairEngine(root)
+            result = engine.repair(
+                [{"path": "demo.txt", "content": "changed"}],
+                ["sh", "-c", "echo unsafe"],
+            )
+            self.assertEqual(result["status"], "rolled_back")
+            self.assertEqual(result["verification"]["kind"], "invalid_test_command")
+            self.assertEqual(target.read_text(encoding="utf-8"), "safe")
+
+    def test_duplicate_paths_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            engine = SandboxRepairEngine(Path(tmp))
+            with self.assertRaises(ValueError):
+                engine.repair([
+                    {"path": "demo.txt", "content": "one"},
+                    {"path": "demo.txt", "content": "two"},
+                ])
+
 
 if __name__ == "__main__":
     unittest.main()
