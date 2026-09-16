@@ -6,10 +6,11 @@ import os
 from datetime import datetime
 
 from .access_manager import AccessManager
+from .activation_gate import ActivationGate
 
 
 class MasterCore:
-    VERSION = "1.1.4"
+    VERSION = "1.1.5"
 
     GOAL_ACCESS_RULES = {
         "web_research": ("research", "تحقیق", "جستجو", "خبر", "بازار", "اطلاعات"),
@@ -31,10 +32,11 @@ class MasterCore:
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.sandbox_dir, exist_ok=True)
         self.access_manager = AccessManager(self.root)
+        self.activation_gate = ActivationGate(self.root, self.access_manager)
         self.state = self._load_state()
 
     def _defaults(self):
-        return {"version": self.VERSION, "cycles": 0, "goals": [], "agents": [], "capabilities": [], "proposals": [], "access_requests": [], "last_cycle": None}
+        return {"version": self.VERSION, "cycles": 0, "goals": [], "agents": [], "capabilities": [], "proposals": [], "access_requests": [], "activation_checks": [], "last_cycle": None}
 
     def _normalize_state(self, state):
         defaults = self._defaults()
@@ -131,6 +133,12 @@ class MasterCore:
         self.state["access_requests"] = self.access_manager.status()["requests"]
         return requests
 
+    def check_activation(self, request_id, capability, scope="minimum_required"):
+        decision = self.activation_gate.authorize(request_id, capability, scope)
+        self.state["activation_checks"].append({**decision, "checked_at": datetime.now().isoformat()})
+        self._save_state()
+        return decision
+
     def create_proposals(self, missing, designs):
         self.state = self._normalize_state(self.state)
         proposals=[{"type":"capability_upgrade","capability":c,"status":"proposal_only","owner_approval_required":True} for c in missing]
@@ -148,4 +156,4 @@ class MasterCore:
 
     def status(self):
         self.state = self._normalize_state(self.state)
-        return {"master_core":True,"version":self.VERSION,"cycles":self.state.get("cycles",0),"goals":len(self.state.get("goals",[])),"agents":len(self.state.get("agents",[])),"capabilities":len(self.state.get("capabilities",[])),"proposals":len(self.state.get("proposals",[])),"access_requests":len(self.state.get("access_requests",[])),"owner_approval_required":True,"real_changes_allowed":False,"sandbox_only":True}
+        return {"master_core":True,"version":self.VERSION,"cycles":self.state.get("cycles",0),"goals":len(self.state.get("goals",[])),"agents":len(self.state.get("agents",[])),"capabilities":len(self.state.get("capabilities",[])),"proposals":len(self.state.get("proposals",[])),"access_requests":len(self.state.get("access_requests",[])),"activation_checks":len(self.state.get("activation_checks",[])),"owner_approval_required":True,"real_changes_allowed":False,"sandbox_only":True}
