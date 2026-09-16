@@ -31,6 +31,28 @@ class MissionExecutorTests(unittest.TestCase):
             self.assertIn(first["status"], {"verified", "retry_pending"})
             self.assertLessEqual(first["attempt"], executor.MAX_REPAIR_ATTEMPTS)
 
+    def test_repair_plan_is_applied_and_verified_in_sandbox(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "sandbox" / "demo.py"
+            target.parent.mkdir()
+            target.write_text("value = 1\n", encoding="utf-8")
+            executor = MissionExecutor(root)
+            executor.queue.enqueue({
+                "id": "repair.plan",
+                "type": "self_repair",
+                "status": "ready",
+                "repair": {
+                    "changes": [{"path": "demo.py", "content": "value = 2\n"}],
+                    "test_command": ["python", "-m", "py_compile", "demo.py"],
+                },
+            })
+            result = executor.execute_next()
+            self.assertEqual(result["status"], "verified")
+            self.assertEqual(target.read_text(encoding="utf-8"), "value = 2\n")
+            self.assertTrue(result["sandbox_only"])
+            self.assertFalse(result["real_world_changes"])
+
 
 if __name__ == "__main__":
     unittest.main()
