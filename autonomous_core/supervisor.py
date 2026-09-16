@@ -111,6 +111,10 @@ class AutonomousSupervisor:
     def _waiting_approvals(self) -> list[Dict[str, Any]]:
         return self.approval.get_waiting()
 
+    def _deployment_approvals(self, waiting: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+        """Return only approvals that must pause autonomous safe work."""
+        return [r for r in waiting if r.get("action") == "change_package_deploy"]
+
     def _resume_approved_packages(self) -> list[Dict[str, Any]]:
         """Execute only already-approved package promotions, never request approval here."""
         results: list[Dict[str, Any]] = []
@@ -129,17 +133,23 @@ class AutonomousSupervisor:
         # First resume work that the owner has already approved.
         promoted = self._resume_approved_packages()
         waiting = self._waiting_approvals()
-        if waiting:
+        deployment_waiting = self._deployment_approvals(waiting)
+
+        # Only real deployment approval pauses autonomous safe work. Older or
+        # informational approvals remain visible but do not freeze discovery,
+        # research, planning, building, testing, or verification in the sandbox.
+        if deployment_waiting:
+            pending = [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting]
             self._save_state(self._base_state(
                 status="waiting_owner_approval", pid=os.getpid(), blocked=True,
-                pending=[f"approval:{r.get('id')}:{r.get('action')}" for r in waiting],
-                resumed=promoted))
+                pending=pending, resumed=promoted))
             return {"report": {"cycle": None, "phase": "approval", "goal": goal,
                                 "completed": ["resume_approved_packages"] if promoted else [],
-                                "pending": [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting],
-                                "owner_approval_required": True, "real_changes_allowed": False,
+                                "pending": pending, "owner_approval_required": True,
+                                "real_changes_allowed": False,
                                 "timestamp": datetime.now(timezone.utc).isoformat()},
                     "promoted": promoted, "waiting_approvals": waiting}
+
         try:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
