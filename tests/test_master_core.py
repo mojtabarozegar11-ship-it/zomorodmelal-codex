@@ -15,6 +15,13 @@ class MasterCoreSmokeTests(unittest.TestCase):
         core.sandbox_dir = os.path.join(tmp, "sandbox", "autonomous_workspace")
         core.state_file = os.path.join(core.data_dir, "master_core_state.json")
         core.mission_file = os.path.join(core.data_dir, "master_mission_queue.json")
+        core.discovery_file = os.path.join(core.data_dir, "project_discovery.json")
+        core._discovery_cache = None
+        core._discovery_cache_at = 0.0
+        core._persisted_discovery_cache = None
+        core._persisted_discovery_cache_at = 0.0
+        core._hot_cache = None
+        core._hot_cache_at = 0.0
         core.access_manager = AccessManager(tmp)
         core.agent_factory = AgentFactory(tmp)
         os.makedirs(core.data_dir, exist_ok=True)
@@ -27,9 +34,9 @@ class MasterCoreSmokeTests(unittest.TestCase):
             core = self._core(tmp)
             result = core.run_cycle()
             self.assertEqual(result["cycle"], 1)
-            self.assertTrue(result["owner_approval_required"])
-            self.assertFalse(result["real_changes_allowed"])
-            self.assertTrue(result["sandbox_only"])
+            self.assertTrue(result["owner_approval_required"] if "owner_approval_required" in result else result["safety"]["owner_approval_required"])
+            self.assertFalse(result["real_changes_allowed"] if "real_changes_allowed" in result else result["safety"]["real_deployment"])
+            self.assertTrue(result["sandbox_only"] if "sandbox_only" in result else result["safety"]["sandbox_only"])
             self.assertIn("next_mission", result)
             self.assertIn("learning", result)
             self.assertTrue(os.path.exists(core.mission_file))
@@ -53,9 +60,9 @@ class MasterCoreSmokeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             core = self._core(tmp)
             result = core.run_cycle("deploy to hosting")
-            self.assertTrue(result["owner_approval_required"])
-            self.assertFalse(result["real_changes_allowed"])
-            self.assertTrue(result["sandbox_only"])
+            self.assertTrue(result["safety"]["owner_approval_required"])
+            self.assertFalse(result["safety"]["real_deployment"])
+            self.assertTrue(result["safety"]["sandbox_only"])
 
 
 if __name__ == "__main__":
