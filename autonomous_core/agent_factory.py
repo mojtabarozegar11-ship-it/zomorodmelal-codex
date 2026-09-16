@@ -4,14 +4,14 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, List, Union
 
 
 class AgentFactory:
     """Safely designs and materializes subordinate-agent definitions.
 
-    The factory creates only local Python modules/manifests in the sandbox. It
-    never executes generated code and never grants external access.
+    Only local manifests are created. Generated code is never executed and
+    external/real-world permissions are never granted by the factory.
     """
 
     SAFE_ROLES = {
@@ -27,21 +27,21 @@ class AgentFactory:
         "general": "Perform bounded general-purpose planning and execution.",
     }
 
-    def __init__(self, root: str | Path) -> None:
+    def __init__(self, root: Union[str, Path]) -> None:
         self.root = Path(root).resolve()
         self.registry = self.root / "data" / "agent_registry.json"
         self.registry.parent.mkdir(parents=True, exist_ok=True)
         if not self.registry.exists():
             self._write([])
 
-    def _read(self) -> list[dict[str, Any]]:
+    def _read(self) -> List[Dict[str, Any]]:
         try:
             value = json.loads(self.registry.read_text(encoding="utf-8"))
             return value if isinstance(value, list) else []
         except (OSError, ValueError, TypeError):
             return []
 
-    def _write(self, value: list[dict[str, Any]]) -> None:
+    def _write(self, value: List[Dict[str, Any]]) -> None:
         tmp = self.registry.with_suffix(".tmp")
         tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.registry)
@@ -58,10 +58,10 @@ class AgentFactory:
         for agent in agents:
             if agent.get("role") == role:
                 return agent
-        agent_id = f"agent_{len(agents) + 1:04d}"
+        agent_id = "agent_{:04d}".format(len(agents) + 1)
         agent = {
             "agent_id": agent_id,
-            "name": f"{role}_agent",
+            "name": "{}_agent".format(role),
             "role": role,
             "mission": mission,
             "description": description,
@@ -75,7 +75,7 @@ class AgentFactory:
         self._write(agents)
         return agent
 
-    def ensure_for_capabilities(self, capabilities: Iterable[str]) -> list[Dict[str, Any]]:
+    def ensure_for_capabilities(self, capabilities: Iterable[str]) -> List[Dict[str, Any]]:
         created = []
         for capability in capabilities:
             text = str(capability).lower()
@@ -87,5 +87,5 @@ class AgentFactory:
             created.append(self.ensure_agent(role, str(capability)))
         return created
 
-    def list_agents(self) -> list[dict[str, Any]]:
+    def list_agents(self) -> List[Dict[str, Any]]:
         return self._read()
