@@ -135,9 +135,7 @@ class AutonomousSupervisor:
         waiting = self._waiting_approvals()
         deployment_waiting = self._deployment_approvals(waiting)
 
-        # Only real deployment approval pauses autonomous safe work. Older or
-        # informational approvals remain visible but do not freeze discovery,
-        # research, planning, building, testing, or verification in the sandbox.
+        # Only a waiting deployment approval pauses autonomous safe work.
         if deployment_waiting:
             pending = [f"approval:{r.get('id')}:{r.get('action')}" for r in waiting]
             self._save_state(self._base_state(
@@ -159,10 +157,13 @@ class AutonomousSupervisor:
             raise
         report = result.get("report", {})
         pending = report.get("pending", [])
+        # A cycle may legitimately report owner approval as its next phase while
+        # the supervisor remains able to continue safe sandbox work. Only the
+        # deployment gate above is a supervisor-level blocker.
         self._save_state(self._base_state(
-            status="blocked" if pending else "running",
+            status="running",
             pid=os.getpid(), last_cycle=report.get("cycle"), last_phase=report.get("phase"),
-            last_goal=report.get("goal"), blocked=bool(pending), pending=pending,
+            last_goal=report.get("goal"), blocked=False, pending=pending,
             resumed=promoted))
         return result
 
