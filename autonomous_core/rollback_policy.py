@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from controller.rollback_manager import RollbackManager
 
@@ -16,7 +16,7 @@ class RollbackPolicy:
 class AutonomousRollback:
     """Adds rollback readiness to the autonomous cycle without auto-rollback."""
 
-    def __init__(self, root: str | None = None) -> None:
+    def __init__(self, root: Optional[str] = None) -> None:
         self.manager = RollbackManager(root)
         self.policy = RollbackPolicy()
 
