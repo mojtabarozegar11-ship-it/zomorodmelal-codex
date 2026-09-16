@@ -74,13 +74,10 @@ class AutonomousCycle:
         self._json_cache: Dict[str, Tuple[int, int, float, Dict[str, Any]]] = {}
 
     def _read_json(self, path: Path) -> Optional[Dict[str, Any]]:
-        key = str(path)
-        now = time.monotonic()
-        try:
-            stat = path.stat()
+        key = str(path); now = time.monotonic()
+        try: stat = path.stat()
         except OSError:
-            self._json_cache.pop(key, None)
-            return None
+            self._json_cache.pop(key, None); return None
         cached = self._json_cache.get(key)
         if cached is not None:
             mtime_ns, size, cached_at, value = cached
@@ -89,10 +86,8 @@ class AutonomousCycle:
         try:
             value = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
             if isinstance(value, dict):
-                self._json_cache[key] = (stat.st_mtime_ns, stat.st_size, now, dict(value))
-                return value
-        except (OSError, ValueError, TypeError):
-            return None
+                self._json_cache[key] = (stat.st_mtime_ns, stat.st_size, now, dict(value)); return value
+        except (OSError, ValueError, TypeError): return None
         return None
 
     def _persist_project_discovery(self, core: Dict[str, Any], force: bool = False) -> Optional[Dict[str, Any]]:
@@ -108,66 +103,50 @@ class AutonomousCycle:
         audits = {x["file"]: x for x in self.master.audit_python()}
         for relative in self.master.discover_project():
             item: Dict[str, Any] = {"path": relative}
-            if relative.endswith(".py"):
-                item["syntax_ok"] = bool(audits.get(relative, {}).get("syntax_ok"))
+            if relative.endswith(".py"): item["syntax_ok"] = bool(audits.get(relative, {}).get("syntax_ok"))
             files.append(item)
         snapshot = {"generated_at": datetime.now(timezone.utc).isoformat(), "root": str(self.project_root), "files": files,
                     "django_detected": any("django" in str(x).lower() for x in core.get("capabilities", [])),
                     "owner_approval_required": True, "real_changes_allowed": False}
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
-        tmp.replace(path)
-        self._json_cache.pop(str(path), None)
-        self._discovery_cache = dict(snapshot); self._discovery_cache_at = now
+        path.parent.mkdir(parents=True, exist_ok=True); tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8"); tmp.replace(path)
+        self._json_cache.pop(str(path), None); self._discovery_cache = dict(snapshot); self._discovery_cache_at = now
         return snapshot
 
     def _site_snapshot(self, cycle: int) -> Dict[str, Any]:
         now = time.monotonic()
         if self._site_cache is not None and now - self._site_cache_at < self.DISCOVERY_CACHE_SECONDS and cycle % self.SITE_CHECK_INTERVAL != 0:
             return dict(self._site_cache)
-        path = self.project_root / "data" / "site_discovery.json"
-        cached = self._read_json(path)
+        path = self.project_root / "data" / "site_discovery.json"; cached = self._read_json(path)
         if cached is not None and cycle % self.SITE_CHECK_INTERVAL != 0:
             self._site_cache = dict(cached); self._site_cache_at = now; return cached
-        result = self.site_connector.discover()
-        self._site_cache = dict(result); self._site_cache_at = now
-        return result
+        result = self.site_connector.discover(); self._site_cache = dict(result); self._site_cache_at = now; return result
 
     def _sandbox_build(self, core: Dict[str, Any], goal: Optional[str]) -> Dict[str, Any]:
-        sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"
-        builder = SafeBuilder(sandbox)
-        files: Dict[str, str] = {"cycle_manifest.json": json.dumps({
-            "cycle": core["cycle"], "goal": goal, "generated_at": datetime.now(timezone.utc).isoformat(),
-            "capabilities": core.get("capabilities", []), "owner_approval_required": True, "real_changes_allowed": False}, ensure_ascii=False, indent=2)}
-        if goal and any(x in goal.lower() for x in ("سایت", "وب", "website", "site")):
-            files.update(self.site_builder.build(goal))
+        sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"; builder = SafeBuilder(sandbox)
+        files: Dict[str, str] = {"cycle_manifest.json": json.dumps({"cycle": core["cycle"], "goal": goal,
+            "generated_at": datetime.now(timezone.utc).isoformat(), "capabilities": core.get("capabilities", []),
+            "owner_approval_required": True, "real_changes_allowed": False}, ensure_ascii=False, indent=2)}
+        if goal and any(x in goal.lower() for x in ("سایت", "وب", "website", "site")): files.update(self.site_builder.build(goal))
         return {"sandbox": str(sandbox), "files": builder.build(files)}
 
     def _test_modules_for_cycle(self, cycle: int) -> List[str]:
         override = os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower()
-        if override in {"1", "true", "yes", "on"} or cycle % self.FULL_TEST_INTERVAL == 0:
-            return []
+        if override in {"1", "true", "yes", "on"} or cycle % self.FULL_TEST_INTERVAL == 0: return []
         return list(self.FAST_TEST_MODULES)
 
     def _test_fingerprint(self, goal: Optional[str]) -> str:
-        h = hashlib.sha256(str(goal or "").encode("utf-8"))
-        snapshot = self._discovery_cache or self._read_json(self.project_root / "data" / "project_discovery.json") or {}
-        paths = [x.get("path") for x in snapshot.get("files", []) if isinstance(x, dict) and x.get("path")]
-        for relative in sorted(paths):
+        h = hashlib.sha256(str(goal or "").encode("utf-8")); snapshot = self._discovery_cache or self._read_json(self.project_root / "data" / "project_discovery.json") or {}
+        for relative in sorted(x.get("path") for x in snapshot.get("files", []) if isinstance(x, dict) and x.get("path")):
             try:
-                stat = (self.project_root / relative).stat()
-                h.update(relative.encode("utf-8")); h.update(str(stat.st_mtime_ns).encode("ascii")); h.update(str(stat.st_size).encode("ascii"))
-            except OSError:
-                h.update((relative + ":missing").encode("utf-8"))
+                stat = (self.project_root / relative).stat(); h.update(relative.encode("utf-8")); h.update(str(stat.st_mtime_ns).encode("ascii")); h.update(str(stat.st_size).encode("ascii"))
+            except OSError: h.update((relative + ":missing").encode("utf-8"))
         return h.hexdigest()
 
     def _cached_test(self, fingerprint: str, cycle: int) -> Optional[Dict[str, Any]]:
-        if cycle % self.FULL_TEST_INTERVAL == 0 or os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower() in {"1", "true", "yes", "on"}:
-            return None
+        if cycle % self.FULL_TEST_INTERVAL == 0 or os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower() in {"1", "true", "yes", "on"}: return None
         cached = self._read_json(self.test_cache_file)
-        if not cached or cached.get("fingerprint") != fingerprint or not cached.get("passed"):
-            return None
+        if not cached or cached.get("fingerprint") != fingerprint or not cached.get("passed"): return None
         try: age = datetime.now(timezone.utc).timestamp() - float(cached.get("timestamp", 0))
         except (TypeError, ValueError): return None
         if age < 0 or age > self.TEST_CACHE_SECONDS: return None
@@ -177,15 +156,12 @@ class AutonomousCycle:
         if not result.get("passed"): return
         self.test_cache_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {"timestamp": datetime.now(timezone.utc).timestamp(), "fingerprint": fingerprint, "passed": True, "result": result}
-        tmp = self.test_cache_file.with_suffix(".tmp"); tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"); tmp.replace(self.test_cache_file)
-        self._json_cache.pop(str(self.test_cache_file), None)
+        tmp = self.test_cache_file.with_suffix(".tmp"); tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"); tmp.replace(self.test_cache_file); self._json_cache.pop(str(self.test_cache_file), None)
 
     def _run_tests(self, cycle: int = 0, goal: Optional[str] = None) -> Dict[str, Any]:
-        fingerprint = self._test_fingerprint(goal)
-        cached = self._cached_test(fingerprint, cycle)
+        fingerprint = self._test_fingerprint(goal); cached = self._cached_test(fingerprint, cycle)
         if cached is not None: return cached
-        env = os.environ.copy(); env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
-        modules = self._test_modules_for_cycle(cycle); fast = bool(modules)
+        env = os.environ.copy(); env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"; modules = self._test_modules_for_cycle(cycle); fast = bool(modules)
         command = [sys.executable, "-m", "unittest"]
         if fast: command.extend(modules); scope = "fast regression suite"
         else: command.extend(["discover", "-s", "tests"]); scope = "full test suite"
@@ -227,8 +203,14 @@ class AutonomousCycle:
             except (OSError, TypeError, ValueError) as exc:
                 repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, cycle); pending.append(f"build_error: {exc}")
         evolution = self.self_evolution.evaluate(test_result, len(self.orchestrator.factory.list_agents())); completed.extend(["learn", "evolve"])
+        next_mission = core.get("next_mission") or (repair_mission if repair_mission is not None else {
+            "id": "await_owner_approval" if pending else "continuous.improvement",
+            "type": "approval" if pending else "improvement",
+            "goal": effective_goal,
+            "status": "awaiting_owner_approval" if pending else "ready",
+        })
         report = CycleReport(cycle, "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "evolve"), effective_goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat())
-        return {"report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan, "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution, "package": package, "approval_request": approval_request, "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
+        return {"report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan, "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution, "package": package, "approval_request": approval_request, "next_mission": next_mission, "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True}}
 
 
 if __name__ == "__main__":
