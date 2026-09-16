@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.autonomous_cycle_100 import AutonomousCycle100
 from autonomous_core.continuous_controller import ContinuousController
+from autonomous_core.mission_executor import MissionExecutor
 from controller.change_package_executor import ChangePackageExecutor
 
 
@@ -35,6 +36,7 @@ class AutonomousSupervisor:
         self._lock_owned = False
         self.approval = ApprovalGateway(self.project_root)
         self.package_executor = ChangePackageExecutor(self.project_root)
+        self.mission_executor = MissionExecutor(self.project_root)
         self.continuous = ContinuousController(self.project_root)
 
     def request_stop(self) -> None:
@@ -84,6 +86,7 @@ class AutonomousSupervisor:
             "repair_attempts": continuous.get("repair_attempts", 0),
             "max_repair_attempts": continuous.get("max_repair_attempts", 3),
             "automatic_repair": continuous.get("automatic", False),
+            "mission_executor": state.get("mission_executor"),
             "master_agent": "MasterAgent100",
             "master_version": "100.0.0",
             "max_generation": 100,
@@ -151,6 +154,7 @@ class AutonomousSupervisor:
                       "pending": pending_before_cycle, "owner_approval_required": True,
                       "real_changes_allowed": False, "timestamp": datetime.now(timezone.utc).isoformat()}
             result = {"report": report, "tests": None, "package": None, "approval_request": None,
+                      "mission_executor": None,
                       "safety": {"sandbox_only": True, "generated_code_executed": False,
                                   "remote_site_write": False, "real_deployment": False,
                                   "owner_approval_required": True}}
@@ -160,6 +164,7 @@ class AutonomousSupervisor:
                 approval_pending=True, continuous_action=continuous["action"],
                 repair_attempts=continuous["repair_attempts"], resumed=promoted))
             return result
+        mission_result = self.mission_executor.execute_next()
         try:
             result = self.cycle_factory(self.project_root).run(goal)
         except Exception as exc:
@@ -168,8 +173,10 @@ class AutonomousSupervisor:
             continuous = self.continuous.observe(error_result)
             self._save_state(self._base_state(status="error", blocked=True, error_type=type(exc).__name__,
                 error=str(exc), pid=os.getpid(), pending=pending_before_cycle,
-                continuous_action=continuous["action"], repair_attempts=continuous["repair_attempts"]))
+                continuous_action=continuous["action"], repair_attempts=continuous["repair_attempts"],
+                mission_executor=mission_result))
             raise
+        result["mission_executor"] = mission_result
         continuous = self.continuous.observe(result)
         report = result.get("report", {})
         cycle_pending = report.get("pending", []) or []
@@ -178,7 +185,8 @@ class AutonomousSupervisor:
         self._save_state(self._base_state(status="blocked" if blocked else "running", pid=os.getpid(),
             last_cycle=report.get("cycle"), last_phase=report.get("phase"), last_goal=report.get("goal"),
             blocked=blocked, pending=all_pending, approval_pending=blocked,
-            continuous_action=continuous["action"], repair_attempts=continuous["repair_attempts"], resumed=promoted))
+            continuous_action=continuous["action"], repair_attempts=continuous["repair_attempts"],
+            resumed=promoted, mission_executor=mission_result))
         return result
 
     def run_forever(self, goal: Optional[str] = None) -> None:
