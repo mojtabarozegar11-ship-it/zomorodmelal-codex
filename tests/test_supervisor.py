@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,7 +39,6 @@ class SupervisorTests(unittest.TestCase):
             root = Path(tmp)
             supervisor = AutonomousSupervisor(root, cycle_factory=FakeCycle)
             result = supervisor.run_once("research market")
-
             self.assertEqual(result["report"]["cycle"], 1)
             state = (root / "data" / "supervisor_state.json").read_text(encoding="utf-8")
             self.assertIn('"blocked": true', state)
@@ -79,6 +79,31 @@ class SupervisorTests(unittest.TestCase):
             self.assertTrue(supervisor.stop_requested)
             supervisor.set_desired_state("running")
             self.assertEqual(supervisor.desired_state(), "running")
+
+    def test_status_is_read_only_and_reports_runtime_safety(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            supervisor = AutonomousSupervisor(root, cycle_factory=FakeCycle)
+            supervisor.run_once("research market")
+            status = supervisor.status()
+            self.assertEqual(status["status"], "blocked")
+            self.assertEqual(status["last_goal"], "research market")
+            self.assertTrue(status["blocked"])
+            self.assertTrue(status["owner_approval_required"])
+            self.assertFalse(status["real_changes_allowed"])
+            self.assertIsInstance(status["pending"], list)
+            self.assertTrue((root / "data" / "supervisor_state.json").exists())
+
+    def test_status_handles_invalid_state_file_safely(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = root / "data"
+            data.mkdir()
+            (data / "supervisor_state.json").write_text("not-json", encoding="utf-8")
+            status = AutonomousSupervisor(root).status()
+            self.assertEqual(status["status"], "stopped")
+            self.assertTrue(status["owner_approval_required"])
+            self.assertFalse(status["real_changes_allowed"])
 
 
 if __name__ == "__main__":
