@@ -5,7 +5,7 @@ import json
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 
 from approval.approval_gateway import ApprovalGateway
 from autonomous_core.change_package import ChangePackage
@@ -16,7 +16,7 @@ class ChangePackageExecutor:
     """Promote only an owner-approved, hash-verified sandbox package once."""
     PROTECTED = {".git", "data", "sandbox", ".venv", "venv"}
 
-    def __init__(self, root: str | Path | None = None) -> None:
+    def __init__(self, root: Optional[Union[str, Path]] = None) -> None:
         self.root = Path(root or Path(__file__).resolve().parents[1]).resolve()
         self.approval = ApprovalGateway(self.root)
         self.execution = ExecutionController() if root is None else ExecutionControllerForRoot(self.root)
@@ -87,39 +87,59 @@ class ChangePackageExecutor:
         sandbox = (self.root / sandbox_rel).resolve()
         if self.root not in sandbox.parents or not sandbox.is_dir():
             return {"success": False, "status": "sandbox_source_invalid", "request_id": request_id}
-        verified=[]
+        verified = []
         for item in package.get("files", []):
-            relative=str(item["path"]); self._safe_relative(relative); source=(sandbox / relative).resolve()
-            if sandbox not in source.parents or not source.is_file(): raise FileNotFoundError(relative)
-            content=source.read_bytes()
-            if len(content) != int(item["size"]): raise ValueError(f"size mismatch: {relative}")
-            if hashlib.sha256(content).hexdigest() != str(item["sha256"]): raise ValueError(f"hash mismatch: {relative}")
+            relative = str(item["path"])
+            self._safe_relative(relative)
+            source = (sandbox / relative).resolve()
+            if sandbox not in source.parents or not source.is_file():
+                raise FileNotFoundError(relative)
+            content = source.read_bytes()
+            if len(content) != int(item["size"]):
+                raise ValueError(f"size mismatch: {relative}")
+            if hashlib.sha256(content).hexdigest() != str(item["sha256"]):
+                raise ValueError(f"hash mismatch: {relative}")
             verified.append(relative)
-        existed_before={relative:self._safe_relative(relative).is_file() for relative in verified}
-        backup=self.execution.backup(verified); promoted=[]
+        existed_before = {relative: self._safe_relative(relative).is_file() for relative in verified}
+        backup = self.execution.backup(verified)
+        promoted = []
         try:
             for relative in verified:
-                source=(sandbox / relative).resolve(); target=self._safe_relative(relative); target.parent.mkdir(parents=True,exist_ok=True)
-                temp=target.with_name(target.name+".master-agent.tmp")
-                try: shutil.copy2(source,temp); os.replace(temp,target)
+                source = (sandbox / relative).resolve()
+                target = self._safe_relative(relative)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temp = target.with_name(target.name + ".master-agent.tmp")
+                try:
+                    shutil.copy2(source, temp)
+                    os.replace(temp, target)
                 finally:
-                    if temp.exists(): temp.unlink()
+                    if temp.exists():
+                        temp.unlink()
                 promoted.append(relative)
             records = self._load_execution_records()
             records[execution_key] = {"request_id": request_id, "package_id": package_id, "package_sha256": package.get("package_sha256"), "files": promoted}
             self._save_execution_records(records)
-            self.execution._log("package_promote","completed",{"request_id":request_id,"package_id":package_id,"package_sha256":package.get("package_sha256"),"files":promoted,"backup":backup})
+            self.execution._log("package_promote", "completed", {"request_id": request_id, "package_id": package_id, "package_sha256": package.get("package_sha256"), "files": promoted, "backup": backup})
         except Exception:
             for relative in reversed(promoted):
-                target=self._safe_relative(relative); backup_file=Path(backup)/relative
-                if existed_before.get(relative) and backup_file.is_file(): shutil.copy2(backup_file,target)
-                else: target.unlink(missing_ok=True)
-            self.execution._log("package_promote","rolled_back_after_failure",{"request_id":request_id,"package_id":package_id,"backup":backup}); raise
-        return {"success":True,"status":"promoted","request_id":request_id,"package_id":package_id,"backup_path":backup,"promoted_files":promoted,"project_promotion":True,"external_deployment":False,"generated_code_executed":False}
+                target = self._safe_relative(relative)
+                backup_file = Path(backup) / relative
+                if existed_before.get(relative) and backup_file.is_file():
+                    shutil.copy2(backup_file, target)
+                elif target.exists():
+                    target.unlink()
+            self.execution._log("package_promote", "rolled_back_after_failure", {"request_id": request_id, "package_id": package_id, "backup": backup})
+            raise
+        return {"success": True, "status": "promoted", "request_id": request_id, "package_id": package_id, "backup_path": backup, "promoted_files": promoted, "project_promotion": True, "external_deployment": False, "generated_code_executed": False}
 
 
 class ExecutionControllerForRoot(ExecutionController):
     def __init__(self, root: Path) -> None:
-        self.root=str(root); self.data_dir=str(root/"data"); self.sandbox_dir=str(root/"sandbox"/"execution_workspace"); self.log_file=str(root/"data"/"execution_log.json")
-        os.makedirs(self.data_dir,exist_ok=True); os.makedirs(self.sandbox_dir,exist_ok=True)
-        if not os.path.exists(self.log_file): self._save_logs([])
+        self.root = str(root)
+        self.data_dir = str(root / "data")
+        self.sandbox_dir = str(root / "sandbox" / "execution_workspace")
+        self.log_file = str(root / "data" / "execution_log.json")
+        os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.sandbox_dir, exist_ok=True)
+        if not os.path.exists(self.log_file):
+            self._save_logs([])
