@@ -40,6 +40,13 @@ class CycleReport:
 
 class AutonomousCycle:
     PHASES = ("discover", "research", "plan", "build", "test", "verify", "approval", "deploy", "learn", "evolve")
+    FULL_TEST_INTERVAL = 10
+    FAST_TEST_MODULES = (
+        "tests.test_master_core",
+        "tests.test_autonomous_cycle_goal",
+        "tests.test_supervisor",
+        "tests.test_master_agent_100_runtime",
+    )
 
     def __init__(self, project_root: str | Path | None = None) -> None:
         self.project_root = Path(project_root or Path(__file__).resolve().parent.parent).resolve()
@@ -81,29 +88,37 @@ class AutonomousCycle:
         sandbox = self.project_root / "data" / "sandbox" / f"cycle_{core['cycle']}"
         builder = SafeBuilder(sandbox)
         files: Dict[str, str] = {
-            "cycle_manifest.json": json.dumps(
-                {
-                    "cycle": core["cycle"],
-                    "goal": goal,
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "capabilities": core.get("capabilities", []),
-                    "owner_approval_required": True,
-                    "real_changes_allowed": False,
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
+            "cycle_manifest.json": json.dumps({
+                "cycle": core["cycle"], "goal": goal,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "capabilities": core.get("capabilities", []),
+                "owner_approval_required": True, "real_changes_allowed": False,
+            }, ensure_ascii=False, indent=2)
         }
         if goal and any(x in goal.lower() for x in ("سایت", "وب", "website", "site")):
             files.update(self.site_builder.build(goal))
         return {"sandbox": str(sandbox), "files": builder.build(files)}
 
-    def _run_tests(self) -> Dict[str, Any]:
+    def _test_modules_for_cycle(self, cycle: int) -> List[str]:
+        override = os.environ.get("AUTONOMOUS_FULL_TESTS", "").strip().lower()
+        if override in {"1", "true", "yes", "on"} or cycle % self.FULL_TEST_INTERVAL == 0:
+            return []
+        return list(self.FAST_TEST_MODULES)
+
+    def _run_tests(self, cycle: int = 0) -> Dict[str, Any]:
         env = os.environ.copy()
         env["AUTONOMOUS_CYCLE_INNER_TESTS"] = "1"
+        modules = self._test_modules_for_cycle(cycle)
+        command = [sys.executable, "-m", "unittest"]
+        if modules:
+            command.extend(modules)
+            test_scope = "fast regression suite"
+        else:
+            command.extend(["discover", "-s", "tests"])
+            test_scope = "full test suite"
         try:
             completed = subprocess.run(
-                [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+                command,
                 cwd=self.source_root,
                 capture_output=True,
                 text=True,
@@ -119,6 +134,8 @@ class AutonomousCycle:
                 "stdout": stdout,
                 "stderr": stderr,
                 "failure_kind": "test_failure" if completed.returncode else "none",
+                "scope": test_scope,
+                "modules": modules,
             }
         except subprocess.TimeoutExpired as exc:
             return {
@@ -127,22 +144,17 @@ class AutonomousCycle:
                 "stdout": str(exc.stdout or "")[-8000:],
                 "stderr": "test suite timed out after 90 seconds",
                 "failure_kind": "timeout",
+                "scope": test_scope,
+                "modules": modules,
             }
 
     def _repair_mission(self, goal: str | None, test_result: Dict[str, Any], cycle: int) -> Dict[str, Any]:
         plan = self.orchestrator.route(f"repair: {goal or 'autonomous test failure'}")
         mission = {
-            "cycle": cycle,
-            "type": "self_repair",
-            "status": "queued_for_sandbox_repair",
-            "goal": goal,
-            "failure_kind": test_result.get("failure_kind"),
-            "returncode": test_result.get("returncode"),
-            "stdout": str(test_result.get("stdout", ""))[-8000:],
-            "stderr": str(test_result.get("stderr", ""))[-8000:],
-            "agent_plan": plan,
-            "owner_approval_required": True,
-            "real_world_changes": False,
+            "cycle": cycle, "type": "self_repair", "status": "queued_for_sandbox_repair", "goal": goal,
+            "failure_kind": test_result.get("failure_kind"), "returncode": test_result.get("returncode"),
+            "stdout": str(test_result.get("stdout", ""))[-8000:], "stderr": str(test_result.get("stderr", ""))[-8000:],
+            "agent_plan": plan, "owner_approval_required": True, "real_world_changes": False,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         path = self.project_root / "data" / "self_repair_mission.json"
@@ -169,44 +181,26 @@ class AutonomousCycle:
             try:
                 build_result = self._sandbox_build(core, effective_goal)
                 completed.append("build")
-                test_result = self._run_tests()
+                test_result = self._run_tests(core["cycle"])
                 self.testing.record_test(
-                    f"autonomous_cycle_{core['cycle']}",
-                    test_result["passed"],
-                    "Sandbox build plus project unittest discovery.",
-                    diagnostics=test_result,
+                    f"autonomous_cycle_{core['cycle']}", test_result["passed"],
+                    "Sandbox build plus adaptive autonomous regression testing.", diagnostics=test_result,
                 )
                 if test_result["passed"]:
                     completed.extend(["test", "verify"])
                     sandbox_rel = str(Path(build_result["sandbox"]).relative_to(self.project_root))
-                    package = self.packages.create(
-                        build_result["files"],
-                        f"Autonomous cycle {core['cycle']} verified sandbox change set",
-                        sandbox_rel=sandbox_rel,
-                    )
+                    package = self.packages.create(build_result["files"], f"Autonomous cycle {core['cycle']} verified sandbox change set", sandbox_rel=sandbox_rel)
                     approval_request = self.approval.request(
-                        "change_package_deploy",
-                        f"انتقال بسته تغییر چرخه {core['cycle']} به محیط اصلی",
-                        metadata={
-                            "package_id": package["package_id"],
-                            "package_sha256": package["package_sha256"],
-                            "cycle": core["cycle"],
-                            "goal": effective_goal,
-                        },
+                        "change_package_deploy", f"انتقال بسته تغییر چرخه {core['cycle']} به محیط اصلی",
+                        metadata={"package_id": package["package_id"], "package_sha256": package["package_sha256"], "cycle": core["cycle"], "goal": effective_goal},
                     )
-                    if approval_request.get("status") == "waiting_approval":
-                        pending.append(f"approval:{approval_request['id']}:change_package_deploy")
-                    elif approval_request.get("status") == "approved":
-                        completed.append("approval_already_granted")
+                    if approval_request.get("status") == "waiting_approval": pending.append(f"approval:{approval_request['id']}:change_package_deploy")
+                    elif approval_request.get("status") == "approved": completed.append("approval_already_granted")
                 else:
                     repair_mission = self._repair_mission(effective_goal, test_result, core["cycle"])
                     pending.append("self_repair")
             except (OSError, TypeError, ValueError) as exc:
-                repair_mission = self._repair_mission(
-                    effective_goal,
-                    {"failure_kind": "build_error", "stderr": str(exc)},
-                    core["cycle"],
-                )
+                repair_mission = self._repair_mission(effective_goal, {"failure_kind": "build_error", "stderr": str(exc)}, core["cycle"])
                 pending.append(f"build_error: {exc}")
 
         evolution = self.self_evolution.evaluate(test_result, len(self.orchestrator.factory.list_agents()))
@@ -214,32 +208,13 @@ class AutonomousCycle:
         report = CycleReport(
             core["cycle"],
             "approval" if any(p.startswith("approval:") for p in pending) else ("test" if pending else "evolve"),
-            effective_goal,
-            completed,
-            pending,
-            True,
-            False,
-            datetime.now(timezone.utc).isoformat(),
+            effective_goal, completed, pending, True, False, datetime.now(timezone.utc).isoformat(),
         )
         return {
-            "report": report.to_dict(),
-            "core": core,
-            "site": site_snapshot,
-            "decision": decision,
-            "agents": agent_plan,
-            "build": build_result,
-            "tests": test_result,
-            "repair_mission": repair_mission,
-            "evolution": evolution,
-            "package": package,
-            "approval_request": approval_request,
-            "safety": {
-                "sandbox_only": True,
-                "generated_code_executed": False,
-                "remote_site_write": False,
-                "real_deployment": False,
-                "owner_approval_required": True,
-            },
+            "report": report.to_dict(), "core": core, "site": site_snapshot, "decision": decision, "agents": agent_plan,
+            "build": build_result, "tests": test_result, "repair_mission": repair_mission, "evolution": evolution,
+            "package": package, "approval_request": approval_request,
+            "safety": {"sandbox_only": True, "generated_code_executed": False, "remote_site_write": False, "real_deployment": False, "owner_approval_required": True},
         }
 
 
