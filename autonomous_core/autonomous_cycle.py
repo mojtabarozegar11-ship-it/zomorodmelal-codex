@@ -207,9 +207,15 @@ class AutonomousCycle:
         pending: List[str] = []
         completed = ["discover", "research", "plan", "agent_orchestration"]
         build_result = test_result = package = approval_request = repair_mission = None
+        cached_probe = self._cached_test(self._test_fingerprint(effective_goal), cycle)
+
         if core.get("syntax_errors"):
             repair_mission = self._repair_mission(effective_goal, {"failure_kind": "syntax_error"}, cycle)
             pending.append("fix_syntax_errors")
+        elif cached_probe is not None:
+            # True fast path: nothing changed, so do not rebuild, retest, repackage, or request approval.
+            test_result = cached_probe
+            completed.extend(["test", "verify", "no_change_fast_path"])
         else:
             try:
                 build_result = self._sandbox_build(core, effective_goal)
