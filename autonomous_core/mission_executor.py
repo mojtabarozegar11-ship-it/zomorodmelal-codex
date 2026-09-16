@@ -8,16 +8,18 @@ from pathlib import Path
 from typing import Any, Dict, Union
 
 from autonomous_core.mission_queue import MissionQueue
+from autonomous_core.sandbox_repair import SandboxRepairEngine
 
 
 class MissionExecutor:
-    """Execute only bounded, sandbox-safe follow-up missions."""
+    """Execute bounded, sandbox-safe missions; real-world changes remain owner-gated."""
 
     MAX_REPAIR_ATTEMPTS = 3
 
     def __init__(self, root: Union[str, Path]) -> None:
         self.root = Path(root).resolve()
         self.queue = MissionQueue(self.root)
+        self.repair = SandboxRepairEngine(self.root)
         self.state_path = self.root / "data" / "mission_executor.json"
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -25,6 +27,17 @@ class MissionExecutor:
         tmp = self.state_path.with_suffix(".tmp")
         tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.state_path)
+
+    def _legacy_verify(self) -> Dict[str, Any]:
+        command = [sys.executable, "-m", "unittest", "tests.test_master_core", "tests.test_autonomous_cycle_goal"]
+        try:
+            completed = subprocess.run(command, cwd=self.root, capture_output=True, text=True, timeout=8, shell=False)
+            return {"passed": completed.returncode == 0, "returncode": completed.returncode,
+                    "stdout": completed.stdout[-4000:], "stderr": completed.stderr[-4000:]}
+        except subprocess.TimeoutExpired as exc:
+            return {"passed": False, "failure_kind": "timeout", "stderr": str(exc)}
+        except OSError as exc:
+            return {"passed": False, "failure_kind": "execution_error", "stderr": str(exc)}
 
     def execute_next(self) -> Dict[str, Any]:
         mission = self.queue.peek()
@@ -50,31 +63,29 @@ class MissionExecutor:
                 self.queue.enqueue(mission)
                 result = {"status": "quarantined", "mission": mission_id, "attempt": attempt - 1,
                           "owner_approval_required": True, "real_world_changes": False, "sandbox_only": True}
-                self._save(result)
-                return result
-            command = [sys.executable, "-m", "unittest", "tests.test_master_core", "tests.test_autonomous_cycle_goal"]
-            try:
-                completed = subprocess.run(command, cwd=self.root, capture_output=True, text=True,
-                                            timeout=8, shell=False)
-                passed = completed.returncode == 0
-                status = "verified" if passed else "retry_pending"
-                if passed:
-                    self.queue.complete(mission_id)
+            else:
+                plan = mission.get("repair")
+                if isinstance(plan, dict) and isinstance(plan.get("changes"), list):
+                    result = self.repair.repair(plan["changes"], plan.get("test_command"))
+                    result.update({"mission": mission_id, "attempt": attempt})
+                    if result.get("status") == "verified":
+                        self.queue.complete(mission_id)
+                    else:
+                        mission["attempt"] = attempt
+                        mission["status"] = "retry_pending"
+                        self.queue.enqueue(mission)
                 else:
-                    mission["attempt"] = attempt
-                    mission["status"] = status
-                    self.queue.enqueue(mission)
-                result = {"status": status, "mission": mission_id, "attempt": attempt,
-                          "tests_passed": passed, "returncode": completed.returncode,
-                          "stdout": completed.stdout[-4000:], "stderr": completed.stderr[-4000:],
-                          "owner_approval_required": True, "real_world_changes": False, "sandbox_only": True}
-            except subprocess.TimeoutExpired as exc:
-                mission["attempt"] = attempt
-                mission["status"] = "retry_pending"
-                self.queue.enqueue(mission)
-                result = {"status": "retry_pending", "mission": mission_id, "attempt": attempt,
-                          "tests_passed": False, "failure_kind": "timeout", "stderr": str(exc),
-                          "owner_approval_required": True, "real_world_changes": False, "sandbox_only": True}
+                    verification = self._legacy_verify()
+                    status = "verified" if verification.get("passed") else "retry_pending"
+                    if verification.get("passed"):
+                        self.queue.complete(mission_id)
+                    else:
+                        mission["attempt"] = attempt
+                        mission["status"] = status
+                        self.queue.enqueue(mission)
+                    result = {"status": status, "mission": mission_id, "attempt": attempt,
+                              "tests_passed": verification.get("passed", False), "verification": verification,
+                              "owner_approval_required": True, "real_world_changes": False, "sandbox_only": True}
         else:
             self.queue.complete(mission_id)
             result = {"status": "completed", "mission": mission_id, "attempt": attempt,
