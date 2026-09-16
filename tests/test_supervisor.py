@@ -105,6 +105,34 @@ class SupervisorTests(unittest.TestCase):
             self.assertTrue(status["owner_approval_required"])
             self.assertFalse(status["real_changes_allowed"])
 
+    def test_non_deployment_waiting_approval_does_not_freeze_safe_cycle(self):
+        FakeCycle.calls = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            supervisor = AutonomousSupervisor(root, cycle_factory=FakeCycle)
+            supervisor.approval.request("goal_execution", "safe sandbox goal")
+            result = supervisor.run_once("research market")
+            self.assertEqual(result["report"]["cycle"], 1)
+            self.assertEqual(result["report"]["goal"], "research market")
+            self.assertFalse(result["report"]["pending"] == [])
+            status = supervisor.status()
+            self.assertFalse(status["blocked"])
+
+    def test_deployment_waiting_approval_pauses_safe_cycle(self):
+        FakeCycle.calls = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            supervisor = AutonomousSupervisor(root, cycle_factory=FakeCycle)
+            supervisor.approval.request(
+                "change_package_deploy", "promote approved package",
+                {"package_id": "pkg-1"},
+            )
+            result = supervisor.run_once("research market")
+            self.assertIsNone(result["report"]["cycle"])
+            self.assertEqual(result["report"]["phase"], "approval")
+            self.assertEqual(FakeCycle.calls, 0)
+            self.assertTrue(supervisor.status()["blocked"])
+
 
 if __name__ == "__main__":
     unittest.main()
