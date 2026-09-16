@@ -20,6 +20,8 @@ class AccessManagerTests(unittest.TestCase):
             manager = AccessManager(Path(tmp))
             request = manager.request("github_repo", "update company site")
             self.assertEqual(request["status"], "waiting_owner_approval")
+            self.assertEqual(request["access_level"], "read_write")
+            self.assertEqual(request["risk_level"], "high")
             self.assertTrue(request["owner_approval_required"])
             self.assertFalse(request["credentials_acquired"])
             self.assertFalse(request["activated"])
@@ -28,6 +30,18 @@ class AccessManagerTests(unittest.TestCase):
             self.assertEqual(approved["status"], "approved_pending_activation")
             self.assertFalse(approved["credentials_acquired"])
             self.assertFalse(approved["activated"])
+
+            status = manager.status()
+            self.assertEqual(status["requests"][0]["request_id"], request["request_id"])
+            self.assertEqual(status["approved_pending_activation"], 1)
+
+    def test_duplicate_active_request_is_reused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = AccessManager(Path(tmp))
+            first = manager.request("web_research", "research agriculture")
+            second = manager.request("web_research", "research agriculture")
+            self.assertEqual(first["request_id"], second["request_id"])
+            self.assertEqual(manager.status()["total"], 1)
 
     def test_revoke_disables_request(self):
         with tempfile.TemporaryDirectory() as tmp:
