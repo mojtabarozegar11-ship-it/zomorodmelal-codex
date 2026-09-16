@@ -5,7 +5,7 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class ChangeItem:
 class ChangePackage:
     """Creates an immutable, auditable description of sandbox changes."""
 
-    def __init__(self, root: str | Path = "data/change_packages") -> None:
+    def __init__(self, root: Union[str, Path] = "data/change_packages") -> None:
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
 
@@ -26,7 +26,7 @@ class ChangePackage:
         self,
         files: List[Dict[str, object]],
         reason: str,
-        sandbox_rel: str | None = None,
+        sandbox_rel: Optional[str] = None,
     ) -> Dict[str, object]:
         items = [
             ChangeItem(
