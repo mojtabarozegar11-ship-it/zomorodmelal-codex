@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +12,7 @@ from autonomous_core.autonomous_cycle import AutonomousCycle
 
 
 class AutonomousSupervisor:
-    """Continuously advance safe autonomous cycles until stopped or blocked."""
+    """Continuously advance safe autonomous cycles without duplicating approvals."""
 
     def __init__(
         self,
@@ -33,38 +35,85 @@ class AutonomousSupervisor:
         temp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
         temp.replace(self.state_path)
 
-    def run_once(self, goal: str | None = None) -> Dict[str, Any]:
-        result = self.cycle_factory(self.project_root).run(goal)
-        report = result.get("report", {})
-        blocked = bool(report.get("pending"))
-        state = {
-            "last_cycle": report.get("cycle"),
-            "last_phase": report.get("phase"),
-            "last_goal": report.get("goal"),
-            "blocked": blocked,
-            "pending": report.get("pending", []),
+    def _base_state(self, **values: Any) -> Dict[str, Any]:
+        return {
             "owner_approval_required": True,
             "real_changes_allowed": False,
             "updated_at": datetime.now(timezone.utc).isoformat(),
+            **values,
         }
-        self._save_state(state)
+
+    def run_once(self, goal: str | None = None) -> Dict[str, Any]:
+        try:
+            result = self.cycle_factory(self.project_root).run(goal)
+        except Exception as exc:
+            self._save_state(self._base_state(
+                status="error",
+                blocked=True,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            ))
+            raise
+
+        report = result.get("report", {})
+        pending = report.get("pending", [])
+        blocked = bool(pending)
+        self._save_state(self._base_state(
+            status="blocked" if blocked else "running",
+            last_cycle=report.get("cycle"),
+            last_phase=report.get("phase"),
+            last_goal=report.get("goal"),
+            blocked=blocked,
+            pending=pending,
+        ))
         return result
 
     def run_forever(self, goal: str | None = None) -> None:
         current_goal = goal
         while not self.stop_requested:
-            result = self.run_once(current_goal)
+            try:
+                result = self.run_once(current_goal)
+            except Exception:
+                # Persisted error state is enough for an operator to inspect;
+                # avoid a tight retry loop.
+                time.sleep(self.interval_seconds)
+                continue
+
             report = result.get("report", {})
             pending = report.get("pending", [])
-
-            # A pending owner approval is a deliberate boundary, not an error.
-            # Do not spin or repeatedly create identical sensitive actions.
-            if "owner_approval_for_real_changes" in pending:
+            if pending:
+                # Approval or another deliberate boundary means WAIT, not retry.
+                self._save_state(self._base_state(
+                    status="waiting_owner_approval",
+                    last_cycle=report.get("cycle"),
+                    last_phase=report.get("phase"),
+                    last_goal=report.get("goal"),
+                    blocked=True,
+                    pending=pending,
+                ))
                 time.sleep(self.interval_seconds)
                 continue
 
             time.sleep(self.interval_seconds)
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the safe autonomous supervisor")
+    parser.add_argument("--goal", default=os.environ.get("MASTER_AGENT_GOAL"), help="goal to advance")
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=int(os.environ.get("SUPERVISOR_INTERVAL_SECONDS", "300")),
+        help="seconds between cycles (default: 300)",
+    )
+    parser.add_argument("--once", action="store_true", help="run exactly one cycle")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    AutonomousSupervisor().run_forever()
+    args = _parse_args()
+    supervisor = AutonomousSupervisor(interval_seconds=args.interval)
+    if args.once:
+        supervisor.run_once(args.goal)
+    else:
+        supervisor.run_forever(args.goal)
