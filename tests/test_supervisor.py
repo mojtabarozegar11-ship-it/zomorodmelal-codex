@@ -23,6 +23,14 @@ class FakeCycle:
         }
 
 
+class FailingCycle:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+
+    def run(self, goal=None):
+        raise RuntimeError("test failure")
+
+
 class SupervisorTests(unittest.TestCase):
     def test_run_once_persists_safe_blocked_state(self):
         FakeCycle.calls = 0
@@ -36,6 +44,18 @@ class SupervisorTests(unittest.TestCase):
             self.assertIn('"blocked": true', state)
             self.assertIn('"owner_approval_required": true', state)
             self.assertIn('"real_changes_allowed": false', state)
+            self.assertIn('"status": "blocked"', state)
+
+    def test_run_once_persists_error_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            supervisor = AutonomousSupervisor(root, cycle_factory=FailingCycle)
+            with self.assertRaises(RuntimeError):
+                supervisor.run_once("research market")
+            state = (root / "data" / "supervisor_state.json").read_text(encoding="utf-8")
+            self.assertIn('"status": "error"', state)
+            self.assertIn('"blocked": true', state)
+            self.assertIn('"error_type": "RuntimeError"', state)
 
 
 if __name__ == "__main__":
