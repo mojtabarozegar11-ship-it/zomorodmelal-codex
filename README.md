@@ -60,9 +60,19 @@ Completed review actions:
 4. Deployment readiness: production remains gated until host credentials and approval are provided.
 5. Documentation update: this progress section added.
 
+## Refactor Priority
+
+Current engineering focus:
+
+- Remove duplicate implementation paths.
+- Keep one source of truth for architecture decisions.
+- Modify existing modules before creating new ones.
+- Add only required components.
+
 ## Roadmap
 
 1. Core validation
-2. Django integration
-3. Database layer
-4. AI API integration
+2. Refactor and consolidation
+3. Django integration
+4. Database layer
+5. AI API integration
