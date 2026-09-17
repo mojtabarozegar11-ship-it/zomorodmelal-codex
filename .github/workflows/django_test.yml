@@ -1,0 +1,19 @@
+name: Django Offline Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: pip install -r django_project/requirements.txt
+      - name: Django check
+        run: python django_project/manage.py check
