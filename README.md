@@ -8,6 +8,20 @@ Core execution framework for Master Agent.
 - Django: Pending Integration
 - Runtime: Local Core Mode
 
+## CI Status
+
+![MVP Tests](https://github.com/mojtabarozegar11-ship-it/zomorodmelal-codex/actions/workflows/mvp-tests.yml/badge.svg)
+
+## Test Suite
+
+Current validation layers:
+
+- Startup validation
+- Import validation
+- Agent flow validation
+- Execution logger validation
+- End-to-end flow validation
+
 ## Run
 
 ```bash
