@@ -18,6 +18,7 @@ from evolution.evolution_engine import EvolutionEngine
 from factory.agent_factory import AgentFactory
 from access.access_manager import AccessManager
 from versioning.version_control import VersionControl
+from ai_bridge import AIBridge
 
 
 class MasterOrchestrator:
@@ -33,6 +34,7 @@ class MasterOrchestrator:
         self.factory = AgentFactory()
         self.access = AccessManager()
         self.versioning = VersionControl()
+        self.ai = AIBridge()
 
     def status(self):
 
@@ -50,6 +52,8 @@ class MasterOrchestrator:
             "access": self.access.status(),
 
             "version_control": self.versioning.status(),
+
+            "ai_provider": self.ai.status(),
 
             "security": {
                 "owner_approval_required": True,
@@ -71,8 +75,17 @@ class MasterOrchestrator:
             "execution": "blocked_until_owner_approval"
         }
 
+    def ai_analysis(self, prompt):
+
+        return {
+            "ai_response": self.ai.ask(prompt),
+            "approval_required": True,
+            "execution": "blocked_until_owner_approval"
+        }
+
 
 if __name__ == "__main__":
+
 
     orchestrator = MasterOrchestrator()
 
