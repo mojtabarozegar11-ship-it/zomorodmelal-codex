@@ -1,12 +1,20 @@
-# Django Apps
+# Zomorod Melal Django Apps
 
-Planned platform modules:
+Application modules for the platform:
 
-- agriculture
-- marketplace
-- encyclopedia
-- research
-- services
-- ai
+- agriculture: agricultural ecosystem
+- marketplace: products and services marketplace
+- encyclopedia: knowledge base
+- research: research center
+- services: platform services
+- ai: AI services
 
-These apps will connect to Master Agent through the integration layer.
+Architecture:
+
+Django Apps
+↓
+Django API Bridge
+↓
+Master Agent Core
+
+Apps are designed to connect with Master Agent through the integration layer.
