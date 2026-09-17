@@ -1,18 +1,44 @@
 # Zomorod Melal Master Agent Core
 
-Master Agent Ecosystem for Zomorod Melal.
+## Overview
+Core execution framework for Master Agent.
 
-## Version
-v1.0 MVP
+## Current Mode
+- API: Disabled
+- Django: Pending Integration
+- Runtime: Local Core Mode
 
-## Core Modules
-- Master Agent Core
-- Planner
-- Executor
-- Agent Registry
-- Memory System
-- Security Approval
-- Django Integration
+## Run
+
+```bash
+make run
+```
+
+or
+
+```bash
+bash start.sh
+```
+
+## Architecture
+
+Startup Pipeline -> Orchestrator -> MVP Runner -> Master Core -> Agents -> Report
+
+## Agents
+
+- Knowledge
+- Finance
+- Agriculture
+- Security
+- Game
 
 ## Security Rule
+
 OWNER APPROVAL REQUIRED BEFORE CRITICAL ACTION
+
+## Roadmap
+
+1. Core validation
+2. Django integration
+3. Database layer
+4. AI API integration
