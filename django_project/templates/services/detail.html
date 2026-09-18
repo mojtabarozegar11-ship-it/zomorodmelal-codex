@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }} | خدمات زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">{{ service.category.name }}</span>
+  <h1>{{ service.name }}</h1>
+  <p>{{ service.summary|default:service.description }}</p>
+  {% if service.request_enabled %}<a class="btn" href="{% url 'service-request' service.slug %}">ثبت درخواست</a>{% else %}<span class="pill">فعلاً غیرفعال</span>{% endif %}
+</section>
+<section class="section"><div class="panel">
+  <h2>درباره خدمت</h2>
+  <p>{{ service.description|default:"توضیحات این خدمت به‌زودی تکمیل می‌شود." }}</p>
+  <p class="notice">{% if service.compliance_required or service.owner_approval_required %}این خدمت ممکن است به بررسی قانونی یا تأیید مسئول مربوط نیاز داشته باشد.{% elif service.requires_quote %}قیمت پس از بررسی درخواست اعلام می‌شود.{% else %}شرایط استفاده هنگام ثبت درخواست نمایش داده می‌شود.{% endif %}</p>
+</div></section>
+{% endblock %}
