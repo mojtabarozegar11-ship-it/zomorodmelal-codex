@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block title %}مرکز خدمات اقتصادی زمرد ملل{% endblock %}
+{% block meta_description %}کاتالوگ جامع خدمات اقتصادی و سوپراپ زمرد ملل.{% endblock %}
+{% block content %}<section class="hero"><span class="eyebrow">ZOMOROD MELAL · SUPER APP</span><h1>مرکز جامع خدمات اقتصادی</h1><p>خدمات پرداخت، مالی، خودرو، سفر، بیمه، سرمایه‌گذاری، کسب‌وکار و زندگی دیجیتال در یک ساختار یکپارچه.</p></section><section class="section"><div class="cards">{% for item in catalog %}<article><span class="pill">{{ item.key }}</span><h3>{{ item.title }}</h3><ul class="service-list">{% for service in item.services %}<li>{{ service }}</li>{% endfor %}</ul></article>{% endfor %}</div></section><section class="section"><p class="notice">این صفحه کاتالوگ محصول است. هر سرویس واقعی بر اساس API/قرارداد رسمی، مجوزهای لازم، احراز هویت و الزامات امنیتی فعال می‌شود.</p></section>{% endblock %}
