@@ -1,9 +1,2 @@
-# Zomorod Melal Django public-root guard.
-# The Python application is managed by cPanel Application Manager/Passenger.
-# Do not expose the public_html directory listing.
+# Keep LiteSpeed from exposing the hosting account's public directory.
 Options -Indexes
-
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^$ / [L]
-</IfModule>
