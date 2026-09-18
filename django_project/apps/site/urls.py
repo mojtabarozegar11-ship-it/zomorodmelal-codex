@@ -5,6 +5,7 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("page/<slug:slug>/", views.page_detail, name="page-detail"),
     path("encyclopedia/", views.encyclopedia, name="encyclopedia"),
+    path("agriculture/weather/", views.agriculture_weather, name="agriculture-weather"),
     path("games/", views.studio_redirect, name="games"),
     path("health/", views.health, name="website-health"),
 ]
