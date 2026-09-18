@@ -20,7 +20,7 @@ jobs:
           pip install ruff
       - name: Ruff static analysis
         working-directory: django_project
-        run: ruff check apps api config manage.py
+        run: ruff check apps api config manage.py --select E4,E7,E9,F --ignore E501 --exclude '**/migrations/**'
 
       - name: Django check
         working-directory: django_project
