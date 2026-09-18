@@ -1,4 +1,3 @@
-from django.utils import timezone
 from .models import AuditLog, CompanyDelegation
 
 def user_has_company_role(user, company, roles=()):
@@ -9,3 +8,15 @@ def user_has_company_role(user, company, roles=()):
 
 def audit(actor, action, obj, company=None, metadata=None):
     return AuditLog.objects.create(actor=actor, company=company, action=action, object_type=obj.__class__.__name__, object_id=str(obj.pk), metadata=metadata or {})
+
+def accessible_companies(user):
+    """Return only companies explicitly delegated to the user, unless superuser."""
+    from .models import Company
+    if user.is_superuser:
+        return Company.objects.filter(active=True)
+    return Company.objects.filter(
+        active=True,
+        delegations__user=user,
+        delegations__active=True,
+        delegations__owner_approved=True,
+    ).distinct()
