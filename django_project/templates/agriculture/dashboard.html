@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}کشاورزی و زنجیره تولید | زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">AGRICULTURE · PRODUCTION CHAINS</span>
+  <h1>کشاورزی و زنجیره‌های تولید</h1>
+  <p>نمای یکپارچه از مزارع، محصولات و زنجیره‌های تولید شرکت.</p>
+</section>
+<section class="section">
+  <div class="cards">
+    {% for farm in farms %}<article><span class="pill">مزرعه</span><h3>{{ farm.name }}</h3><p>{{ farm.location|default:"مکان ثبت نشده" }}</p></article>
+    {% empty %}<article><h3>هنوز مزرعه‌ای ثبت نشده است.</h3><p>اطلاعات مزارع از پنل مدیریت ثبت می‌شود.</p></article>{% endfor %}
+  </div>
+</section>
+<section class="section">
+  <div class="section-title"><div><p>PRODUCTS</p><h2>محصولات</h2></div></div>
+  <div class="cards">{% for item in products %}<article><h3>{{ item.name }}</h3><p>{{ item.category|default:"محصول کشاورزی" }}</p></article>{% empty %}<article><h3>محصولی ثبت نشده است.</h3></article>{% endfor %}</div>
+</section>
+<section class="section">
+  <div class="section-title"><div><p>VALUE CHAINS</p><h2>زنجیره‌های تولید</h2></div></div>
+  <div class="cards">{% for chain in chains %}<article><h3>{{ chain.name }}</h3><p>{{ chain.description }}</p></article>{% empty %}<article><h3>زنجیره‌ای ثبت نشده است.</h3></article>{% endfor %}</div>
+</section>
+{% endblock %}
