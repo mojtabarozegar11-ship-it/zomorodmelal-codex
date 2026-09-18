@@ -20,21 +20,20 @@ jobs:
       - name: Django check
         working-directory: django_project
         run: python manage.py check
-      - name: Django integration tests
+      - name: Django migrations check
+        working-directory: django_project
+        run: python manage.py makemigrations --check --dry-run
+      - name: Primary website, encyclopedia and agent tests
         working-directory: django_project
         env:
-          PYTHONPATH: '${{ github.workspace }}:${{ github.workspace }}/django_project'
-        run: python -m django test api.tests.test_agent_endpoint apps.ai.tests_admin
-      - name: Website route tests
-        run: |
-          python -m pip install -r django_project/requirements.txt
-          PYTHONPATH='${{ github.workspace }}:${{ github.workspace }}/django_project' DJANGO_SETTINGS_MODULE=website.config.settings python -m django test website.core
+          PYTHONPATH: '$'+'{{ github.workspace }}:$'+'{{ github.workspace }}/django_project'
+        run: python -m django test apps.site apps.encyclopedia api.tests.test_agent_endpoint apps.ai.tests_admin
       - name: Host entrypoint imports
         working-directory: django_project
         env:
-          PYTHONPATH: '${{ github.workspace }}:${{ github.workspace }}/django_project'
-        run: python -c "import config.wsgi, config.asgi; print('Master WSGI/ASGI import OK')"
-      - name: Website WSGI import
+          PYTHONPATH: '$'+'{{ github.workspace }}:$'+'{{ github.workspace }}/django_project'
+        run: python -c "import config.wsgi, config.asgi; print('Primary WSGI/ASGI import OK')"
+      - name: Legacy website compatibility check
         env:
-          PYTHONPATH: '${{ github.workspace }}'
-        run: python -c "import website.config.wsgi; print('Website WSGI import OK')"
+          PYTHONPATH: '$'+'{{ github.workspace }}'
+        run: python -c "import website.config.wsgi; print('Legacy website import OK')"
