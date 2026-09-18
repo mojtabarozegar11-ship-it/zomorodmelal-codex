@@ -11,7 +11,7 @@ INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "apps.common", "apps.site", "apps.agriculture", "apps.marketplace", "apps.encyclopedia",
-    "apps.research", "apps.services", "apps.ai", "apps.economy",
+    "apps.research", "apps.services", "apps.ai", "apps.economy", "apps.studio",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
