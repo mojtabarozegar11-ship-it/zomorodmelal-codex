@@ -1,0 +1,25 @@
+name: Build Repository ZIP
+
+on:
+  push:
+    branches:
+      - "export/repo-zip-20260918"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create ZIP
+        run: |
+          zip -r ../zomorodmelal-codex.zip . -x ".git/*"
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: zomorodmelal-codex
+          path: zomorodmelal-codex.zip
+          if-no-files-found: error
