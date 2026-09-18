@@ -6,13 +6,14 @@
   <meta name="theme-color" content="#173d2f">
   <meta name="description" content="{% block meta_description %}شرکت کشت و صنعت زمرد ملل؛ اکوسیستم کشاورزی، صنعت، دانش، اقتصاد و فناوری{% endblock %}">
   <title>{% block title %}کشت و صنعت زمرد ملل{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'site/logo.svg' %}">
   <link rel="stylesheet" href="{% static 'site/main.css' %}">
   {% block page_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}page-default{% endblock %}">
   <header class="site-header">
-    <a class="brand" href="/" aria-label="زمرد ملل">
-      <span class="brand-mark">زمرد</span>
+    <a class="brand" href="/" aria-label="شرکت کشت و صنعت زمرد ملل">
+      <img class="brand-logo" src="{% static 'site/logo.svg' %}" alt="لوگوی رسمی شرکت کشت و صنعت زمرد ملل">
       <span class="brand-copy"><b>زمرد ملل</b><small>کشت و صنعت · دانش · فناوری</small></span>
     </a>
     <nav class="nav" aria-label="ناوبری اصلی">
@@ -26,7 +27,10 @@
   </header>
   <main>{% block content %}{% endblock %}</main>
   <footer class="site-footer">
-    <span>کشت و صنعت زمرد ملل</span>
+    <div class="footer-brand">
+      <img class="footer-logo" src="{% static 'site/logo.svg' %}" alt="" aria-hidden="true">
+      <span>کشت و صنعت زمرد ملل</span>
+    </div>
     <span>اکوسیستم یکپارچه تولید، دانش، اقتصاد و نوآوری</span>
   </footer>
 </body>
