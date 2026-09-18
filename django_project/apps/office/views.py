@@ -5,6 +5,11 @@ from .models import AccountingEntry, CashTransaction, Company, CompanyDelegation
 
 
 @login_required
+def app_shell(request):
+    return render(request, "office/app.html")
+
+
+@login_required
 def dashboard(request):
     companies = Company.objects.filter(active=True)
     context = {
