@@ -1,6 +1,6 @@
-from decimal import Decimal
 import json
 import os
+from decimal import Decimal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
