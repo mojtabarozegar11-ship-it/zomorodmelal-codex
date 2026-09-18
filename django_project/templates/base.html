@@ -1,1 +1,32 @@
-{% load static %}<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#173d2f"><title>{% block title %}کشت و صنعت زمرد ملل{% endblock %}</title><link rel="stylesheet" href="{% static 'site/main.css' %}"></head><body><nav class="nav"><a href="/">زمرد ملل</a><a href="/">خانه</a><a href="/encyclopedia/">دانشنامه</a><a href="/economy/">اقتصاد</a><a href="/games/">استودیو</a><a href="/admin/">مدیریت</a></nav>{% block content %}{% endblock %}</body></html>
+{% load static %}<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#173d2f">
+  <meta name="description" content="{% block meta_description %}شرکت کشت و صنعت زمرد ملل؛ اکوسیستم کشاورزی، صنعت، دانش، اقتصاد و فناوری{% endblock %}">
+  <title>{% block title %}کشت و صنعت زمرد ملل{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'site/main.css' %}">
+  {% block page_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}page-default{% endblock %}">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="زمرد ملل">
+      <span class="brand-mark">زمرد</span>
+      <span class="brand-copy"><b>زمرد ملل</b><small>کشت و صنعت · دانش · فناوری</small></span>
+    </a>
+    <nav class="nav" aria-label="ناوبری اصلی">
+      <a href="/">خانه</a>
+      <a href="/encyclopedia/">دانشنامه</a>
+      <a href="/economy/">اقتصاد</a>
+      <a href="/games/">استودیو</a>
+      <a href="/admin/">مدیریت</a>
+    </nav>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer class="site-footer">
+    <span>کشت و صنعت زمرد ملل</span>
+    <span>اکوسیستم یکپارچه تولید، دانش، اقتصاد و نوآوری</span>
+  </footer>
+</body>
+</html>
