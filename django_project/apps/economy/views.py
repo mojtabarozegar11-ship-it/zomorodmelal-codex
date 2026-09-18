@@ -1,14 +1,24 @@
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 import json
 import os
+from decimal import Decimal
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 from .agents import EconomicMasterAgent
 from .gateway import get_payment_gateway
-from .models import Asset, EconomicWorkItem, MarketDataSnapshot, OrderIntent, Portfolio, SignalProduct, SignalPurchase, VirtualAssetProject, GoldOrder
+from .models import (
+    Asset,
+    EconomicWorkItem,
+    GoldOrder,
+    MarketDataSnapshot,
+    OrderIntent,
+    Portfolio,
+    SignalProduct,
+    SignalPurchase,
+    VirtualAssetProject,
+)
 
 
 IRANICARD_INSPIRED_SERVICES = [
@@ -164,7 +174,6 @@ def gold_order_create(request):
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "authentication_required"}, status=401)
     try:
-        from decimal import Decimal
         weight = Decimal(request.POST.get("weight_grams", "0"))
     except Exception:
         return JsonResponse({"detail": "invalid_weight"}, status=400)
