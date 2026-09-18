@@ -3,7 +3,20 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .models import SitePage
 
 def home(request):
-    return render(request, "site/home.html")
+    return render(
+        request,
+        "site/home.html",
+        {
+            "quick_links": [
+                ("کشاورزی", "agriculture-dashboard", "مزارع، محصولات و زنجیره‌های تولید"),
+                ("بازار", "marketplace", "کاتالوگ محصولات و عرضه"),
+                ("پژوهش", "research-home", "پروژه‌ها و توسعه دانش"),
+                ("خدمات", "services", "خدمات و ثبت درخواست"),
+                ("اقتصاد", "economy-dashboard", "اقتصاد و تحلیل"),
+                ("استودیو", "studio-home", "بازی، اپلیکیشن و نوآوری"),
+            ]
+        },
+    )
 
 def page_detail(request, slug):
     page = get_object_or_404(SitePage, slug=slug, published=True)
