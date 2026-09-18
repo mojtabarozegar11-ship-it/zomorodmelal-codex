@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -32,7 +32,7 @@ class ContentAgent:
     def __init__(self):
         self.intelligence = ContentIntelligenceEngine()
 
-    def build_content_plan(self, channel: ContentChannel, topic: str) -> Dict[str, object]:
+    def build_content_plan(self, channel: ContentChannel, topic: str) -> dict[str, Any]:
         strategy = getattr(channel, "strategy", None)
         algorithm_notes = (strategy.algorithm_notes if strategy else {}) or {}
         competitors = list(
