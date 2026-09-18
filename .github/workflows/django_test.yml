@@ -27,7 +27,7 @@ jobs:
         working-directory: django_project
         env:
           PYTHONPATH: '$'+'{{ github.workspace }}:$'+'{{ github.workspace }}/django_project'
-        run: python -m django test apps.site apps.encyclopedia apps.economy apps.economy.tests_signals api.tests.test_agent_endpoint apps.ai.tests_admin
+        run: python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.economy.tests_signals api.tests.test_agent_endpoint apps.ai.tests_admin
       - name: Host entrypoint imports
         working-directory: django_project
         env:
