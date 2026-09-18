@@ -1,5 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
 
 class BaseEntity:
     """Common base structure placeholder for shared Django entities."""
-    created_at = datetime.utcnow
+
+    @staticmethod
+    def created_at() -> datetime:
+        """Return the current UTC timestamp when requested."""
+        return datetime.now(timezone.utc)
