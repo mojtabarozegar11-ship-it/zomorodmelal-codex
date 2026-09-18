@@ -1,11 +1,13 @@
+from decimal import Decimal
+import json
+import os
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
-import json
-import os
-from decimal import Decimal
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
 from .agents import EconomicMasterAgent
 from .gateway import get_payment_gateway
 from .models import (
@@ -117,7 +119,8 @@ def dashboard(request):
         "virtual_assets": VirtualAssetProject.objects.filter(active=True).count(),
         "work_items": EconomicWorkItem.objects.exclude(status="done").count(),
         "agents": EconomicMasterAgent().capabilities(),
-        "international_services": IRANICARD_INSPIRED_SERVICES,\n        "super_app_services": SUPER_APP_SERVICES,
+        "international_services": IRANICARD_INSPIRED_SERVICES,
+        "super_app_services": SUPER_APP_SERVICES,
     })
 
 
