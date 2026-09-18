@@ -13,3 +13,9 @@ class SignalSalesTests(TestCase):
         self.assertTrue(result["sandbox"])
         self.assertTrue(result["authority"].startswith("SANDBOX-"))
         self.assertEqual(SignalPurchase.objects.get(pk=purchase.pk).status, "pending")
+
+
+    def test_coupon_model_can_be_created(self):
+        from .models import SignalCoupon
+        coupon = SignalCoupon.objects.create(code="WELCOME", percent=10)
+        self.assertEqual(coupon.percent, 10)
