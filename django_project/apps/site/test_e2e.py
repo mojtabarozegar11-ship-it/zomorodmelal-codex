@@ -1,5 +1,5 @@
 import unittest
-from django.test import Client
+from django.test import Client, TestCase
 
 
 class PrimarySiteE2E(TestCase):
