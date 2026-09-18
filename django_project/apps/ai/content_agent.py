@@ -57,7 +57,6 @@ class ContentAgent:
             ],
         }
 
-    @transaction.atomic
     def research_snapshot(self, channel: ContentChannel, topic: str):
         signals = list(
             channel.research_snapshots.filter(query__icontains=topic).values(
@@ -74,7 +73,8 @@ class ContentAgent:
     def generate_brief(self, *, channel: ContentChannel, topic: str, user=None) -> ContentBrief:
         if not topic.strip():
             raise ValueError("Topic is required.")
-        plan = self.build_content_plan(channel, topic)\n        research = self.research_snapshot(channel, topic)
+        plan = self.build_content_plan(channel, topic)
+        research = self.research_snapshot(channel, topic)
         brief = ContentBrief.objects.create(
             channel=channel,
             topic=topic.strip(),
@@ -101,6 +101,8 @@ class ContentAgent:
 
     @transaction.atomic
     def approve_brief(self, brief: ContentBrief, *, actor=None):
+        if not getattr(actor, "is_authenticated", False) or not getattr(actor, "is_superuser", False):
+            raise PermissionDenied("Only the owner can approve content.")
         require_owner_approval(True)
         brief.owner_approved = True
         brief.status = "approved"
@@ -114,11 +116,17 @@ class ContentAgent:
         outputs = {
             "title": f"{brief.topic} | راهنمای کاربردی",
             "script": (
-                f"شروع: یک سؤال مهم درباره «{brief.topic}».\n"
-                "ارزش: سه نکته روشن و کاربردی ارائه کن.\n"
+                f"شروع: یک سؤال مهم درباره «{brief.topic}».
+"
+                "ارزش: سه نکته روشن و کاربردی ارائه کن.
+"
                 "پایان: یک اقدام مشخص برای مخاطب پیشنهاد بده."
             ),
-            "caption": f"{brief.hook}\n\n{brief.angle}\n\n{brief.call_to_action}",
+            "caption": f"{brief.hook}
+
+{brief.angle}
+
+{brief.call_to_action}",
             "description": f"محتوای آموزشی درباره {brief.topic}.",
             "hashtags": f"#{brief.topic.replace(' ', '_')}",
             "thumbnail_prompt": f"تصویر حرفه‌ای و جذاب برای موضوع {brief.topic} بدون ادعای گمراه‌کننده",
@@ -149,6 +157,8 @@ class ContentAgent:
 
     def approve_publication(self, publication: ContentPublication, *, approved: bool, actor=None):
         if approved:
+            if not getattr(actor, "is_authenticated", False) or not getattr(actor, "is_superuser", False):
+                raise PermissionDenied("Only the owner can approve publication.")
             require_owner_approval(approved)
             publication.owner_approved = True
             publication.save(update_fields=["owner_approved"])
