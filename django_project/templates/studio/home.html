@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}استودیو بازی و اپلیکیشن | زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>استودیو بازی و اپلیکیشن زمرد ملل</h1>
+  <p>مرکز اختصاصی مطالعه، نوآوری، طراحی، ساخت، انتشار و درآمدزایی محصولات دیجیتال شرکت.</p>
+</section>
+<section class="cards">
+  {% for title, text in stages %}<article><h2>{{ title }}</h2><p>{{ text }}</p></article>{% endfor %}
+</section>
+<section class="cards">
+  <article><h2>پروژه‌های شرکت</h2>{% for project in projects %}<p><strong>{{ project.name }}</strong> — {{ project.get_kind_display }} — {{ project.get_status_display }}</p>{% empty %}<p>هنوز پروژه‌ای ثبت نشده است.</p>{% endfor %}</article>
+  <article><h2>آزمایشگاه ایده</h2>{% for idea in ideas %}<p>{{ idea.title }}{% if idea.approved_for_prototyping %} ✓{% endif %}</p>{% empty %}<p>هنوز ایده‌ای ثبت نشده است.</p>{% endfor %}</article>
+</section>
+<section class="hero"><h2>کنترل انتشار و NFT</h2><p>انتشار واقعی محصول و هر اقدام واقعی NFT باید به‌صورت صریح توسط مالک تأیید شود.</p></section>
+{% endblock %}
