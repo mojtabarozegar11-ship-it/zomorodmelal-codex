@@ -130,6 +130,7 @@ class ContentPublication(models.Model):
     channel = models.ForeignKey(ContentChannel, on_delete=models.PROTECT, related_name="publications")
     scheduled_for = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="queued")
+    content_json = models.JSONField(default=dict, blank=True)
     payload = models.JSONField(default=dict, blank=True)
     provider = models.CharField(max_length=60, default="manual")
     external_id = models.CharField(max_length=180, blank=True)
