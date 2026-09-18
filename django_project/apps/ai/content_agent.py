@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.common.platform import record_audit, require_owner_approval
-from .content_agent_models import (
+from .content_intelligence import ContentIntelligenceEngine\nfrom .content_agent_models import (
     ContentBrief,
     ContentChannel,
     ContentCompetitor,
@@ -40,7 +40,7 @@ class ContentAgent:
             "pillars": pillars,
             "formats": formats,
             "competitors": competitors,
-            "algorithm_notes": algorithm_notes,\n            "research_tasks": [
+            "algorithm_notes": algorithm_notes,\n            "platform_variants": self.intelligence.generate_platform_variants(topic=topic, platforms=formats),\n            "baseline_score": score,\n            "research_tasks": [
                 "collect_current_topic_signals",
                 "collect_competitor_patterns",
                 "identify_audience_questions",
