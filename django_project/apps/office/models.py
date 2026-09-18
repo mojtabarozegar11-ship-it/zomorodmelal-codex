@@ -258,3 +258,45 @@ class SalesOrder(models.Model):
     total = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     order_date = models.DateField()
+
+
+class Journal(models.Model):
+    STATUS_CHOICES = (("draft", "پیش‌نویس"), ("posted", "ثبت‌شده"), ("reversed", "معکوس‌شده"))
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="journals")
+    journal_no = models.CharField(max_length=80)
+    entry_date = models.DateField()
+    description = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_journals")
+    owner_approved = models.BooleanField(default=False)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-entry_date", "-id")
+        constraints = [models.UniqueConstraint(fields=("company", "journal_no"), name="office_journal_company_no_uniq")]
+
+    def __str__(self):
+        return self.journal_no
+
+
+class JournalLine(models.Model):
+    journal = models.ForeignKey(Journal, on_delete=models.CASCADE, related_name="lines")
+    line_no = models.PositiveIntegerField()
+    account = models.ForeignKey(LedgerAccount, on_delete=models.PROTECT, related_name="journal_lines")
+    description = models.CharField(max_length=300, blank=True)
+    debit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ("line_no", "id")
+        constraints = [
+            models.UniqueConstraint(fields=("journal", "line_no"), name="office_journal_line_no_uniq"),
+            models.CheckConstraint(check=models.Q(debit__gte=0) & models.Q(credit__gte=0), name="office_journal_line_nonnegative"),
+            models.CheckConstraint(check=((models.Q(debit__gt=0) & models.Q(credit=0)) | (models.Q(debit=0) & models.Q(credit__gt=0))), name="office_journal_line_one_side"),
+        ]
+
+    def clean(self):
+        if self.journal_id and self.account_id and self.journal.company_id != self.account.company_id:
+            from django.core.exceptions import ValidationError
+            raise ValidationError({"account": "Account must belong to the journal company."})
