@@ -34,8 +34,8 @@ CSRF_TRUSTED_ORIGINS = [
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "apps.common.apps.CommonConfig", "apps.site", "apps.agriculture", "apps.marketplace", "apps.encyclopedia.apps.EncyclopediaConfig",
-    "apps.research", "apps.services", "apps.ai", "apps.economy", "apps.studio", "apps.office",
+    "apps.common.apps.CommonConfig", "apps.site", "apps.agriculture.apps.AgricultureConfig", "apps.marketplace.apps.MarketplaceConfig", "apps.encyclopedia.apps.EncyclopediaConfig",
+    "apps.research.apps.ResearchConfig", "apps.services", "apps.ai", "apps.economy", "apps.studio", "apps.office",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
