@@ -1,0 +1,4 @@
+deployment:
+  tasks:
+    - export APPDIR=/home/zomorodm/zomorodmelal-download/django_project
+    - /bin/cp -R django_project/. $APPDIR/
