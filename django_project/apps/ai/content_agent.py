@@ -64,7 +64,7 @@ class ContentAgent:
             )[:20]
         )
         return self.intelligence.summarize_research([
-            __import__("apps.ai.content_intelligence", fromlist=["ResearchSignal"]).ResearchSignal(
+            ResearchSignal(
                 source=item["source"], title=item["title"] or topic,
                 summary=item["summary"], metrics=item["metrics"] or {}
             ) for item in signals
