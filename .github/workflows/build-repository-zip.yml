@@ -16,10 +16,11 @@ jobs:
         uses: actions/checkout@v4
       - name: Create ZIP
         run: |
-          zip -r ../zomorodmelal-codex.zip . -x ".git/*"
+          mkdir -p dist
+          zip -r dist/zomorodmelal-codex.zip . -x ".git/*" "dist/*"
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
           name: zomorodmelal-codex
-          path: ../zomorodmelal-codex.zip
+          path: dist/zomorodmelal-codex.zip
           if-no-files-found: error
