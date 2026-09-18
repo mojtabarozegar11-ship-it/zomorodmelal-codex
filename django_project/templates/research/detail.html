@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} | پژوهش{% endblock %}
+{% block content %}
+<section class="hero"><span class="eyebrow">RESEARCH PROJECT</span><h1>{{ project.title }}</h1><p>{{ project.summary }}</p><div class="cards"><article><span class="pill">وضعیت</span><h3>{{ project.status }}</h3></article><article><span class="pill">تأیید مالک</span><h3>{% if project.owner_approved %}تأیید شده{% else %}در انتظار{% endif %}</h3></article></div></section>
+{% endblock %}
