@@ -2,13 +2,18 @@ from django.db import models
 
 
 class StudioProject(models.Model):
-    KIND_CHOICES = [("game", "بازی"), ("app", "اپلیکیشن")]
-    STATUS_CHOICES = [
-        ("idea", "ایده"), ("research", "مطالعه"), ("design", "طراحی"),
-        ("prototype", "نمونه اولیه"), ("development", "توسعه"),
-        ("testing", "آزمون"), ("release_ready", "آماده انتشار"),
-        ("published", "منتشرشده"), ("maintenance", "توسعه پس از انتشار"),
-    ]
+    KIND_CHOICES = (("game", "بازی"), ("app", "اپلیکیشن"))
+    STATUS_CHOICES = (
+        ("idea", "ایده"),
+        ("research", "مطالعه"),
+        ("design", "طراحی"),
+        ("prototype", "نمونه اولیه"),
+        ("development", "توسعه"),
+        ("testing", "آزمون"),
+        ("release_ready", "آماده انتشار"),
+        ("published", "منتشرشده"),
+        ("maintenance", "توسعه پس از انتشار"),
+    )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)
@@ -51,7 +56,11 @@ class StudioIdea(models.Model):
 
 
 class StudioMilestone(models.Model):
-    project = models.ForeignKey(StudioProject, on_delete=models.CASCADE, related_name="milestones")
+    project = models.ForeignKey(
+        StudioProject,
+        on_delete=models.CASCADE,
+        related_name="milestones",
+    )
     title = models.CharField(max_length=200)
     done = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
