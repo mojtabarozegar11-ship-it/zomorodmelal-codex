@@ -29,6 +29,19 @@ Production deployment and external host actions remain gated by owner approval.
 ## CI
 MVP tests run on Python 3.8 through GitHub Actions.
 
+## Canonical Django deployment layout
+
+The production Django application is **`django_project/`**. This is the canonical host entrypoint and the only Django tree that should be registered in cPanel Application Manager.
+
+- Project root: `django_project/`
+- Django settings: `config.settings`
+- WSGI callable: `config.wsgi.application`
+- cPanel/Passenger startup file: `django_project/passenger_wsgi.py`
+- Host dependency file: `django_project/requirements-host.txt`
+- The top-level `website/` tree is retained for compatibility/reference and must not be registered as the production cPanel application.
+
+For cPanel, the application path is the extracted `django_project` directory (the current host copy may be named `django-project`; use the directory that actually contains `manage.py`, `config/`, `apps/`, and `requirements-host.txt`).
+
 ## Remaining external setup
 1. Run Django migrations on the target host.
 2. Create/enable the admin account on the target host.
