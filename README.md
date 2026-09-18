@@ -1,78 +1,38 @@
 # Zomorod Melal Master Agent Core
 
 ## Overview
-Core execution framework for Master Agent.
+Core execution framework and Django management layer for the Zomorod Melal Master Agent.
 
-## Current Mode
-- API: Disabled
-- Django: Pending Integration
-- Runtime: Local Core Mode
+## Android Admin Panel
+The repository now includes an Android-installable Progressive Web App (PWA) for the management panel:
 
-## CI Status
-
-![MVP Tests](https://github.com/mojtabarozegar11-ship-it/zomorodmelal-codex/actions/workflows/mvp-tests.yml/badge.svg)
-
-## Test Suite
-
-Current validation layers:
-
-- Startup validation
-- Import validation
-- Agent flow validation
-- Execution logger validation
-- End-to-end flow validation
-
-## Run
-
-```bash
-make run
-```
-
-or
-
-```bash
-bash start.sh
-```
-
-## Architecture
-
-Startup Pipeline -> Orchestrator -> MVP Runner -> Master Core -> Agents -> Report
-
-## Agents
-
-- Knowledge
-- Finance
-- Agriculture
-- Security
-- Game
+- URL: `/mobile-admin/`
+- Android Chrome can install it from the browser's install/add-to-home-screen flow.
+- The app opens the Django Admin and AI configuration screens in a mobile-friendly management shell.
+- DeepSeek API keys are entered through Django Admin and are never rendered back into the form.
+- The DeepSeek provider reads the enabled configuration at runtime.
+- External AI remains disabled unless `AI_PROVIDER_ENABLED=True` is explicitly configured.
+- No API key is stored in GitHub, source code, APK, or frontend assets.
 
 ## Security Rule
 
 OWNER APPROVAL REQUIRED BEFORE CRITICAL ACTION
 
-## Hardening Phase Progress
+Production deployment and external host actions remain gated by owner approval.
 
-Completed review actions:
+## Runtime
+- Django admin: `/admin/`
+- Android PWA admin: `/mobile-admin/`
+- Agent API status: `/api/status/`
+- Agent API execution: `/api/execute/`
 
-1. Repository structure review: completed.
-2. Security boundary review: owner approval gate confirmed.
-3. Agent workflow validation: validation layers documented.
-4. Deployment readiness: production remains gated until host credentials and approval are provided.
-5. Documentation update: this progress section added.
+## CI
+MVP tests run on Python 3.8 through GitHub Actions.
 
-## Refactor Priority
-
-Current engineering focus:
-
-- Remove duplicate implementation paths.
-- Keep one source of truth for architecture decisions.
-- Modify existing modules before creating new ones.
-- Add only required components.
-
-## Roadmap
-
-1. Core validation
-2. Refactor and consolidation
-3. Django integration
-4. Database layer
-5. AI API integration
+## Remaining external setup
+1. Run Django migrations on the target host.
+2. Create/enable the admin account on the target host.
+3. Open `/mobile-admin/` on Android and install the PWA.
+4. Enter the DeepSeek API key through the secured admin form when ready.
+5. Enable the provider only after the owner explicitly approves external AI use.
+6. Configure production deployment credentials only after owner approval.
