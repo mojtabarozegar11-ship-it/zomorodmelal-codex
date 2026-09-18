@@ -13,6 +13,7 @@ from .content_agent_models import (
     ContentCompetitor,
     ContentPublication,
 )
+from .services import get_deepseek_provider
 from .content_intelligence import (
     CompetitorPattern,
     ContentIntelligenceEngine,
@@ -173,7 +174,47 @@ class ContentAgent:
 
     @transaction.atomic
     def create_draft_assets(self, brief: ContentBrief, *, actor=None):
-        outputs = {
+        strategy = getattr(brief.channel, "strategy", None)
+        provider = get_deepseek_provider()
+        outputs = None
+        if provider:
+            prompt = {
+                "channel": brief.channel.name,
+                "platform": brief.channel.platform,
+                "language": brief.channel.language,
+                "tone": brief.channel.tone,
+                "audience": brief.channel.audience,
+                "topic": brief.topic,
+                "objective": brief.objective,
+                "format": brief.format,
+                "angle": brief.angle,
+                "hook": brief.hook,
+                "cta": brief.call_to_action,
+                "pillars": (strategy.pillars if strategy else []) or [],
+                "brand_rules": (strategy.brand_rules if strategy else {}) or {},
+                "banned_topics": (strategy.banned_topics if strategy else []) or [],
+                "competitors": list(
+                    brief.channel.competitors.filter(active=True).values(
+                        "name", "platform", "notes"
+                    )[:20]
+                ),
+            }
+            result = provider.generate_json(
+                system=(
+                    "Generate original social content. Return ONLY JSON with keys: "
+                    "title, script, caption, description, hashtags, thumbnail_prompt, image_prompt. "
+                    "Do not invent facts. Respect banned topics and brand rules."
+                ),
+                user=prompt,
+            )
+            required = (
+                "title", "script", "caption", "description",
+                "hashtags", "thumbnail_prompt", "image_prompt",
+            )
+            if isinstance(result, dict) and all(isinstance(result.get(key), str) for key in required):
+                outputs = {key: result[key].strip() for key in required}
+        if outputs is None:
+            outputs = {
             "title": f"{brief.topic} | راهنمای کاربردی",
             "script": (
                 f"شروع: یک سؤال مهم درباره «{brief.topic}».\n"
@@ -204,7 +245,7 @@ class ContentAgent:
                     version=version,
                     body=body,
                     metadata={
-                        "source": "content-agent-template",
+                        "source": "deepseek" if provider and outputs else "content-agent-template",
                         "platform": brief.channel.platform,
                     },
                 )
