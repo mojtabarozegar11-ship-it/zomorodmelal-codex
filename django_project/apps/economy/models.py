@@ -93,3 +93,19 @@ class EconomicWorkItem(models.Model):
 class EconomicPublication(models.Model):
     CHANNELS = [("site","Website"),("report","Report"),("signal","Signal"),("social","Social"),("marketplace","Marketplace")]
     title = models.CharField(max_length=250); channel = models.CharField(max_length=30, choices=CHANNELS); content = models.TextField(); compliance_checked = models.BooleanField(default=False); owner_approved = models.BooleanField(default=False); published = models.BooleanField(default=False); published_at = models.DateTimeField(null=True, blank=True)
+
+
+class GoldOrder(models.Model):
+    SIDES = [("buy", "Buy"), ("sell", "Sell")]
+    STATUSES = [("draft", "Draft"), ("pending_approval", "Pending owner approval"), ("approved", "Approved"), ("quoted", "Quoted"), ("settled", "Settled"), ("cancelled", "Cancelled"), ("blocked", "Blocked")]
+    user = models.ForeignKey("auth.User", on_delete=models.PROTECT, related_name="gold_orders")
+    side = models.CharField(max_length=10, choices=SIDES)
+    product = models.CharField(max_length=100, default="gold_18")
+    weight_grams = models.DecimalField(max_digits=20, decimal_places=6)
+    quoted_price = models.DecimalField(max_digits=24, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=10, default="IRR")
+    status = models.CharField(max_length=30, choices=STATUSES, default="draft")
+    owner_approved = models.BooleanField(default=False)
+    provider_reference = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
