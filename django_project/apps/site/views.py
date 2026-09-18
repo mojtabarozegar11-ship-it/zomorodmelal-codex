@@ -8,3 +8,4 @@ def page_detail(request, slug):
     return render(request, "site/page_detail.html", {"page": page})
 def encyclopedia(request): return render(request, "site/encyclopedia.html")
 def health(request): return JsonResponse({"status":"ok","service":"Zomorod Melal Website"})
+\n\ndef studio_redirect(request):\n    from django.shortcuts import redirect\n    return redirect("studio-home")\n
