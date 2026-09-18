@@ -1,6 +1,8 @@
 services:
   web:
-    build: ./django_project
+    build:
+      context: ./django_project
+      dockerfile: Dockerfile
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${WEB_WORKERS:-3}
     environment:
       DJANGO_DEBUG: "false"
