@@ -143,3 +143,28 @@ class Signal(models.Model):
     rationale = models.TextField(blank=True)
     published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SignalSubscription(models.Model):
+    user = models.ForeignKey("auth.User", on_delete=models.PROTECT, related_name="signal_subscriptions")
+    product = models.ForeignKey(SignalProduct, on_delete=models.PROTECT, related_name="subscriptions")
+    starts_at = models.DateTimeField()
+    expires_at = models.DateTimeField()
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class SignalCoupon(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    percent = models.PositiveIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    max_uses = models.PositiveIntegerField(default=0)
+    used_count = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+class SignalPerformance(models.Model):
+    signal = models.OneToOneField(Signal, on_delete=models.PROTECT, related_name="performance")
+    outcome = models.CharField(max_length=30, default="open")
+    return_percent = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    verified = models.BooleanField(default=False)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
