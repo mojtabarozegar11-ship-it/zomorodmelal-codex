@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}هواشناسی تخصصی کشاورزی | زمرد ملل{% endblock %}
+{% block meta_description %}هواشناسی تخصصی کشاورزی؛ پیش‌بینی هوا، بارش، دما، باد و هشدارهای قابل استفاده برای مزرعه و باغ.{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">AGRI WEATHER · FREE + PROFESSIONAL</span>
+  <h1>هواشناسی تخصصی کشاورزی</h1>
+  <p>داده‌های هواشناسی را به اطلاعات قابل استفاده برای مزرعه تبدیل کنید؛ از پیش‌بینی بارش و دما تا هشدارهای عملیاتی.</p>
+  <div class="cards">
+    <article><span class="pill">رایگان</span><h3>پیش‌بینی پایه</h3><p>دما، بارش، باد و وضعیت روزهای آینده برای موقعیت انتخابی.</p></article>
+    <article><span class="pill">حرفه‌ای</span><h3>داشبورد مزرعه</h3><p>پروفایل محصول، هشدارهای اختصاصی و گزارش‌های قابل دانلود برای کاربران حرفه‌ای.</p></article>
+    <article><span class="pill">درآمد</span><h3>مدل کسب‌وکار</h3><p>اشتراک حرفه‌ای، خدمات B2B، گزارش تخصصی، اسپانسرینگ و جایگاه تبلیغاتی مرتبط با کشاورزی.</p></article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-title"><div><p>LIVE DATA</p><h2>هواشناسی موقعیت شما</h2></div></div>
+  <div class="cards">
+    <article><h3 id="location-name">در حال دریافت موقعیت...</h3><p id="weather-status">برای نمایش داده زنده، اجازه دسترسی به موقعیت مکانی را بدهید.</p></article>
+    <article><h3 id="temp">—</h3><p>دمای فعلی</p></article>
+    <article><h3 id="rain">—</h3><p>بارش</p></article>
+    <article><h3 id="wind">—</h3><p>سرعت باد</p></article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-title"><div><p>AGRI INTELLIGENCE</p><h2>تبدیل هوا به تصمیم کشاورزی</h2></div></div>
+  <div class="cards">
+    <article><h3>آبیاری</h3><p>ترکیب بارش، دما و باد برای ارائه هشدار زمان‌بندی آبیاری؛ تصمیم نهایی با کشاورز است.</p></article>
+    <article><h3>سم‌پاشی</h3><p>هشدار شرایط نامناسب باد و بارش برای کاهش ریسک عملیات مزرعه.</p></article>
+    <article><h3>سرما و گرما</h3><p>هشدار دمایی برای مدیریت ریسک محصولات حساس.</p></article>
+  </div>
+  <p style="margin-top:1rem">داده هواشناسی این صفحه از Open-Meteo دریافت می‌شود. این سرویس اطلاعات هواشناسی است و توصیه‌های کشاورزی باید با شرایط واقعی مزرعه و نظر کارشناس بررسی شوند.</p>
+</section>
+
+<script>
+(async function () {
+  const status = document.getElementById("weather-status");
+  try {
+    const pos = await new Promise((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy:true, timeout:10000})
+    );
+    const lat = pos.coords.latitude.toFixed(4);
+    const lon = pos.coords.longitude.toFixed(4);
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat +
+      "&longitude=" + lon + "&current=temperature_2m,precipitation,wind_speed_10m&timezone=auto";
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("weather request failed");
+    const data = await response.json();
+    document.getElementById("location-name").textContent = "موقعیت فعلی";
+    document.getElementById("temp").textContent = data.current.temperature_2m + " °C";
+    document.getElementById("rain").textContent = data.current.precipitation + " mm";
+    document.getElementById("wind").textContent = data.current.wind_speed_10m + " km/h";
+    status.textContent = "داده زنده با منطقه زمانی خودکار دریافت شد.";
+  } catch (e) {
+    status.textContent = "دریافت داده زنده انجام نشد؛ دسترسی موقعیت مکانی و اتصال اینترنت را بررسی کنید.";
+  }
+})();
+</script>
+{% endblock %}
