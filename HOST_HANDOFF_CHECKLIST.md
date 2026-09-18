@@ -10,6 +10,7 @@
 - [x] Android-installable admin PWA
 - [x] Masked DeepSeek key entry
 - [x] DeepSeek runtime configuration bridge
+- [x] Host dependency manifest
 - [x] Deployment remains owner-approved and disabled by default
 
 ## Host-side actions
@@ -31,3 +32,6 @@ The repository is currently small; a 1 GB host can support the initial deploymen
 
 ## Security
 Never commit secrets. Keep the real environment file outside Git and keep production deployment disabled until explicitly approved.
+
+## Important
+The repository is prepared for host handoff, but host-side commands, migrations, HTTPS, DNS, and service startup have not been executed from GitHub and therefore remain pending external actions.
