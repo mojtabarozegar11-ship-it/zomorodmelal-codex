@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}درخواست {{ service.name }} | زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero"><span class="eyebrow">REQUEST</span><h1>درخواست {{ service.name }}</h1><p>نیاز خود را ساده و روشن بنویسید.</p></section>
+<section class="section"><div class="panel">
+<form method="post">{% csrf_token %}
+<label for="details">توضیحات درخواست</label>
+<textarea id="details" name="details" rows="8" required maxlength="5000" placeholder="چه خدمتی می‌خواهید؟ جزئیات لازم را بنویسید."></textarea>
+<button class="btn" type="submit">ثبت درخواست</button>
+</form>
+</div></section>
+{% endblock %}
