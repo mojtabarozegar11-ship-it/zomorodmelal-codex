@@ -24,6 +24,16 @@ class MasterOrchestratorTests(unittest.TestCase):
         self.assertEqual(runtime.registry.get_all()[0]["name"], "Research Agent")
         self.assertIn("echo", runtime.tools.names())
 
+    def test_runtime_runner_is_used(self):
+        class Runner:
+            def run(self, goal):
+                return {"status": "runner_ok", "goal": goal}
+        runtime = MasterRuntime(runner=Runner())
+        master = MasterOrchestrator(runtime=runtime)
+        result = master.execute("run via runtime", approved=True)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["result"]["status"], "runner_ok")
+
     def test_failed_validation_is_reported(self):
         master = MasterOrchestrator(runtime=MasterRuntime())
         result = master.execute("run task", approved=True, validate=lambda _: False)
