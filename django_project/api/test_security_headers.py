@@ -1,5 +1,5 @@
 import unittest
-from django.test import Client
+from django.test import Client, SimpleTestCase
 
 
 class SecurityHeadersTests(SimpleTestCase):
