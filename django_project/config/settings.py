@@ -9,7 +9,7 @@ def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")\nif not SECRET_KEY and not DEBUG:\n    raise RuntimeError("DJANGO_SECRET_KEY must be configured when DEBUG=False")
 DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [
     h.strip()
