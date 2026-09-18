@@ -65,9 +65,29 @@ class ContentAgent:
         )
         return self.intelligence.summarize_research([
             ResearchSignal(
-                source=item["source"], title=item["title"] or topic,
-                summary=item["summary"], metrics=item["metrics"] or {}
-            ) for item in signals
+                source=item["source"],
+                title=item["title"] or topic,
+                summary=item["summary"],
+                metrics=item["metrics"] or {},
+            )
+            for item in signals
+        ])
+
+    def competitor_snapshot(self, channel: ContentChannel):
+        patterns = list(
+            channel.competitors.filter(active=True).values(
+                "name", "platform", "notes"
+            )[:50]
+        )
+        from .content_intelligence import CompetitorPattern
+        return self.intelligence.compare_competitors([
+            CompetitorPattern(
+                name=item["name"],
+                platform=item["platform"],
+                pattern=item["notes"] or "observed competitor pattern",
+                evidence=item["notes"] or "",
+            )
+            for item in patterns
         ])
 
     def generate_brief(self, *, channel: ContentChannel, topic: str, user=None) -> ContentBrief:
@@ -75,6 +95,7 @@ class ContentAgent:
             raise ValueError("Topic is required.")
         plan = self.build_content_plan(channel, topic)
         research = self.research_snapshot(channel, topic)
+        competitors = self.competitor_snapshot(channel)
         brief = ContentBrief.objects.create(
             channel=channel,
             topic=topic.strip(),
@@ -86,7 +107,7 @@ class ContentAgent:
             call_to_action="برای ادامه این موضوع همراه ما باشید.",
             keywords=[topic.strip()],
             status="briefed",
-            scorecard={"research": min(100, research.get("signal_count", 0) * 10), "originality": 70, "clarity": 80, "platform_fit": 80},
+            scorecard={"research": min(100, research.get("signal_count", 0) * 10), "originality": 70, "clarity": 80, "platform_fit": 80, "competitors": competitors.get("competitor_count", 0)},
             owner_approved=False,
             created_by=user if getattr(user, "is_authenticated", False) else None,
         )
@@ -95,7 +116,7 @@ class ContentAgent:
             action="content_brief_created",
             scope="ai.content",
             obj=brief,
-            metadata={"channel": channel.name, "topic": topic.strip(), "research": research},
+            metadata={"channel": channel.name, "topic": topic.strip(), "research": research, "competitors": competitors},
         )
         return brief
 
