@@ -87,6 +87,63 @@ class OfficeTask(models.Model):
         verbose_name_plural = "وظایف اداری"
 
 
+class Employee(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="employees")
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="office_employee")
+    personnel_code = models.CharField(max_length=50, unique=True)
+    job_title = models.CharField(max_length=150, blank=True)
+    base_salary = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "کارمند"
+        verbose_name_plural = "کارکنان"
+
+
+class InventoryItem(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="inventory_items")
+    sku = models.CharField(max_length=80)
+    name = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30, default="عدد")
+    quantity = models.DecimalField(max_digits=20, decimal_places=3, default=0)
+    reorder_point = models.DecimalField(max_digits=20, decimal_places=3, default=0)
+
+    class Meta:
+        unique_together = ("company", "sku")
+        verbose_name = "قلم انبار"
+        verbose_name_plural = "اقلام انبار"
+
+
+class CashTransaction(models.Model):
+    KIND_CHOICES = [("in", "دریافت"), ("out", "پرداخت")]
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="cash_transactions")
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    description = models.CharField(max_length=300)
+    transaction_date = models.DateField()
+    reference = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ("-transaction_date", "-id")
+        verbose_name = "تراکنش خزانه"
+        verbose_name_plural = "تراکنش‌های خزانه"
+
+
+class AuditLog(models.Model):
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    company = models.ForeignKey(Company, null=True, blank=True, on_delete=models.SET_NULL)
+    action = models.CharField(max_length=120)
+    object_type = models.CharField(max_length=120)
+    object_id = models.CharField(max_length=80, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "لاگ حسابرسی"
+        verbose_name_plural = "لاگ‌های حسابرسی"
+
+
 class Invoice(models.Model):
     STATUS_CHOICES = [("draft", "پیش‌نویس"), ("issued", "صادرشده"), ("paid", "پرداخت‌شده"), ("cancelled", "لغوشده")]
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="invoices")
