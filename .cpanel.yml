@@ -1,8 +1,4 @@
 deployment:
   tasks:
-    - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/django_project
-    - /bin/cp -R django_project/. /home/zomorodm/zomorodmelal-app/django_project/
-    - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/django_project/autonomous_core
-    - /bin/cp -R autonomous_core/. /home/zomorodm/zomorodmelal-app/django_project/autonomous_core/
     - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/django_project/tmp
     - /bin/touch /home/zomorodm/zomorodmelal-app/django_project/tmp/restart.txt
