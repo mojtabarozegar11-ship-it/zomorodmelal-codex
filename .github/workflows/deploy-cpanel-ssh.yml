@@ -1,0 +1,81 @@
+name: Deploy to cPanel via SSH
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          test -n "$SSH_HOST"
+          test -n "$SSH_PORT"
+          test -n "$SSH_USER"
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          test -n "$DEPLOY_PATH"
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy repository
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "
+            set -e
+            cd '$DEPLOY_PATH'
+            git fetch --prune origin
+            git checkout main
+            git reset --hard origin/main
+            git clean -fd
+            if [ -x .venv/bin/python ]; then
+              PYTHON=.venv/bin/python
+            elif [ -x venv/bin/python ]; then
+              PYTHON=venv/bin/python
+            else
+              PYTHON=python
+            fi
+            echo Using Python: \$(\"\$PYTHON\" --version 2>&1)
+            if [ -f django_project/requirements.txt ]; then
+              \$PYTHON -m pip install -r django_project/requirements.txt
+            elif [ -f requirements.txt ]; then
+              \$PYTHON -m pip install -r requirements.txt
+            fi
+            cd django_project
+            \$PYTHON manage.py migrate --noinput
+            \$PYTHON manage.py collectstatic --noinput
+            \$PYTHON manage.py check
+          "
+
+      - name: Deployment complete
+        run: echo "Production deployment completed for $GITHUB_SHA"
