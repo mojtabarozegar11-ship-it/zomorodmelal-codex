@@ -1,0 +1,75 @@
+name: Platform Full CI
+
+on:
+  push:
+    branches: [main, "integration/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8","3.11","3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: ${{ matrix.python-version }}}
+      - run: python -m pip install --upgrade pip
+      - run: if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - run: python -m compileall -q .
+      - run: python -m unittest discover -s tests -v
+
+  django:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: zomorodmelal
+          POSTGRES_USER: zomorodmelal
+          POSTGRES_PASSWORD: test-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U zomorodmelal -d zomorodmelal"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.8"}
+      - run: python -m pip install --upgrade "pip<25.1"
+      - run: pip install -r django_project/requirements.txt
+      - name: Django checks and migrations
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+          DJANGO_DB_ENGINE: postgresql
+          POSTGRES_DB: zomorodmelal
+          POSTGRES_USER: zomorodmelal
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          python manage.py check --deploy
+          python manage.py makemigrations --check --dry-run
+          python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services api.tests.test_agent_endpoint apps.ai.tests_admin
+          python -c "import config.wsgi, config.asgi; print('WSGI/ASGI import OK')"
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secret hygiene
+        run: |
+          ! grep -RInE 'DEEPSEEK_API_KEY=[A-Za-z0-9]|OPENAI_API_KEY=[A-Za-z0-9]|ANTHROPIC_API_KEY=[A-Za-z0-9]' . --exclude-dir=.git --exclude='*.md'
+      - name: Production configuration review
+        run: |
+          test -f docker-compose.production.yml
+          test -f deployment/Caddyfile
+          test -f deployment/backup.sh
