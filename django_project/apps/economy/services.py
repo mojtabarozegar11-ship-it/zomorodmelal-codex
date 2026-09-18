@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
@@ -19,7 +20,7 @@ class TradingGate:
         if order.real_execution_requested:
             try:
                 guard_real_execution(owner_approved=order.owner_approved)
-            except Exception as exc:
+            except PermissionDenied as exc:
                 EconomicAuditLog.objects.create(
                     action="real_execution_blocked",
                     detail=f"Order {order.pk}: {exc}",
