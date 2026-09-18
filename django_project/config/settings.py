@@ -8,12 +8,12 @@ DEBUG = True
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.auth',
-    'agriculture',
-    'marketplace',
-    'encyclopedia',
-    'research',
-    'services',
-    'ai',
+    'apps.agriculture',
+    'apps.marketplace',
+    'apps.encyclopedia',
+    'apps.research',
+    'apps.services',
+    'apps.ai',
 ]
 
 ROOT_URLCONF = 'config.urls'
