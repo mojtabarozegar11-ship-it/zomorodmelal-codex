@@ -4,6 +4,7 @@ from django.urls import include, path
 from apps.ai.mobile_admin import mobile_admin, mobile_icon, mobile_manifest, mobile_service_worker
 
 urlpatterns = [
+    path("", include("apps.site.urls")),
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
     path("mobile-admin/", mobile_admin, name="mobile-admin"),
