@@ -8,14 +8,13 @@ except Exception:
 
 
 class DeepSeekProvider(AIProvider):
-    def __init__(self):
-        self.api_key = os.getenv("DEEPSEEK_API_KEY")
+    def __init__(self, api_key=None, base_url=None, model=None):
+        self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
+        self.base_url = base_url or os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+        self.model = model or "deepseek-chat"
         self.client = None
         if self.api_key and OpenAI:
-            self.client = OpenAI(
-                api_key=self.api_key,
-                base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-            )
+            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
     @property
     def name(self):
@@ -25,7 +24,9 @@ class DeepSeekProvider(AIProvider):
         return self.client is not None
 
     def chat(self, messages, **kwargs):
+        if not self.client:
+            raise RuntimeError("DeepSeek provider is not configured")
         return self.client.chat.completions.create(
-            model=kwargs.get("model", "deepseek-chat"),
-            messages=messages
+            model=kwargs.get("model", self.model),
+            messages=messages,
         )
