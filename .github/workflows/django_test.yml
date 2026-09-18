@@ -35,6 +35,12 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
         run: python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services apps.economy.tests_signals api.tests.test_agent_endpoint apps.ai.tests_admin
+      - name: Primary website E2E smoke tests
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+        run: python -m django test apps.site.test_e2e
       - name: Host entrypoint imports
         working-directory: django_project
         env:
