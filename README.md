@@ -36,3 +36,9 @@ MVP tests run on Python 3.8 through GitHub Actions.
 4. Enter the DeepSeek API key through the secured admin form when ready.
 5. Enable the provider only after the owner explicitly approves external AI use.
 6. Configure production deployment credentials only after owner approval.
+
+## Architecture
+
+The repository follows a staged convergence model: `django_project/` is the primary Django application source of truth, `ai_engine/` is the canonical AI integration layer for new work, and `website/` plus `ai_providers/` are compatibility paths to be migrated only after import/test verification.
+
+See `ARCHITECTURE.md`, `DESIGN_SYSTEM.md`, and `ARCHITECTURE_REFACTOR_PLAN.md` for the execution contract, approval boundary, UI system, and migration sequence.
