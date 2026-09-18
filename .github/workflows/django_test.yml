@@ -42,7 +42,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/django_project
         run: python -c "import config.wsgi, config.asgi; print('Primary WSGI/ASGI import OK')"
       - name: Legacy website compatibility check
+        working-directory: website
         env:
+          DJANGO_SETTINGS_MODULE: website.config.settings
           PYTHONPATH: ${{ github.workspace }}
-        run: python -c "import website.config.wsgi; print('Legacy website import OK')
-"
+        run: python -c "import website.config.wsgi; print('Legacy website import OK')"
