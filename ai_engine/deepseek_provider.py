@@ -30,3 +30,19 @@ class DeepSeekProvider(AIProvider):
             model=kwargs.get("model", self.model),
             messages=messages,
         )
+
+
+    def generate_json(self, *, system, user):
+        import json
+
+        response = self.chat(
+            [
+                {"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(user, ensure_ascii=False)},
+            ],
+            temperature=0.7,
+        )
+        text = response.choices[0].message.content
+        if not text:
+            raise RuntimeError("DeepSeek returned empty content")
+        return json.loads(text)
