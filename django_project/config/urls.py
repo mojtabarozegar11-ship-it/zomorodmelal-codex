@@ -1,6 +1,8 @@
-"""Main URL configuration for Zomorod Melal platform."""
+"""Main URL configuration."""
+from django.contrib import admin
+from django.urls import include, path
 
-urlpatterns = []
-
-# Phase 1: Offline runtime mode
-# API and Agent routes will be enabled after integration validation.
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", include("api.urls")),
+]
