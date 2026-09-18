@@ -4,3 +4,5 @@ pytest>=8.0
 pytest-django>=4.8
 openai>=1.0
 gunicorn>=21.2
+psycopg[binary]>=3.2
+ruff>=0.6
