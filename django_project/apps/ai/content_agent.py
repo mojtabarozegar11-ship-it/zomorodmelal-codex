@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -175,6 +175,7 @@ class ContentAgent:
         )
         return publication
 
+    @transaction.atomic
     def publish(self, publication: ContentPublication, *, actor=None):
         if publication.status in {"published", "cancelled"}:
             return publication
@@ -182,24 +183,51 @@ class ContentAgent:
             raise PermissionDenied("OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION")
         if not publication.brief.assets.filter(approved=True).exists():
             raise PermissionDenied("At least one approved content asset is required before publication.")
+        adapter = get_social_adapter(publication.channel.platform)
+        publication.status = "publishing"
+        publication.save(update_fields=["status"])
+        result = adapter.publish(publication=publication, payload=publication.payload or {})
+        if not result.get("ok"):
+            publication.status = "failed"
+            publication.response_metadata = result
+            publication.save(update_fields=["status", "response_metadata"])
+            return publication
         publication.status = "published"
         publication.published_at = timezone.now()
-        publication.external_id = f"SIM-{publication.pk}"
-        publication.save(update_fields=["status", "published_at", "external_id"])
+        publication.external_id = str(result.get("external_id") or f"SIM-{publication.pk}")
+        publication.response_metadata = result
+        publication.save(update_fields=["status", "published_at", "external_id", "response_metadata"])
         record_audit(
             actor=actor, action="content_published", scope="ai.content", obj=publication,
             metadata={"provider": publication.provider, "external_id": publication.external_id},
         )
         return publication
 
-
 class SocialPlatformAdapter:
     platform = "manual"
 
     def publish(self, *, publication: ContentPublication, payload: Dict[str, object]) -> Dict[str, object]:
-        return {"ok": True, "sandbox": True, "publication_id": publication.pk}
+        return {
+            "ok": True,
+            "sandbox": True,
+            "provider": self.platform,
+            "publication_id": publication.pk,
+            "external_id": f"SIM-{self.platform}-{publication.pk}",
+        }
+
+
+class PlatformAdapterRegistry:
+    _adapters = {}
+
+    @classmethod
+    def register(cls, platform, adapter):
+        cls._adapters[platform] = adapter
+
+    @classmethod
+    def resolve(cls, platform):
+        adapter = cls._adapters.get(platform)
+        return adapter() if adapter else SocialPlatformAdapter()
 
 
 def get_social_adapter(platform: str) -> SocialPlatformAdapter:
-    # Real provider adapters can be added without changing the content pipeline.
-    return SocialPlatformAdapter()
+    return PlatformAdapterRegistry.resolve(platform)
