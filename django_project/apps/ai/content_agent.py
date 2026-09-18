@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.common.platform import record_audit, require_owner_approval
-from .content_intelligence import ContentIntelligenceEngine, ResearchSignal
+from .content_intelligence import ContentIntelligenceEngine, ResearchSignal, CompetitorPattern
 from .content_agent_models import (
     ContentBrief,
     ContentChannel,
@@ -79,7 +79,6 @@ class ContentAgent:
                 "name", "platform", "notes"
             )[:50]
         )
-        from .content_intelligence import CompetitorPattern
         return self.intelligence.compare_competitors([
             CompetitorPattern(
                 name=item["name"],
