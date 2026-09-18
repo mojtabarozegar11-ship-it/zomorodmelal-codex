@@ -159,3 +159,46 @@ class Invoice(models.Model):
         ordering = ("-issue_date", "-id")
         verbose_name = "فاکتور"
         verbose_name_plural = "فاکتورها"
+
+
+class WorkflowApproval(models.Model):
+    STATUS_CHOICES = [("pending", "در انتظار"), ("approved", "تأیید"), ("rejected", "رد")]
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="workflow_approvals")
+    title = models.CharField(max_length=250)
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="workflow_requests")
+    approver = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="workflow_approvals")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+
+class PayrollRecord(models.Model):
+    STATUS_CHOICES = [("draft", "پیش‌نویس"), ("approved", "تأیید"), ("paid", "پرداخت")]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="payroll_records")
+    period = models.CharField(max_length=20)
+    gross = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    deductions = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    net = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class PurchaseOrder(models.Model):
+    STATUS_CHOICES = [("draft", "پیش‌نویس"), ("approved", "تأیید"), ("received", "دریافت"), ("cancelled", "لغو")]
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="purchase_orders")
+    supplier = models.CharField(max_length=200)
+    number = models.CharField(max_length=80)
+    total = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    order_date = models.DateField()
+
+
+class SalesOrder(models.Model):
+    STATUS_CHOICES = [("draft", "پیش‌نویس"), ("confirmed", "تأیید"), ("delivered", "تحویل"), ("cancelled", "لغو")]
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="sales_orders")
+    customer = models.CharField(max_length=200)
+    number = models.CharField(max_length=80)
+    total = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    order_date = models.DateField()
