@@ -22,7 +22,7 @@ class MasterOrchestratorTests(unittest.TestCase):
         result = master.execute("research market", approved=True)
         self.assertEqual(result["status"], "completed")
         self.assertEqual(runtime.registry.get_all()[0]["name"], "Research Agent")
-        self.assertIn("echo", runtime.tools.names())
+        self.assertEqual(runtime.tools.execute("echo", {"ok": True})["ok"], True)
 
     def test_runtime_runner_is_used(self):
         class Runner:
