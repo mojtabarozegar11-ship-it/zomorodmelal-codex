@@ -10,6 +10,9 @@ from apps.ai.mobile_admin import (
 
 urlpatterns = [
     path("", include("apps.site.urls")),
+    path("agriculture/", include("apps.agriculture.urls")),
+    path("marketplace/", include("apps.marketplace.urls")),
+    path("research/", include("apps.research.urls")),
     path("", include("apps.economy.urls")),
     path("studio/", include("apps.studio.urls")),
     path("office/", include("apps.office.urls")),
