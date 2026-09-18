@@ -1,29 +1,28 @@
 # Zomorod Melal Platform Completion Checklist
 
-## Goal
-Complete Agent + Django platform for execution readiness (without AI API connection).
-
 ## Master Agent
 - [x] Core architecture
-- [x] Runner
-- [x] Logging
-- [x] Test structure
-- [ ] Production configuration
-- [ ] Final security/approval layer validation
+- [x] Runner and safe runtime
+- [x] Logging and audit trail
+- [x] Owner approval boundary
+- [x] Django integration foundation
+- [x] Django startup configuration
+- [x] Internal API routes
+- [x] AI configuration model/admin surface
+- [x] Initial AI migration
+- [ ] Production secrets supplied by owner
+- [ ] External AI provider enabled by owner
+- [ ] External host deployment enabled by owner
 
-## Django Platform
-- [x] Project foundation
-- [x] App architecture
-- [x] API foundation
-- [x] Agent integration foundation
-- [ ] Final settings
-- [ ] Database migrations
-- [ ] Deployment configuration
-- [ ] Full runtime test
+## Runtime verification
+- [x] Offline-safe execution path
+- [x] Django system-check workflow
+- [x] API contract tests
+- [x] AI configuration persistence test
+- [x] Production deployment remains gated
 
-## Final phase
-1. Complete runtime files
-2. Validate Django startup
-3. Validate Agent flow
-4. Validate deployment readiness
-5. Leave AI provider API as the only pending external connection
+## Remaining external actions
+1. Run migrations in the target host environment.
+2. Enter the DeepSeek API key through the secured management flow when ready.
+3. Configure production host credentials only after owner approval.
+4. Execute the deployment gate with a verified ChangePackage and persisted owner approval.
