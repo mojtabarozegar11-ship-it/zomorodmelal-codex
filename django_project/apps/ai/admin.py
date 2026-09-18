@@ -65,3 +65,11 @@ admin.site.register(ContentBrief, ContentBriefAdmin)
 admin.site.register(ContentAsset, ContentAssetAdmin)
 admin.site.register(ContentPublication, ContentPublicationAdmin)
 admin.site.register(ContentPerformance, ContentPerformanceAdmin)
+
+from .content_agent_models import ContentExperiment
+
+@admin.register(ContentExperiment)
+class ContentExperimentAdmin(admin.ModelAdmin):
+    list_display = ("name", "publication", "variant", "active", "created_at")
+    list_filter = ("active", "variant")
+    search_fields = ("name", "hypothesis")
