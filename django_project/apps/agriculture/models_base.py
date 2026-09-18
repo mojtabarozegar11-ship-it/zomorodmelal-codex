@@ -3,15 +3,15 @@
 Foundation layer for farms, products and production chains.
 """
 
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 
 @dataclass
 class Farm:
     name: str
     location: str
-    created_at: datetime = datetime.utcnow()
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
