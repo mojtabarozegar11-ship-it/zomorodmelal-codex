@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.shortcuts import render
-from .models import AccountingEntry, Company, CompanyDelegation, Invoice, OfficeTask
+from .models import AccountingEntry, CashTransaction, Company, CompanyDelegation, Employee, InventoryItem, Invoice, OfficeTask
 
 
 @login_required
@@ -14,5 +14,9 @@ def dashboard(request):
         "invoices": Invoice.objects.exclude(status="cancelled")[:12],
         "income": AccountingEntry.objects.aggregate(total=Sum("credit"))["total"] or 0,
         "expense": AccountingEntry.objects.aggregate(total=Sum("debit"))["total"] or 0,
+        "employees": Employee.objects.filter(active=True).count(),
+        "inventory_items": InventoryItem.objects.count(),
+        "cash_in": CashTransaction.objects.filter(kind="in").aggregate(total=Sum("amount"))["total"] or 0,
+        "cash_out": CashTransaction.objects.filter(kind="out").aggregate(total=Sum("amount"))["total"] or 0,
     }
     return render(request, "office/dashboard.html", context)
