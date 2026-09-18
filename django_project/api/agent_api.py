@@ -9,6 +9,7 @@ def agent_status(request):
         "service": "master_agent_bridge",
         "status": "ready",
         "owner_approval_required": True,
+        "owner": "مجتبی روزگار",
     })
 
 
@@ -36,6 +37,7 @@ def agent_dashboard(request):
         "status": "ready",
         "execution": "approval_gated",
         "owner_approval_required": True,
+        "owner": "مجتبی روزگار",
         "external_ai_enabled": False,
         "endpoints": {
             "status": "/api/status/",
