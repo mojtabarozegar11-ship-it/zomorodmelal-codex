@@ -1,5 +1,7 @@
 from django.conf import settings
-from django.db import models\nfrom django.core.exceptions import ValidationError\nfrom django.db.models import Q
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 
 class Company(models.Model):
