@@ -22,7 +22,7 @@ class StrategyInput:
 
 
 class ContentAgent:
-    """Domain service for research -> strategy -> production -> approval -> publication."""
+    """Domain service for research -> strategy -> production -> approval -> publication."""\n\n    def __init__(self):\n        self.intelligence = ContentIntelligenceEngine()
 
     def build_content_plan(self, channel: ContentChannel, topic: str) -> Dict[str, object]:
         strategy = getattr(channel, "strategy", None)
