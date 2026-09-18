@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f5132">
+  <link rel="manifest" href="/mobile-admin/manifest.json">
+  <title>مدیریت زمرد ملل</title>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f5f7f6;color:#17301f}
+    header{background:#0f5132;color:white;padding:22px 18px;border-radius:0 0 22px 22px}
+    main{padding:18px;max-width:680px;margin:auto}
+    .card{background:white;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 4px 18px #0000000d}
+    .status{display:flex;justify-content:space-between;align-items:center}
+    .ok{color:#198754;font-weight:700}.off{color:#b02a37;font-weight:700}
+    a,button{display:block;width:100%;box-sizing:border-box;border:0;border-radius:14px;padding:14px;margin-top:10px;text-align:center;text-decoration:none;font-size:16px}
+    a{background:#0f5132;color:white}.secondary{background:#e9f1ec;color:#0f5132}
+    small{opacity:.7}
+  </style>
+</head>
+<body>
+<header><strong>پنل مدیریت زمرد ملل</strong><br><small>Master Agent • Android-ready</small></header>
+<main>
+  <div class="card">
+    <div class="status"><span>وضعیت DeepSeek</span><span class="{{ 'ok' if ai_enabled else 'off' }}">{{ 'فعال' if ai_enabled else 'غیرفعال' }}</span></div>
+    <p>کلید API: <strong>{{ 'تنظیم شده' if ai_configured else 'تنظیم نشده' }}</strong></p>
+    <small>کلید در رابط کاربری نمایش داده نمی‌شود.</small>
+  </div>
+  <div class="card">
+    <a href="{{ admin_url }}">ورود به Django Admin</a>
+    <a class="secondary" href="{{ ai_url }}">تنظیمات هوش مصنوعی</a>
+  </div>
+</main>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/mobile-admin/sw.js");
+</script>
+</body>
+</html>
