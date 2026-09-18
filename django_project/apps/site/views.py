@@ -12,6 +12,9 @@ def page_detail(request, slug):
 def encyclopedia(request):
     return render(request, "site/encyclopedia.html")
 
+def agriculture_weather(request):
+    return render(request, "site/agriculture_weather.html")
+
 def health(request):
     return JsonResponse({"status": "ok", "service": "Zomorod Melal Website"})
 
