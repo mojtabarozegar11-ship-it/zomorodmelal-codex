@@ -21,5 +21,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zomorodmelal-codex
-          path: zomorodmelal-codex.zip
+          path: ../zomorodmelal-codex.zip
           if-no-files-found: error
