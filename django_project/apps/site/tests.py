@@ -5,5 +5,5 @@ class SiteContractTests(SimpleTestCase):
     def test_routes(self):
         self.assertEqual(resolve("/").url_name, "home")
         self.assertEqual(resolve("/health/").url_name, "website-health")
-        self.assertEqual(resolve("/encyclopedia/").url_name, "encyclopedia")
+        self.assertEqual(resolve("/encyclopedia/").url_name, "encyclopedia")\n        self.assertEqual(resolve("/games/").url_name, "games")
         self.assertEqual(resolve("/page/example/").url_name, "page-detail")
