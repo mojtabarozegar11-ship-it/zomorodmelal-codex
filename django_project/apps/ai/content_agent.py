@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -26,6 +26,7 @@ class ContentAgent:
 
     def build_content_plan(self, channel: ContentChannel, topic: str) -> Dict[str, object]:
         strategy = getattr(channel, "strategy", None)
+        algorithm_notes = (strategy.algorithm_notes if strategy else {}) or {}
         competitors = list(
             ContentCompetitor.objects.filter(channel=channel, active=True)
             .values("name", "platform", "url", "notes")
@@ -39,7 +40,7 @@ class ContentAgent:
             "pillars": pillars,
             "formats": formats,
             "competitors": competitors,
-            "research_tasks": [
+            "algorithm_notes": algorithm_notes,\n            "research_tasks": [
                 "collect_current_topic_signals",
                 "collect_competitor_patterns",
                 "identify_audience_questions",
