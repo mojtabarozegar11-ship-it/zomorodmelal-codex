@@ -54,3 +54,14 @@ class AIConfigurationAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description="API key configured")
     def has_api_key(self, obj):
         return bool(obj.api_key)
+
+from .content_agent_models import ContentChannel, ContentCompetitor, ContentStrategy, ContentResearchSnapshot, ContentBrief, ContentAsset, ContentPublication, ContentPerformance
+
+admin.site.register(ContentChannel, ContentChannelAdmin)
+admin.site.register(ContentCompetitor, ContentCompetitorAdmin)
+admin.site.register(ContentStrategy, ContentStrategyAdmin)
+admin.site.register(ContentResearchSnapshot, ContentResearchSnapshotAdmin)
+admin.site.register(ContentBrief, ContentBriefAdmin)
+admin.site.register(ContentAsset, ContentAssetAdmin)
+admin.site.register(ContentPublication, ContentPublicationAdmin)
+admin.site.register(ContentPerformance, ContentPerformanceAdmin)
