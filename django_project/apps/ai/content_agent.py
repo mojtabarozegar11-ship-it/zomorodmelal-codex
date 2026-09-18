@@ -177,6 +177,7 @@ class ContentAgent:
         strategy = getattr(brief.channel, "strategy", None)
         provider = get_deepseek_provider()
         outputs = None
+        provider_used = False
         if provider:
             prompt = {
                 "channel": brief.channel.name,
@@ -211,8 +212,11 @@ class ContentAgent:
                 "title", "script", "caption", "description",
                 "hashtags", "thumbnail_prompt", "image_prompt",
             )
-            if isinstance(result, dict) and all(isinstance(result.get(key), str) for key in required):
+            if isinstance(result, dict) and all(
+                isinstance(result.get(key), str) and result[key].strip() for key in required
+            ):
                 outputs = {key: result[key].strip() for key in required}
+                provider_used = True
         if outputs is None:
             outputs = {
             "title": f"{brief.topic} | راهنمای کاربردی",
@@ -245,7 +249,7 @@ class ContentAgent:
                     version=version,
                     body=body,
                     metadata={
-                        "source": "deepseek" if provider and outputs else "content-agent-template",
+                        "source": "deepseek" if provider_used else "content-agent-template",
                         "platform": brief.channel.platform,
                     },
                 )
