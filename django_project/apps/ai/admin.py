@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib import admin
+
+from .content_agent_models import ContentExperiment
 from .models import AIConfiguration
 
 
@@ -20,7 +22,6 @@ class AIConfigurationAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Never expose an existing secret through the form's initial state.
         self.initial["api_key"] = None
 
     def save(self, commit=True):
@@ -55,13 +56,13 @@ class AIConfigurationAdmin(admin.ModelAdmin):
     def has_api_key(self, obj):
         return bool(obj.api_key)
 
-from .content_agent_models import ContentChannel, ContentCompetitor, ContentStrategy, ContentResearchSnapshot, ContentBrief, ContentAsset, ContentPublication, ContentPerformance
-
-
-from .content_agent_models import ContentExperiment
 
 @admin.register(ContentExperiment)
 class ContentExperimentAdmin(admin.ModelAdmin):
     list_display = ("name", "publication", "variant", "active", "created_at")
     list_filter = ("active", "variant")
     search_fields = ("name", "hypothesis")
+
+
+# Import model-admin registrations after local registrations are defined.
+from . import content_agent_admin  # noqa: E402,F401
