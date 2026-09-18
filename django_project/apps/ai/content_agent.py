@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -58,10 +58,23 @@ class ContentAgent:
         }
 
     @transaction.atomic
+    def research_snapshot(self, channel: ContentChannel, topic: str):
+        signals = list(
+            channel.research_snapshots.filter(query__icontains=topic).values(
+                "source", "title", "summary", "metrics"
+            )[:20]
+        )
+        return self.intelligence.summarize_research([
+            __import__("apps.ai.content_intelligence", fromlist=["ResearchSignal"]).ResearchSignal(
+                source=item["source"], title=item["title"] or topic,
+                summary=item["summary"], metrics=item["metrics"] or {}
+            ) for item in signals
+        ])
+
     def generate_brief(self, *, channel: ContentChannel, topic: str, user=None) -> ContentBrief:
         if not topic.strip():
             raise ValueError("Topic is required.")
-        plan = self.build_content_plan(channel, topic)
+        plan = self.build_content_plan(channel, topic)\n        research = self.research_snapshot(channel, topic)
         brief = ContentBrief.objects.create(
             channel=channel,
             topic=topic.strip(),
@@ -73,7 +86,7 @@ class ContentAgent:
             call_to_action="برای ادامه این موضوع همراه ما باشید.",
             keywords=[topic.strip()],
             status="briefed",
-            scorecard={"research": 0, "originality": 0, "clarity": 0, "platform_fit": 0},
+            scorecard={"research": min(100, research.get("signal_count", 0) * 10), "originality": 70, "clarity": 80, "platform_fit": 80},
             owner_approved=False,
             created_by=user if getattr(user, "is_authenticated", False) else None,
         )
@@ -82,7 +95,7 @@ class ContentAgent:
             action="content_brief_created",
             scope="ai.content",
             obj=brief,
-            metadata={"channel": channel.name, "topic": topic.strip()},
+            metadata={"channel": channel.name, "topic": topic.strip(), "research": research},
         )
         return brief
 
