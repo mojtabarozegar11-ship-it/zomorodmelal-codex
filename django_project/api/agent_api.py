@@ -1,20 +1,22 @@
-"""Internal Django API bridge for Master Agent.
-
-Provides a simple interface layer between Django services and Agent Core.
-"""
-
+"""HTTP bridge between Django and the safe Master Agent runtime."""
+import json
 from django.http import JsonResponse
+from autonomous_core.safe_agent_loop import SafeAgentLoop
 
 
 def agent_status(request):
-    return JsonResponse({
-        "service": "master_agent_bridge",
-        "status": "ready"
-    })
+    return JsonResponse({"service":"master_agent_bridge","status":"ready","owner_approval_required":True})
 
 
 def execute_goal(request):
-    return JsonResponse({
-        "goal": None,
-        "status": "pending_agent_connection"
-    })
+    if request.method != "POST":
+        return JsonResponse({"status":"error","message":"POST required"}, status=405)
+    try:
+        body=json.loads(request.body.decode("utf-8") or "{}")
+    except (ValueError, UnicodeDecodeError):
+        body={}
+    goal=str(body.get("goal","")).strip()
+    if not goal:
+        return JsonResponse({"status":"error","message":"goal required"}, status=400)
+    result=SafeAgentLoop().execute_cycle(goal)
+    return JsonResponse(result)
