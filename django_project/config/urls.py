@@ -5,7 +5,7 @@ from apps.ai.mobile_admin import mobile_admin, mobile_icon, mobile_manifest, mob
 
 urlpatterns = [
     path("", include("apps.site.urls")),
-    path("", include("apps.economy.urls")),
+    path("", include("apps.economy.urls")),\n    path("studio/", include("apps.studio.urls")),
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
     path("mobile-admin/", mobile_admin, name="mobile-admin"),
