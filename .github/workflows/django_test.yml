@@ -29,6 +29,13 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py makemigrations --check --dry-run
+      - name: URL smoke tests
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          python -c "from django.test import Client; c=Client(); paths=['/','/economy/','/economy/services/','/economy/api/v1/services/','/architecture/']; [print(p, c.get(p).status_code) for p in paths]"
       - name: Primary Django tests
         working-directory: django_project
         env:
