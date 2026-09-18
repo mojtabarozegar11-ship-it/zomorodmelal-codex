@@ -1,9 +1,14 @@
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET
+import json
+import os
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 from .agents import EconomicMasterAgent
 from .gateway import get_payment_gateway
-from .models import Asset, EconomicWorkItem, MarketDataSnapshot, OrderIntent, Portfolio, SignalProduct, SignalPurchase, VirtualAssetProject
+from .models import Asset, EconomicWorkItem, MarketDataSnapshot, OrderIntent, Portfolio, SignalProduct, SignalPurchase, VirtualAssetProject, GoldOrder
 
 
 IRANICARD_INSPIRED_SERVICES = [
@@ -139,3 +144,34 @@ def signal_checkout_page(request, purchase_id):
     if request.user.is_authenticated and purchase.user_id != request.user.id and not request.user.is_staff:
         return JsonResponse({"detail": "forbidden"}, status=403)
     return render(request, "economy/checkout.html", {"purchase": purchase, "checkout": {"authority": purchase.authority, "sandbox": True}})
+
+
+@require_GET
+def gold_market(request):
+    api_key = os.environ.get("ARZHAM_API_KEY", "")
+    if not api_key:
+        return JsonResponse({"status": "not_configured", "configure": "ARZHAM_API_KEY"}, status=503)
+    req = Request("https://arzhaam.ir/api/rates/latest", headers={"X-App-Key": api_key})
+    try:
+        with urlopen(req, timeout=8) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError) as exc:
+        return JsonResponse({"status": "provider_error", "detail": str(exc)}, status=502)
+    return JsonResponse({"status": "ok", "provider": "arzhaam", "data": payload})
+
+@require_POST
+def gold_order_create(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "authentication_required"}, status=401)
+    try:
+        from decimal import Decimal
+        weight = Decimal(request.POST.get("weight_grams", "0"))
+    except Exception:
+        return JsonResponse({"detail": "invalid_weight"}, status=400)
+    if weight <= 0:
+        return JsonResponse({"detail": "weight_must_be_positive"}, status=400)
+    side = request.POST.get("side", "buy")
+    if side not in {"buy", "sell"}:
+        return JsonResponse({"detail": "invalid_side"}, status=400)
+    order = GoldOrder.objects.create(user=request.user, side=side, product=request.POST.get("product", "gold_18"), weight_grams=weight, status="pending_approval")
+    return JsonResponse({"status": "pending_approval", "order_id": order.pk, "owner_approval_required": True})
