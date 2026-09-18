@@ -33,14 +33,14 @@ jobs:
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
-          PYTHONPATH: ${{ github.workspace }}/django_project
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python -m django test
 
       - name: Host entrypoint imports
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
-          PYTHONPATH: ${{ github.workspace }}/django_project
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python -c "import config.wsgi, config.asgi; print('Primary WSGI/ASGI import OK')"
       - name: Legacy website compatibility check
         working-directory: website
