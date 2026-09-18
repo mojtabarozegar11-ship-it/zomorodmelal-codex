@@ -23,11 +23,11 @@ jobs:
       - name: Django migrations check
         working-directory: django_project
         run: python manage.py makemigrations --check --dry-run
-      - name: Primary website, encyclopedia and agent tests
+      - name: Primary website, encyclopedia, economy and agent tests
         working-directory: django_project
         env:
           PYTHONPATH: '$'+'{{ github.workspace }}:$'+'{{ github.workspace }}/django_project'
-        run: python -m django test apps.site apps.encyclopedia api.tests.test_agent_endpoint apps.ai.tests_admin
+        run: python -m django test apps.site apps.encyclopedia apps.economy api.tests.test_agent_endpoint apps.ai.tests_admin
       - name: Host entrypoint imports
         working-directory: django_project
         env:
