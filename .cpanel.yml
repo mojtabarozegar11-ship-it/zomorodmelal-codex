@@ -4,3 +4,5 @@ deployment:
     - /bin/cp -R django_project/. $APPDIR/
     - /bin/mkdir -p $APPDIR/autonomous_core
     - /bin/cp -R autonomous_core/. $APPDIR/autonomous_core/
+    - /bin/mkdir -p $APPDIR/tmp
+    - /bin/touch $APPDIR/tmp/restart.txt
