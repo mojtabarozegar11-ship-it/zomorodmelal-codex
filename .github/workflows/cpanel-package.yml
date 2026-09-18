@@ -1,0 +1,22 @@
+name: Build cPanel ZIP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create deployment ZIP
+        run: |
+          zip -r zomorodmelal-cpanel.zip . -x ".git/*" "*.pyc" "__pycache__/*"
+      - name: Upload deployment ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: zomorodmelal-cpanel
+          path: zomorodmelal-cpanel.zip
+          retention-days: 7
