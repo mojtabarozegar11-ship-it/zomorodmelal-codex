@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}بازار | زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero"><span class="eyebrow">MARKETPLACE</span><h1>بازار محصولات و خدمات</h1><p>کاتالوگ کالاهای فعال و آماده عرضه در اکوسیستم زمرد ملل.</p></section>
+<section class="section">
+<form method="get" class="zm-card"><input name="q" value="{{ query }}" placeholder="جستجوی محصول"><button class="zm-btn" type="submit">جستجو</button></form>
+<div class="cards">{% for product in products %}<article><span class="pill">{{ product.currency }}</span><h3><a href="{% url 'marketplace-product' product.slug %}">{{ product.name }}</a></h3><p>{{ product.description }}</p><strong>{{ product.price }}</strong><p>موجودی: {{ product.stock }}</p></article>{% empty %}<article><h3>هنوز محصول فعالی ثبت نشده است.</h3></article>{% endfor %}</div>
+</section>
+{% endblock %}
