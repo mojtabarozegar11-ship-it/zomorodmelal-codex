@@ -1,4 +1,4 @@
-from system.execution_logger import ExecutionLogger
+from app.system.execution_logger import ExecutionLogger
 
 
 def test_logger():
