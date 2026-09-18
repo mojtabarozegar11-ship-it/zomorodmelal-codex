@@ -155,3 +155,13 @@ class ContentPerformance(models.Model):
     click_through_rate = models.FloatField(default=0)
     followers_gained = models.IntegerField(default=0)
     captured_at = models.DateTimeField(auto_now=True)
+
+
+class ContentExperiment(models.Model):
+    publication = models.ForeignKey(ContentPublication, on_delete=models.CASCADE, related_name="experiments")
+    name = models.CharField(max_length=160)
+    hypothesis = models.TextField(blank=True)
+    variant = models.CharField(max_length=80, default="A")
+    metrics = models.JSONField(default=dict, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
