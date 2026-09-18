@@ -7,4 +7,4 @@ deployment:
     - /bin/cp -R autonomous_core/. $APPDIR/autonomous_core/
     - /bin/mkdir -p $APPDIR/tmp
     - /bin/touch $APPDIR/tmp/restart.txt
-    - /bin/cp deploy/public_html/.htaccess $WEBROOT/.htaccess
+    - /bin/cp -f deploy/public_html/.htaccess $WEBROOT/.htaccess
