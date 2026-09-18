@@ -1,29 +1,28 @@
 {% extends "base.html" %}
 {% block title %}خدمات | زمرد ملل{% endblock %}
+{% block meta_description %}مرکز خدمات زمرد ملل؛ خدمات عمومی و تخصصی برای مردم و کسب‌وکارها.{% endblock %}
 {% block content %}
 <section class="hero">
   <span class="eyebrow">SERVICES</span>
-  <h1>مرکز خدمات زمرد ملل</h1>
-  <p>خدمات کاربردی را ساده پیدا کنید؛ هر بخش برای عموم مردم، کسب‌وکارها و سازمان‌ها دسته‌بندی شده است.</p>
+  <h1>خدمات زمرد ملل</h1>
+  <p>خدمت موردنظر را پیدا کنید، توضیحات را ببینید و در صورت فعال بودن، درخواست خود را ثبت کنید.</p>
+  <form method="get" class="service-search" role="search">
+    <input type="search" name="q" value="{{ query }}" placeholder="نام خدمت را جست‌وجو کنید" aria-label="جست‌وجوی خدمت">
+    <button class="btn" type="submit">جست‌وجو</button>
+  </form>
+  <div class="hero-actions"><span class="pill">{{ service_count }} خدمت فعال</span></div>
 </section>
-<section class="section">
-  <div class="section-title"><div><p>ONE PLACE</p><h2>همه خدمات در یکجا</h2></div></div>
-  <div class="cards">
-    {% for name, description in categories %}
-    <article>
-      <span class="pill">خدمات</span>
-      <h3>{{ name }}</h3>
-      <p>{{ description }}</p>
-      <a class="btn" href="#request">مشاهده خدمات</a>
-    </article>
-    {% endfor %}
-  </div>
-</section>
-<section class="section" id="request">
-  <div class="panel">
-    <h2>درخواست خدمت</h2>
-    <p>در نسخه بعدی، هر دسته به فهرست خدمات، قیمت/استعلام، فرم درخواست و پیگیری سفارش متصل می‌شود.</p>
-    <p class="notice">خدمات مالی، پرداخت، رمزارز، طلا و سایر خدمات دارای الزامات قانونی و اجرایی، پس از اتصال ارائه‌دهنده و تکمیل کنترل‌های لازم فعال خواهند شد.</p>
-  </div>
-</section>
+<section class="section"><div class="panel"><h2>خدمات پرکاربرد</h2><div class="service-list">
+{% for name, description in popular_services %}<div class="service-item"><strong>{{ name }}</strong><span>{{ description }}</span></div>{% endfor %}
+</div></div></section>
+<section class="section"><div class="section-title"><div><p>AVAILABLE SERVICES</p><h2>خدمات قابل مشاهده</h2></div></div>
+<div class="cards">{% for service in services %}<article><span class="pill">{{ service.category.name }}</span><h3>{{ service.name }}</h3><p>{{ service.summary|default:service.description }}</p><a class="btn" href="{% url 'service-detail' service.slug %}">جزئیات</a></article>{% empty %}<article><h3>خدمتی پیدا نشد</h3><p>عبارت جست‌وجو را تغییر دهید یا دسته‌ها را ببینید.</p></article>{% endfor %}</div></section>
+<section class="section" id="categories"><div class="section-title"><div><p>CATEGORIES</p><h2>دسته‌بندی خدمات</h2></div></div>
+<div class="cards">{% for category in categories %}<article><span class="pill">دسته خدمات</span><h3>{{ category.name }}</h3><p>{{ category.description }}</p>{% with first_service=category.services.all|first %}{% if first_service %}<a class="btn" href="{% url 'service-detail' first_service.slug %}">شروع</a>{% else %}<span class="pill">به‌زودی</span>{% endif %}{% endwith %}</article>{% empty %}<article><h3>خدمات در حال آماده‌سازی است</h3><p>فهرست خدمات از پنل مدیریت قابل تکمیل است.</p></article>{% endfor %}</div></section>
+<section class="section"><div class="panel"><h2>روال استفاده</h2><div class="service-list">
+<div class="service-item"><strong>۱. انتخاب</strong><span>خدمت مناسب را انتخاب کنید.</span></div>
+<div class="service-item"><strong>۲. درخواست</strong><span>جزئیات نیاز خود را ثبت کنید.</span></div>
+<div class="service-item"><strong>۳. بررسی</strong><span>درخواست بررسی و در صورت نیاز قیمت‌گذاری می‌شود.</span></div>
+<div class="service-item"><strong>۴. پیگیری</strong><span>با کد رهگیری وضعیت درخواست را ببینید.</span></div>
+</div><p class="notice">خدمات دارای الزامات قانونی یا اجرایی فقط پس از بررسی و فعال شدن ارائه‌دهنده ارائه می‌شوند.</p></div></section>
 {% endblock %}
