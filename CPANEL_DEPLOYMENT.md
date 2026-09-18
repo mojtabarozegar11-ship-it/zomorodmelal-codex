@@ -1,62 +1,74 @@
 # cPanel Deployment — Zomorod Melal
 
-## Canonical application
+## معماری صحیح سایت
 
-Use the Django project under `django_project/`.
+سایت اصلی شرکت با Django/Python اجرا می‌شود؛ بنابراین برای این پروژه نباید دنبال index.php، composer.json، vendor یا WordPress باشید.
 
-Expected files:
-
+برنامه اصلی در GitHub در مسیر `django_project/` است و فایل‌های کلیدی آن:
 - `manage.py`
 - `config/settings.py`
 - `config/wsgi.py`
 - `passenger_wsgi.py`
-- `requirements-host.txt`
+- `requirements.txt`
 - `apps/`
 
-Do not register the legacy `website/` tree as the production application.
+درخت `website/` قدیمی/سازگاری است و نباید به عنوان برنامه اصلی Passenger ثبت شود.
 
-## cPanel Application Manager
+## تنظیم Python Application در cPanel
 
-Create/register one Python application:
+Application Root باید به پوشه‌ای اشاره کند که همان‌جا `manage.py` و پوشه `config/` قرار دارند:
 
-- Application path: the directory containing `manage.py` and `config/`
-- Startup file: `passenger_wsgi.py`
-- Deployment mode: Production
-- Python: use the host Python version compatible with the project's Django requirement
+`/home/zomorodm/zomorodmelal-app/django_project`
 
-Environment variables:
+Startup File باید فقط این مقدار باشد:
 
-- `DJANGO_SETTINGS_MODULE=config.settings`
-- `DJANGO_DEBUG=False`
-- `DJANGO_ALLOWED_HOSTS=zomorodmelal.ir,www.zomorodmelal.ir`
-- `DJANGO_SECRET_KEY=<set a private production secret>`
-- `DJANGO_SECURE_SSL_REDIRECT=True` only after HTTPS is confirmed
-- `DJANGO_SESSION_COOKIE_SECURE=True` when HTTPS is confirmed
-- `DJANGO_CSRF_COOKIE_SECURE=True` when HTTPS is confirmed
+`passenger_wsgi.py`
 
-## Terminal commands
+در Startup File مسیر کامل فایل وارد نکنید.
 
-Run as the cPanel user from the application directory:
+## اگر Directory Listing می‌بینید
+
+اگر `https://zomorodmelal.ir/` به جای صفحه سایت، فهرست فایل‌های LiteSpeed مانند `cgi-bin` و `php.ini` را نشان می‌دهد، درخواست دامنه هنوز به برنامه Django/Passenger متصل نشده است.
+
+در این حالت فایل PHP یا WordPress به public_html اضافه نکنید. باید اتصال دامنه به Python Application و Application Root صحیح بررسی شود.
+
+## متغیرهای محیطی
+
+`DJANGO_SETTINGS_MODULE=config.settings`
+
+`DJANGO_DEBUG=False`
+
+`DJANGO_ALLOWED_HOSTS=zomorodmelal.ir,www.zomorodmelal.ir`
+
+`DJANGO_SECRET_KEY=<private-production-secret>`
+
+پس از تأیید کامل HTTPS می‌توان `DJANGO_SECURE_SSL_REDIRECT=True` را فعال کرد.
+
+## بررسی و راه‌اندازی
+
+از داخل Application Root:
 
 ```bash
-python -m pip install -r requirements-host.txt
+python -m pip install -r requirements.txt
 python manage.py check
 python manage.py check --deploy
 python manage.py migrate
 python manage.py collectstatic --noinput
+python -c "import config.wsgi; print('WSGI OK')"
 ```
 
-Then restart Passenger from cPanel/Application Manager or by touching the application's restart file as supported by the host.
+سپس برنامه را از cPanel → Application Manager بازنشانی/Restart کنید.
 
-## Verification
+## بررسی نهایی
+
+پس از اتصال صحیح Passenger:
 
 ```bash
-python -c "import config.wsgi; print('WSGI OK')"
 curl -I https://zomorodmelal.ir/
 ```
 
-If the application fails, inspect the Python application's `stderr.log` before changing project files.
+باید پاسخ از برنامه Django دریافت شود، نه Directory Listing پیش‌فرض LiteSpeed.
 
-## Important
+## مهم
 
-Do not delete the old host directory until the canonical application has passed `check`, migrations, static collection, WSGI import, and an HTTPS request test.
+فایل‌ها و پوشه‌های قدیمی هاست را تا زمانی که WSGI، مهاجرت‌ها، static و درخواست HTTPS با موفقیت آزمایش نشده‌اند حذف نکنید.
