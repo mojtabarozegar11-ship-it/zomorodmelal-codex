@@ -20,3 +20,7 @@ def health(request):
 
 def studio_redirect(request):
     return redirect("studio-home")
+
+
+def architecture_audit(request):
+    return render(request, "architecture_audit.html")
