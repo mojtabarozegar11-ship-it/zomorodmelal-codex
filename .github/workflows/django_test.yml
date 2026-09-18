@@ -34,7 +34,8 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: ${{ github.workspace }}/django_project
-        run: python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services apps.economy.tests_signals api.tests.test_agent_endpoint apps.ai.tests_admin
+        run: python -m django test
+
       - name: Host entrypoint imports
         working-directory: django_project
         env:
