@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}خدمات | زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">SERVICES</span>
+  <h1>مرکز خدمات زمرد ملل</h1>
+  <p>خدمات کاربردی را ساده پیدا کنید؛ هر بخش برای عموم مردم، کسب‌وکارها و سازمان‌ها دسته‌بندی شده است.</p>
+</section>
+<section class="section">
+  <div class="section-title"><div><p>ONE PLACE</p><h2>همه خدمات در یکجا</h2></div></div>
+  <div class="cards">
+    {% for name, description in categories %}
+    <article>
+      <span class="pill">خدمات</span>
+      <h3>{{ name }}</h3>
+      <p>{{ description }}</p>
+      <a class="btn" href="#request">مشاهده خدمات</a>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+<section class="section" id="request">
+  <div class="panel">
+    <h2>درخواست خدمت</h2>
+    <p>در نسخه بعدی، هر دسته به فهرست خدمات، قیمت/استعلام، فرم درخواست و پیگیری سفارش متصل می‌شود.</p>
+    <p class="notice">خدمات مالی، پرداخت، رمزارز، طلا و سایر خدمات دارای الزامات قانونی و اجرایی، پس از اتصال ارائه‌دهنده و تکمیل کنترل‌های لازم فعال خواهند شد.</p>
+  </div>
+</section>
+{% endblock %}
