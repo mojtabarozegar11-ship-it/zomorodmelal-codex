@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="zm-section">
+  <h1>Content Intelligence Agent</h1>
+  <p>مدیریت کانال، تحلیل رقبا، طراحی محتوا و انتشار از یک پنل.</p>
+  <div class="zm-grid">
+    {% for channel in channels %}
+      <article class="zm-card">
+        <h2>{{ channel.name }}</h2>
+        <p>{{ channel.platform }} · {{ channel.topic }}</p>
+        <p>رقبا: {{ channel.competitors.count }}</p>
+        <p>انتشار خودکار: {% if channel.auto_publish %}فعال{% else %}غیرفعال{% endif %}</p>
+      </article>
+    {% empty %}
+      <article class="zm-card zm-empty">هنوز کانالی ثبت نشده است.</article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
