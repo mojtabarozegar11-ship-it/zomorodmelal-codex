@@ -6,6 +6,12 @@ class PolicyAdapter:
         self.policy = policy
 
     def check(self, action, approved=False):
+        if not action or not str(action).strip():
+            return {
+                "allowed": False,
+                "reason": "Action name is required.",
+                "action": action,
+            }
         allowed = self.policy.can_execute(approved=approved)
         return {
             "allowed": bool(allowed),
