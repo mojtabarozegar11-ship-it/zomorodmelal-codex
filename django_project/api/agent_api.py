@@ -28,3 +28,18 @@ def execute_goal(request):
 
 def health(request):
     return JsonResponse({"status": "ok", "service": "django"})
+
+
+def agent_dashboard(request):
+    return JsonResponse({
+        "service": "Zomorod Melal Master Agent",
+        "status": "ready",
+        "execution": "approval_gated",
+        "owner_approval_required": True,
+        "external_ai_enabled": False,
+        "endpoints": {
+            "status": "/api/status/",
+            "health": "/api/health/",
+            "execute": "/api/execute/",
+        },
+    })
