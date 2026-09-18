@@ -1,10 +1,9 @@
-# Route the domain's public document root to the existing cPanel Passenger Django app.
-# Keep the Django application outside public_html.
-PassengerEnabled on
-PassengerAppRoot /home/zomorodm/zomorodmelal-app/django_project
-PassengerBaseURI /
-PassengerAppType wsgi
-PassengerStartupFile passenger_wsgi.py
-PassengerPython /home/zomorodm/virtualenv/zomorodmelal-app/3.8/bin/python
-
+# Zomorod Melal Django public-root guard.
+# The Python application is managed by cPanel Application Manager/Passenger.
+# Do not expose the public_html directory listing.
 Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ / [L]
+</IfModule>
