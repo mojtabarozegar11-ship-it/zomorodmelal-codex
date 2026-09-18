@@ -101,17 +101,11 @@ class ContentAgent:
         outputs = {
             "title": f"{brief.topic} | راهنمای کاربردی",
             "script": (
-                f"شروع: یک سؤال مهم درباره «{brief.topic}».
-"
-                "ارزش: سه نکته روشن و کاربردی ارائه کن.
-"
+                f"شروع: یک سؤال مهم درباره «{brief.topic}».\n"
+                "ارزش: سه نکته روشن و کاربردی ارائه کن.\n"
                 "پایان: یک اقدام مشخص برای مخاطب پیشنهاد بده."
             ),
-            "caption": f"{brief.hook}
-
-{brief.angle}
-
-{brief.call_to_action}",
+            "caption": f"{brief.hook}\n\n{brief.angle}\n\n{brief.call_to_action}",
             "description": f"محتوای آموزشی درباره {brief.topic}.",
             "hashtags": f"#{brief.topic.replace(' ', '_')}",
             "thumbnail_prompt": f"تصویر حرفه‌ای و جذاب برای موضوع {brief.topic} بدون ادعای گمراه‌کننده",
