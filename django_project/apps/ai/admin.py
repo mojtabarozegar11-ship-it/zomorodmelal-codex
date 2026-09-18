@@ -21,13 +21,14 @@ class AIConfigurationAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Never expose an existing secret through the form's initial state.
+        self._existing_api_key = self.instance.api_key
         self.initial["api_key"] = None
 
     def save(self, commit=True):
+        existing_key = self._existing_api_key
         instance = super().save(commit=False)
         new_key = self.cleaned_data.get("api_key", "").strip()
-        if new_key:
-            instance.api_key = new_key
+        instance.api_key = new_key or existing_key
         if commit:
             instance.save()
             self.save_m2m()

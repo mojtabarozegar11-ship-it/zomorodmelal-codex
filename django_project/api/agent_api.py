@@ -1,14 +1,21 @@
-"""HTTP bridge between Django and the safe Master Agent runtime."""
+"""HTTP bridge between Django and the canonical approval-gated Master Agent."""
 import json
 from django.http import JsonResponse
-from autonomous_core.safe_agent_loop import SafeAgentLoop
+from master_agent import MasterOrchestrator, MasterRuntime
+
+
+def _master():
+    return MasterOrchestrator(runtime=MasterRuntime())
+
 
 def agent_status(request):
     return JsonResponse({
         "service": "master_agent_bridge",
         "status": "ready",
         "owner_approval_required": True,
+        "engine": "master_agent",
     })
+
 
 def execute_goal(request):
     if request.method != "POST":
@@ -20,5 +27,7 @@ def execute_goal(request):
     goal = str(body.get("goal", "")).strip()
     if not goal:
         return JsonResponse({"status": "error", "message": "goal required"}, status=400)
-    result = SafeAgentLoop().execute_cycle(goal)
-    return JsonResponse(result)
+    approved = bool(body.get("approved", False))
+    result = _master().execute(goal, approved=approved)
+    code = 202 if result["status"] == "approval_required" else 200
+    return JsonResponse(result, status=code)

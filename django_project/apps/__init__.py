@@ -1,0 +1,1 @@
+# Canonical Django application package.

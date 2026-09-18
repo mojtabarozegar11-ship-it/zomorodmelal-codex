@@ -1,17 +1,44 @@
 import unittest
-from master_agent import MasterOrchestrator
+
+from agents.agent_registry import AgentRegistry
+from app.security.approval import ApprovalSystem
+from app.security.audit import AuditLogger
+from master_agent import MasterOrchestrator, MasterRuntime, ToolRegistry
+
 
 class MasterOrchestratorTests(unittest.TestCase):
-    def test_denies_without_approval(self):
-        self.assertEqual(MasterOrchestrator().execute('audit site')['status'], 'approval_required')
+    def test_denies_without_owner_approval(self):
+        master = MasterOrchestrator(runtime=MasterRuntime())
+        result = master.execute("publish update")
+        self.assertEqual(result["status"], "approval_required")
 
-    def test_runs_after_approval(self):
-        result = MasterOrchestrator().execute('audit site', approved=True, action=lambda plan: {'ok': True}, validate=lambda value: value['ok'])
-        self.assertEqual(result['status'], 'completed')
+    def test_connects_runtime_registry_and_tools(self):
+        registry = AgentRegistry()
+        registry.register("Research Agent", "Research")
+        tools = ToolRegistry()
+        tools.register("echo", lambda payload: payload)
+        runtime = MasterRuntime(registry=registry, tools=tools, approval=ApprovalSystem(), audit=AuditLogger())
+        master = MasterOrchestrator(runtime=runtime, registry=registry, tools=tools)
+        result = master.execute("research market", approved=True)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(runtime.registry.get_all()[0]["name"], "Research Agent")
+        self.assertEqual(runtime.tools.execute("echo", {"ok": True})["ok"], True)
 
-    def test_validation_failure(self):
-        result = MasterOrchestrator().execute('audit site', approved=True, action=lambda plan: {'ok': False}, validate=lambda value: value['ok'])
-        self.assertEqual(result['status'], 'validation_failed')
+    def test_runtime_runner_is_used(self):
+        class Runner:
+            def run(self, goal):
+                return {"status": "runner_ok", "goal": goal}
+        runtime = MasterRuntime(runner=Runner())
+        master = MasterOrchestrator(runtime=runtime)
+        result = master.execute("run via runtime", approved=True)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["result"]["status"], "runner_ok")
 
-if __name__ == '__main__':
+    def test_failed_validation_is_reported(self):
+        master = MasterOrchestrator(runtime=MasterRuntime())
+        result = master.execute("run task", approved=True, validate=lambda _: False)
+        self.assertEqual(result["status"], "validation_failed")
+
+
+if __name__ == "__main__":
     unittest.main()
