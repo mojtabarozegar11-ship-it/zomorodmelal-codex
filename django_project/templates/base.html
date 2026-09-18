@@ -8,6 +8,9 @@
   <title>{% block title %}کشت و صنعت زمرد ملل{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'site/logo.svg' %}">
   <link rel="stylesheet" href="{% static 'site/main.css' %}">
+  <link rel="manifest" href="{% static 'office/manifest.json' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   {% block page_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}page-default{% endblock %}">
