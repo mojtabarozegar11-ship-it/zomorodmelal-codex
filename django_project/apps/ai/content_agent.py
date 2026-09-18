@@ -77,6 +77,54 @@ class ContentAgent:
         )
         return brief
 
+    @transaction.atomic
+    def approve_brief(self, brief: ContentBrief, *, actor=None):
+        require_owner_approval(True)
+        brief.owner_approved = True
+        brief.status = "approved"
+        brief.save(update_fields=["owner_approved", "status", "updated_at"])
+        record_audit(actor=actor, action="content_brief_approved", scope="ai.content", obj=brief)
+        return brief
+
+    @transaction.atomic
+    def create_draft_assets(self, brief: ContentBrief, *, actor=None):
+        """Create platform-ready first drafts. AI providers can replace these drafts."""
+        outputs = {
+            "title": f"{brief.topic} | راهنمای کاربردی",
+            "script": (
+                f"شروع: یک سؤال مهم درباره «{brief.topic}».\n"
+                "ارزش: سه نکته روشن و کاربردی ارائه کن.\n"
+                "پایان: یک اقدام مشخص برای مخاطب پیشنهاد بده."
+            ),
+            "caption": f"{brief.hook}\n\n{brief.angle}\n\n{brief.call_to_action}",
+            "description": f"محتوای آموزشی درباره {brief.topic}.",
+            "hashtags": f"#{brief.topic.replace(' ', '_')}",
+            "thumbnail_prompt": f"تصویر حرفه‌ای و جذاب برای موضوع {brief.topic} بدون ادعای گمراه‌کننده",
+            "image_prompt": f"تصویر اصلی متناسب با موضوع {brief.topic}",
+        }
+        created = []
+        for asset_type, body in outputs.items():
+            latest = brief.assets.filter(asset_type=asset_type).order_by("-version").first()
+            version = (latest.version + 1) if latest else 1
+            created.append(ContentAsset.objects.create(
+                brief=brief,
+                asset_type=asset_type,
+                version=version,
+                body=body,
+                metadata={"source": "content-agent-template", "platform": brief.channel.platform},
+            ))
+        brief.status = "review"
+        brief.save(update_fields=["status", "updated_at"])
+        record_audit(
+            actor=actor,
+            action="content_assets_generated",
+            scope="ai.content",
+            obj=brief,
+            metadata={"asset_count": len(created)},
+        )
+        return created
+
+
     def approve_publication(self, publication: ContentPublication, *, approved: bool, actor=None):
         if approved:
             require_owner_approval(approved)
@@ -106,6 +154,8 @@ class ContentAgent:
         return publication
 
     def publish(self, publication: ContentPublication, *, actor=None):
+        if publication.status in {"published", "cancelled"}:
+            return publication
         if not publication.owner_approved:
             raise PermissionDenied("OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION")
         if not publication.brief.assets.filter(approved=True).exists():
