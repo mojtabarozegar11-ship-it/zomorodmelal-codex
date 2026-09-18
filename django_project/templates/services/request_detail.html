@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}پیگیری درخواست | زمرد ملل{% endblock %}
+{% block content %}
+<section class="hero"><span class="eyebrow">TRACKING</span><h1>کد رهگیری: {{ item.tracking_code }}</h1><p>وضعیت: <strong>{{ item.get_status_display }}</strong></p></section>
+<section class="section"><div class="panel">
+<p><strong>خدمت:</strong> {{ item.service.name }}</p>
+<p><strong>تاریخ ثبت:</strong> {{ item.created_at }}</p>
+<p><strong>توضیحات:</strong> {{ item.details }}</p>
+{% if item.quote_amount %}<p><strong>مبلغ اعلامی:</strong> {{ item.quote_amount }} {{ item.quote_currency }}</p>{% endif %}
+<p class="notice">کد رهگیری را برای پیگیری نگه دارید.</p>
+</div></section>
+{% endblock %}
