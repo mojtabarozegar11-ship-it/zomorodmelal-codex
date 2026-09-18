@@ -7,3 +7,6 @@ class SafeRuntime:
 
     def stage(self, request_id, action, files=None, approved=False):
         return self.controller.execute(request_id, action, approved=approved, files=files or [])
+
+    def status(self):
+        return self.controller.status()
