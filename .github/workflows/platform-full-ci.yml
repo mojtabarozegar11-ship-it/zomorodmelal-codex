@@ -70,7 +70,7 @@ jobs:
         run: |
           python manage.py check --deploy
           python manage.py makemigrations --check --dry-run
-          python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services api.tests.test_agent_endpoint apps.ai.tests_admin
+          python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services api.test_api_surface api.test_security_headers apps.site.test_security apps.site.test_e2e api.tests.test_agent_endpoint apps.ai.tests_admin
           python -c "import config.wsgi, config.asgi; print('WSGI/ASGI import OK')"
 
   security:
