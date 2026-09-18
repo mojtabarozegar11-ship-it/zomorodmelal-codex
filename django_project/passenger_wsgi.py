@@ -3,9 +3,10 @@ import os
 import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_ROOT = os.path.dirname(BASE_DIR)
 
-for path in (BASE_DIR, APP_ROOT):
+# Keep both the Django application and the deployed repository support modules
+# importable under cPanel Passenger.
+for path in (BASE_DIR, os.path.dirname(BASE_DIR)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
