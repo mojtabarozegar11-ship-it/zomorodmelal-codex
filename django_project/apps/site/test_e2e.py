@@ -2,7 +2,7 @@ import unittest
 from django.test import Client
 
 
-class PrimarySiteE2E(unittest.TestCase):
+class PrimarySiteE2E(TestCase):
     def test_public_and_management_routes(self):
         client=Client()
         paths=["/","/services/","/encyclopedia/","/economy/","/studio/","/health/","/mobile-admin/","/api/status/"]
