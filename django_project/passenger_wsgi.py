@@ -3,8 +3,11 @@ import os
 import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+APP_ROOT = os.path.dirname(BASE_DIR)
+
+for path in (BASE_DIR, APP_ROOT):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
