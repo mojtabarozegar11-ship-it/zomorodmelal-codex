@@ -2,6 +2,9 @@
 import json
 from django.http import JsonResponse
 from autonomous_core.safe_agent_loop import SafeAgentLoop
+from autonomous_core.planner import Planner
+from autonomous_core.executor import Executor
+from autonomous_core.approval_gateway import ApprovalGateway
 
 
 def agent_status(request):
@@ -23,7 +26,8 @@ def execute_goal(request):
     goal = str(body.get("goal", "")).strip()
     if not goal:
         return JsonResponse({"status": "error", "message": "goal required"}, status=400)
-    result = SafeAgentLoop().execute_cycle(goal)
+    loop = SafeAgentLoop(Planner(), Executor(), ApprovalGateway())
+    result = loop.execute_cycle(goal)
     return JsonResponse(result)
 
 
