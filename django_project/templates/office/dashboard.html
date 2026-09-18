@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}اتوماسیون اداری، مدیریت و حسابداری | زمرد ملل{% endblock %}
+{% block meta_description %}پنل یکپارچه اتوماسیون اداری، مدیریت شرکت‌ها، واگذاری دسترسی و حسابداری زمرد ملل؛ قابل استفاده در وب، Android و iOS.{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">ZOMOROD MELAL · BUSINESS OS</span>
+  <h1>اتوماسیون اداری، مدیریت و حسابداری</h1>
+  <p>یک پنل یکپارچه برای مدیریت شرکت‌ها، واگذاری مسئولیت و دسترسی، وظایف، فاکتورها و دفترکل؛ با طراحی واکنش‌گرا برای دسکتاپ و موبایل.</p>
+  <div class="cards">
+    <article><span class="pill">شرکت‌ها</span><h3>{{ companies|length }}</h3><p>شرکت فعال در داشبورد</p></article>
+    <article><span class="pill">واگذاری</span><h3>{{ delegations|length }}</h3><p>دسترسی تأییدشده</p></article>
+    <article><span class="pill">درآمد</span><h3>{{ income }}</h3><p>جمع بستانکار ثبت‌شده</p></article>
+    <article><span class="pill">هزینه</span><h3>{{ expense }}</h3><p>جمع بدهکار ثبت‌شده</p></article>
+  </div>
+</section>
+<section class="section">
+  <div class="section-title"><div><p>COMPANY DELEGATION</p><h2>پنل واگذاری به شرکت‌ها</h2></div></div>
+  <div class="cards">{% for item in delegations %}<article><h3>{{ item.company.name }}</h3><p>{{ item.user.get_full_name|default:item.user.username }} · {{ item.get_role_display }}</p><span class="pill">تأیید مالک</span></article>{% empty %}<article><h3>هنوز واگذاری تأییدشده‌ای ثبت نشده</h3><p>ایجاد شرکت، کاربر و سطح دسترسی از پنل مدیریت Django انجام می‌شود.</p></article>{% endfor %}</div>
+</section>
+<section class="section">
+  <div class="section-title"><div><p>OFFICE</p><h2>مدیریت عملیات</h2></div></div>
+  <div class="cards"><article><h3>وظایف و گردش کار</h3><p>{{ tasks|length }} وظیفه باز برای پیگیری.</p></article><article><h3>فاکتورها</h3><p>{{ invoices|length }} فاکتور فعال در داشبورد.</p></article><article><h3>حسابداری</h3><p>دفترکل، بدهکار/بستانکار و اسناد حسابداری برای هر شرکت.</p></article><article><h3>امنیت</h3><p>واگذاری دسترسی با تأیید مالک طراحی شده و اجرای تراکنش مالی واقعی باید جداگانه مجاز شود.</p></article></div>
+</section>
+<section class="section"><div class="section-title"><div><p>MOBILE</p><h2>Android و iOS</h2></div></div><p>این پنل به‌صورت Responsive/PWA طراحی شده است؛ روی Android قابل نصب به‌صورت Web App و روی iPhone/iPad از گزینه Add to Home Screen قابل استفاده است. نسخه‌های Native اختصاصی Android/iOS می‌توانند در مرحله بعد به API همین هسته متصل شوند.</p></section>
+{% endblock %}
