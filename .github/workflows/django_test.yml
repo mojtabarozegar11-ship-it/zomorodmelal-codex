@@ -1,1 +1,47 @@
-name: Django Offline Test\n\non:\n  push:\n  pull_request:\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Setup Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: '3.8'\n      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade "pip<25.1"\n          pip install -r django_project/requirements.txt\n      - name: Django check\n        working-directory: django_project\n        run: python manage.py check\n      - name: Django migrations check\n        working-directory: django_project\n        run: python manage.py makemigrations --check --dry-run\n      - name: Primary website, encyclopedia, economy and agent tests\n        working-directory: django_project\n        env:\n          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project\n        run: python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services apps.economy.tests_signals api.tests.test_agent_endpoint apps.ai.tests_admin\n      - name: Host entrypoint imports\n        working-directory: django_project\n        env:\n          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project\n        run: python -c "import config.wsgi, config.asgi; print('Primary WSGI/ASGI import OK')"\n      - name: Legacy website compatibility check\n        env:\n          PYTHONPATH: ${{ github.workspace }}\n        run: python -c "import website.config.wsgi; print('Legacy website import OK')"\n
+name: Django Offline Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade "pip<25.1"
+          pip install -r django_project/requirements.txt
+      - name: Django check
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+        run: python manage.py check
+      - name: Django migrations check
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+        run: python manage.py makemigrations --check --dry-run
+      - name: Primary website, encyclopedia, economy, studio, services and agent tests
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+        run: python -m django test apps.site apps.encyclopedia apps.economy apps.studio apps.services apps.economy.tests_signals api.tests.test_agent_endpoint apps.ai.tests_admin
+      - name: Host entrypoint imports
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+        run: python -c "import config.wsgi, config.asgi; print('Primary WSGI/ASGI import OK')"
+      - name: Legacy website compatibility check
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -c "import website.config.wsgi; print('Legacy website import OK')"
