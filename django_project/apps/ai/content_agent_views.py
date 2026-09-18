@@ -3,7 +3,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
 from .content_agent import ContentAgent
-from .content_agent_models import ContentChannel, ContentPublication
+from .content_agent_models import ContentChannel, ContentPublication, ContentBrief
+from django.views.decorators.http import require_POST
 
 
 @login_required
@@ -34,3 +35,17 @@ def publish_content(request, publication_id):
     publication = get_object_or_404(ContentPublication, pk=publication_id)
     ContentAgent().publish(publication, actor=request.user)
     return JsonResponse({"id": publication.pk, "status": publication.status, "external_id": publication.external_id})
+
+
+@login_required
+@require_POST
+def generate_content_assets(request, brief_id):
+    if not request.user.is_staff:
+        return JsonResponse({"detail": "staff access required"}, status=403)
+    brief = get_object_or_404(ContentBrief, pk=brief_id)
+    assets = ContentAgent().create_draft_assets(brief, actor=request.user)
+    return JsonResponse({
+        "brief_id": brief.pk,
+        "status": brief.status,
+        "assets": [{"type": a.asset_type, "version": a.version, "approved": a.approved} for a in assets],
+    })
