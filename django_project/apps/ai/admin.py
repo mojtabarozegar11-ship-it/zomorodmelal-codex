@@ -64,5 +64,3 @@ class ContentExperimentAdmin(admin.ModelAdmin):
     search_fields = ("name", "hypothesis")
 
 
-# Import model-admin registrations after local registrations are defined.
-from . import content_agent_admin  # noqa: E402,F401
