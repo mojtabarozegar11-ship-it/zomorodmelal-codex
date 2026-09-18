@@ -1,10 +1,11 @@
-class MasterAgent:
-    def __init__(self):
-        self.name = "Zomorod Melal Master Agent"
+"""Backward-compatible entrypoint for the canonical MasterOrchestrator."""
+from master_agent.orchestrator import MasterOrchestrator
 
-    def run(self, goal):
-        return {
-            "status": "received",
-            "goal": goal,
-            "message": "Task submitted to Master Agent"
-        }
+
+class MasterAgent:
+    def __init__(self, orchestrator=None):
+        self.name = "Zomorod Melal Master Agent"
+        self.orchestrator = orchestrator or MasterOrchestrator()
+
+    def run(self, goal, approved=False, action=None, validate=None):
+        return self.orchestrator.execute(goal, approved=approved, action=action, validate=validate)
