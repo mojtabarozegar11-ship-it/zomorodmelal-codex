@@ -6,7 +6,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.common.platform import record_audit, require_owner_approval
-from .content_intelligence import ContentIntelligenceEngine\nfrom .content_agent_models import (
+from .content_intelligence import ContentIntelligenceEngine
+from .content_agent_models import (
     ContentBrief,
     ContentChannel,
     ContentCompetitor,
@@ -22,11 +23,15 @@ class StrategyInput:
 
 
 class ContentAgent:
-    """Domain service for research -> strategy -> production -> approval -> publication."""\n\n    def __init__(self):\n        self.intelligence = ContentIntelligenceEngine()
+    """Domain service for research -> strategy -> production -> approval -> publication."""
+
+    def __init__(self):
+        self.intelligence = ContentIntelligenceEngine()
 
     def build_content_plan(self, channel: ContentChannel, topic: str) -> Dict[str, object]:
         strategy = getattr(channel, "strategy", None)
         algorithm_notes = (strategy.algorithm_notes if strategy else {}) or {}
+        score = self.intelligence.score_content(relevance=70, originality=70, clarity=80, platform_fit=80)
         competitors = list(
             ContentCompetitor.objects.filter(channel=channel, active=True)
             .values("name", "platform", "url", "notes")
@@ -40,7 +45,10 @@ class ContentAgent:
             "pillars": pillars,
             "formats": formats,
             "competitors": competitors,
-            "algorithm_notes": algorithm_notes,\n            "platform_variants": self.intelligence.generate_platform_variants(topic=topic, platforms=formats),\n            "baseline_score": score,\n            "research_tasks": [
+            "algorithm_notes": algorithm_notes,
+            "platform_variants": self.intelligence.generate_platform_variants(topic=topic, platforms=formats),
+            "baseline_score": score,
+            "research_tasks": [
                 "collect_current_topic_signals",
                 "collect_competitor_patterns",
                 "identify_audience_questions",
@@ -93,11 +101,17 @@ class ContentAgent:
         outputs = {
             "title": f"{brief.topic} | راهنمای کاربردی",
             "script": (
-                f"شروع: یک سؤال مهم درباره «{brief.topic}».\n"
-                "ارزش: سه نکته روشن و کاربردی ارائه کن.\n"
+                f"شروع: یک سؤال مهم درباره «{brief.topic}».
+"
+                "ارزش: سه نکته روشن و کاربردی ارائه کن.
+"
                 "پایان: یک اقدام مشخص برای مخاطب پیشنهاد بده."
             ),
-            "caption": f"{brief.hook}\n\n{brief.angle}\n\n{brief.call_to_action}",
+            "caption": f"{brief.hook}
+
+{brief.angle}
+
+{brief.call_to_action}",
             "description": f"محتوای آموزشی درباره {brief.topic}.",
             "hashtags": f"#{brief.topic.replace(' ', '_')}",
             "thumbnail_prompt": f"تصویر حرفه‌ای و جذاب برای موضوع {brief.topic} بدون ادعای گمراه‌کننده",
