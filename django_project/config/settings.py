@@ -8,9 +8,12 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
-
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")\nif not SECRET_KEY and not DEBUG:\n    raise RuntimeError("DJANGO_SECRET_KEY must be configured when DEBUG=False")
 DEBUG = env_bool("DJANGO_DEBUG", False)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY and not DEBUG:
+    raise RuntimeError("DJANGO_SECRET_KEY must be configured when DEBUG=False")
+
+
 ALLOWED_HOSTS = [
     h.strip()
     for h in os.environ.get(
@@ -44,8 +47,15 @@ TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIR
     "OPTIONS": {"context_processors": ["django.template.context_processors.request", "django.contrib.auth.context_processors.auth", "django.contrib.messages.context_processors.messages"]}}]
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
-DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3"))}}
 LANGUAGE_CODE = "fa"
+if os.environ.get("DATABASE_URL"):
+    import urllib.parse
+    parsed = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+    if not parsed.scheme.startswith("postgres"):
+        raise RuntimeError("DATABASE_URL must use PostgreSQL.")
+    DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql", "NAME": parsed.path.lstrip("/"), "USER": parsed.username or "", "PASSWORD": parsed.password or "", "HOST": parsed.hostname or "", "PORT": str(parsed.port or 5432)}}
+else:
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3"))}}
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Asia/Tehran")
 USE_I18N = True
 USE_TZ = True
@@ -56,9 +66,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AI_PROVIDER_ENABLED = env_bool("AI_PROVIDER_ENABLED", False)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-ECONOMIC_REAL_EXECUTION_ENABLED = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Production security switches. Enable HSTS only when HTTPS is confirmed at the host.
+ECONOMIC_REAL_EXECUTION_ENABLED = env_bool("ECONOMIC_REAL_EXECUTION_ENABLED", False) and not DEBUG
+
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
 SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
