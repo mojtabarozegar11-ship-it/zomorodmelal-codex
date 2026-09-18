@@ -20,6 +20,18 @@ jobs:
       - run: if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - run: python -m compileall -q .
       - run: python -m unittest discover -s tests -v
+      - name: Provider interface smoke test
+        run: |
+          python - <<'PY'
+          from ai_engine.registry import get_providers
+          providers = get_providers()
+          assert {"openai","deepseek","gemini","claude"} <= set(providers)
+          for provider in providers.values():
+              assert hasattr(provider, "chat")
+              assert hasattr(provider, "available") or hasattr(provider, "is_available")
+          print("Canonical AI provider interface OK")
+          PY
+
 
   django:
     runs-on: ubuntu-latest
