@@ -3,12 +3,14 @@ import json
 from django.http import JsonResponse
 from autonomous_core.safe_agent_loop import SafeAgentLoop
 
+
 def agent_status(request):
     return JsonResponse({
         "service": "master_agent_bridge",
         "status": "ready",
         "owner_approval_required": True,
     })
+
 
 def execute_goal(request):
     if request.method != "POST":
@@ -22,3 +24,7 @@ def execute_goal(request):
         return JsonResponse({"status": "error", "message": "goal required"}, status=400)
     result = SafeAgentLoop().execute_cycle(goal)
     return JsonResponse(result)
+
+
+def health(request):
+    return JsonResponse({"status": "ok", "service": "django"})
