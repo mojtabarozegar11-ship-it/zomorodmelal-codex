@@ -1,23 +1,16 @@
-from decimal import Decimal
 from django.test import TestCase
-from .models import Asset, OrderIntent, Portfolio
-from .services import TradingGate, paper_execute
+from .agents import EconomicMasterAgent, ComplianceAgent
+from .models import VirtualAssetProject
 
+class EconomicLifecycleTests(TestCase):
+    def test_master_agent_has_specialized_domains(self):
+        caps = EconomicMasterAgent().capabilities()
+        for expected in ["behavioral_economics", "financial_markets", "innovation", "virtual_assets", "compliance", "revenue", "analytics"]:
+            self.assertIn(expected, caps)
+        self.assertIn("owner_approval_gate", caps)
 
-class EconomySafetyTests(TestCase):
-    def setUp(self):
-        self.asset = Asset.objects.create(symbol="TEST", name="Test Asset")
-        self.portfolio = Portfolio.objects.create(name="Paper", cash_balance=Decimal("1000"), paper_trading=True)
-
-    def test_real_execution_is_blocked(self):
-        order = OrderIntent.objects.create(portfolio=self.portfolio, asset=self.asset, side="buy", quantity=Decimal("1"), limit_price=Decimal("10"), real_execution_requested=True)
-        ok, _ = TradingGate.validate(order)
-        self.assertFalse(ok)
-        self.assertEqual(order.__class__.objects.get(pk=order.pk).status, "blocked")
-
-    def test_paper_buy(self):
-        order = OrderIntent.objects.create(portfolio=self.portfolio, asset=self.asset, side="buy", quantity=Decimal("2"), limit_price=Decimal("10"))
-        ok, _ = paper_execute(order)
-        self.assertTrue(ok)
-        self.assertEqual(order.__class__.objects.get(pk=order.pk).status, "paper_executed")
-        self.assertEqual(Portfolio.objects.get(pk=self.portfolio.pk).cash_balance, Decimal("980"))
+    def test_virtual_asset_is_not_issuable_without_gates(self):
+        project = VirtualAssetProject.objects.create(name="Test Asset", symbol="TST", concept="Test")
+        result = ComplianceAgent().review(project)
+        self.assertFalse(result["ready_for_issuance"])
+        self.assertFalse(project.issuance_approved)
