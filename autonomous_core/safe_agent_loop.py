@@ -25,6 +25,9 @@ class SafeAgentLoop:
             reason=reason,
         )
 
+    def execute_cycle(self, goal):
+        return self.run_cycle(goal)
+
     def run_cycle(self, goal):
         plan = self.create_plan(goal)
 
@@ -45,6 +48,7 @@ class SafeAgentLoop:
                 "approval_id": approval.get("id"),
             })
 
+        result["waiting"] = result["waiting_for_approval"]
         return result
 
     def heartbeat(self, interval=60):
