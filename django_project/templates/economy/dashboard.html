@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}مرکز اقتصادی و ترید{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>مرکز اقتصادی و ترید</h1>
+  <p>تحلیل، پژوهش، مدیریت پرتفوی و معاملات آزمایشی در یک لایه واحد.</p>
+  <div class="grid">
+    <div><strong>{{ assets }}</strong><span>دارایی فعال</span></div>
+    <div><strong>{{ portfolios }}</strong><span>پرتفوی</span></div>
+    <div><strong>{{ orders }}</strong><span>سفارش</span></div>
+    <div><strong>{{ market_points }}</strong><span>داده بازار</span></div>
+  </div>
+  <h2>ایجنت‌های اقتصادی</h2>
+  <ul>{% for agent in agents %}<li>{{ agent }}</li>{% endfor %}</ul>
+  <p class="notice">معاملات واقعی عمداً غیرفعال است و هر اقدام واقعی نیازمند تأیید مالک و اتصال صریح به یک کارگزار/صرافی مجاز است.</p>
+</section>
+{% endblock %}
