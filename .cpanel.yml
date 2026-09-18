@@ -2,3 +2,5 @@ deployment:
   tasks:
     - export APPDIR=/home/zomorodm/zomorodmelal-app/django_project
     - /bin/cp -R django_project/. $APPDIR/
+    - /bin/mkdir -p $APPDIR/autonomous_core
+    - /bin/cp -R autonomous_core/. $APPDIR/autonomous_core/
