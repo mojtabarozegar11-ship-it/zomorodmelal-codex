@@ -6,11 +6,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.common.platform import record_audit, require_owner_approval
-from .content_intelligence import (
-    CompetitorPattern,
-    ContentIntelligenceEngine,
-    ResearchSignal,
-)
 from .content_agent_models import (
     ContentAsset,
     ContentBrief,
@@ -18,16 +13,21 @@ from .content_agent_models import (
     ContentCompetitor,
     ContentPublication,
 )
+from .content_intelligence import (
+    CompetitorPattern,
+    ContentIntelligenceEngine,
+    ResearchSignal,
+)
 
 
-@dataclass
+@dataclass(frozen=True)
 class StrategyInput:
     topic: str
     objective: str = "grow_audience"
 
 
 class ContentAgent:
-    """Research -> strategy -> production -> approval -> publication."""
+    """Auditable content workflow: research -> strategy -> draft -> approval -> publish."""
 
     def __init__(self):
         self.intelligence = ContentIntelligenceEngine()
@@ -40,10 +40,11 @@ class ContentAgent:
             .values("name", "platform", "url", "notes")
         )
         pillars = (strategy.pillars if strategy else []) or [channel.topic]
-        formats = (strategy.formats if strategy else []) or ["short_video", "carousel", "post"]
-        score = self.intelligence.score_content(
-            relevance=70, originality=70, clarity=80, platform_fit=80
-        )
+        formats = (strategy.formats if strategy else []) or [
+            "short_video",
+            "carousel",
+            "post",
+        ]
         return {
             "channel": channel.name,
             "platform": channel.platform,
@@ -53,9 +54,15 @@ class ContentAgent:
             "competitors": competitors,
             "algorithm_notes": algorithm_notes,
             "platform_variants": self.intelligence.generate_platform_variants(
-                topic=topic, platforms=formats
+                topic=topic,
+                platforms=[channel.platform],
             ),
-            "baseline_score": score,
+            "baseline_score": self.intelligence.score_content(
+                relevance=70,
+                originality=70,
+                clarity=80,
+                platform_fit=80,
+            ),
             "research_tasks": [
                 "collect_current_topic_signals",
                 "collect_competitor_patterns",
@@ -101,21 +108,22 @@ class ContentAgent:
 
     @transaction.atomic
     def generate_brief(self, *, channel: ContentChannel, topic: str, user=None) -> ContentBrief:
-        if not topic.strip():
+        topic = (topic or "").strip()
+        if not topic:
             raise ValueError("Topic is required.")
         plan = self.build_content_plan(channel, topic)
         research = self.research_snapshot(channel, topic)
         competitors = self.competitor_snapshot(channel)
         brief = ContentBrief.objects.create(
             channel=channel,
-            topic=topic.strip(),
+            topic=topic,
             objective="grow_audience",
             format=(plan["formats"] or ["short_video"])[0],
-            angle=f"Original angle for: {topic.strip()}",
+            angle=f"Original angle for: {topic}",
             audience_pain="Identify and answer one concrete audience need.",
-            hook=f"چرا {topic.strip()} مهم است؟",
+            hook=f"چرا {topic} مهم است؟",
             call_to_action="برای ادامه این موضوع همراه ما باشید.",
-            keywords=[topic.strip()],
+            keywords=[topic],
             status="briefed",
             scorecard={
                 "research": min(100, research.get("signal_count", 0) * 10),
@@ -124,7 +132,6 @@ class ContentAgent:
                 "platform_fit": 80,
                 "competitors": competitors.get("competitor_count", 0),
             },
-            owner_approved=False,
             created_by=user if getattr(user, "is_authenticated", False) else None,
         )
         record_audit(
@@ -134,26 +141,33 @@ class ContentAgent:
             obj=brief,
             metadata={
                 "channel": channel.name,
-                "topic": topic.strip(),
+                "topic": topic,
                 "research": research,
                 "competitors": competitors,
             },
         )
         return brief
 
+    @staticmethod
+    def _owner(actor):
+        return bool(
+            getattr(actor, "is_authenticated", False)
+            and getattr(actor, "is_superuser", False)
+        )
+
     @transaction.atomic
     def approve_brief(self, brief: ContentBrief, *, actor=None):
-        if not getattr(actor, "is_authenticated", False) or not getattr(
-            actor, "is_superuser", False
-        ):
+        if not self._owner(actor):
             raise PermissionDenied("Only the owner can approve content.")
         require_owner_approval(True)
         brief.owner_approved = True
         brief.status = "approved"
         brief.save(update_fields=["owner_approved", "status", "updated_at"])
         record_audit(
-            actor=actor, action="content_brief_approved",
-            scope="ai.content", obj=brief
+            actor=actor,
+            action="content_brief_approved",
+            scope="ai.content",
+            obj=brief,
         )
         return brief
 
@@ -207,22 +221,14 @@ class ContentAgent:
         return created
 
     @transaction.atomic
-    def approve_publication(self, publication: ContentPublication, *, approved: bool, actor=None):
-        if approved:
-            if not getattr(actor, "is_authenticated", False) or not getattr(
-                actor, "is_superuser", False
-            ):
-                raise PermissionDenied("Only the owner can approve publication.")
-            require_owner_approval(True)
-            publication.owner_approved = True
-            publication.save(update_fields=["owner_approved"])
-            record_audit(
-                actor=actor,
-                action="content_publication_approved",
-                scope="ai.content",
-                obj=publication,
-            )
-        else:
+    def approve_publication(
+        self,
+        publication: ContentPublication,
+        *,
+        approved: bool,
+        actor=None,
+    ):
+        if not approved:
             publication.owner_approved = False
             publication.status = "cancelled"
             publication.save(update_fields=["owner_approved", "status"])
@@ -232,37 +238,100 @@ class ContentAgent:
                 scope="ai.content",
                 obj=publication,
             )
+            return publication
+        if not self._owner(actor):
+            raise PermissionDenied("Only the owner can approve publication.")
+        require_owner_approval(True)
+        publication.owner_approved = True
+        publication.save(update_fields=["owner_approved"])
+        record_audit(
+            actor=actor,
+            action="content_publication_approved",
+            scope="ai.content",
+            obj=publication,
+        )
         return publication
 
     @transaction.atomic
-    def queue_publication(self, *, brief: ContentBrief, channel: ContentChannel, actor=None):
-        if not brief.owner_approved and channel.auto_publish:
-            raise PermissionDenied("OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION")
+    def queue_publication(
+        self,
+        *,
+        brief: ContentBrief,
+        channel: ContentChannel,
+        actor=None,
+        scheduled_for=None,
+    ):
+        if channel.auto_publish and not self._owner(actor):
+            raise PermissionDenied(
+                "OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION"
+            )
         key = f"content:{brief.pk}:{channel.pk}"
-        publication, _ = ContentPublication.objects.get_or_create(
+        publication, created = ContentPublication.objects.get_or_create(
             idempotency_key=key,
             defaults={
                 "brief": brief,
                 "channel": channel,
                 "provider": "manual",
                 "status": "queued",
+                "scheduled_for": scheduled_for,
+                "content_json": self._build_content_json(brief),
             },
         )
+        if not created:
+            updates = {}
+            if scheduled_for and publication.scheduled_for != scheduled_for:
+                publication.scheduled_for = scheduled_for
+                updates["scheduled_for"] = scheduled_for
+            content_json = self._build_content_json(brief)
+            if content_json and publication.content_json != content_json:
+                publication.content_json = content_json
+                updates["content_json"] = content_json
+            if updates:
+                publication.save(update_fields=list(updates))
+        if scheduled_for:
+            publication.status = "scheduled"
+            publication.save(update_fields=["status"])
         record_audit(
             actor=actor,
             action="content_publication_queued",
             scope="ai.content",
             obj=publication,
-            metadata={"channel": channel.name, "platform": channel.platform},
+            metadata={
+                "channel": channel.name,
+                "platform": channel.platform,
+                "scheduled_for": scheduled_for.isoformat() if scheduled_for else None,
+            },
         )
         return publication
+
+    @staticmethod
+    def _build_content_json(brief: ContentBrief):
+        assets = list(brief.assets.filter(approved=True).order_by("asset_type", "-version"))
+        if not assets:
+            assets = list(brief.assets.order_by("asset_type", "-version"))
+        latest = {}
+        for asset in assets:
+            latest.setdefault(asset.asset_type, asset.body)
+        return {
+            "platform": brief.channel.platform,
+            "topic": brief.topic,
+            "title": latest.get("title", ""),
+            "script": latest.get("script", ""),
+            "caption": latest.get("caption", ""),
+            "description": latest.get("description", ""),
+            "hashtags": latest.get("hashtags", ""),
+            "thumbnail_prompt": latest.get("thumbnail_prompt", ""),
+            "image_prompt": latest.get("image_prompt", ""),
+        }
 
     @transaction.atomic
     def publish(self, publication: ContentPublication, *, actor=None):
         if publication.status in {"published", "cancelled"}:
             return publication
         if not publication.owner_approved:
-            raise PermissionDenied("OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION")
+            raise PermissionDenied(
+                "OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION"
+            )
         if not publication.brief.assets.filter(approved=True).exists():
             raise PermissionDenied(
                 "At least one approved content asset is required before publication."
@@ -271,7 +340,8 @@ class ContentAgent:
         publication.status = "publishing"
         publication.save(update_fields=["status"])
         result = adapter.publish(
-            publication=publication, payload=publication.payload or {}
+            publication=publication,
+            payload=publication.payload or publication.content_json or {},
         )
         if not result.get("ok"):
             publication.status = "failed"
