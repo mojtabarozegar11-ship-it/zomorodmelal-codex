@@ -20,7 +20,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware","django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware","django.middleware.csrf.CsrfViewMiddleware",
+    "django.middleware.common.CommonMiddleware","django.middleware.csrf.CsrfViewMiddleware","django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware","django.contrib.messages.middleware.MessageMiddleware",
 ]
 ROOT_URLCONF="config.urls"
@@ -60,4 +60,5 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS=env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS",False)
 SECURE_HSTS_PRELOAD=env_bool("DJANGO_HSTS_PRELOAD",False)
 SECURE_CONTENT_TYPE_NOSNIFF=True
 X_FRAME_OPTIONS=os.environ.get("DJANGO_X_FRAME_OPTIONS","DENY")
-SECURE_REFERRER_POLICY=os.environ.get("DJANGO_REFERRER_POLICY","same-origin")\nREFERRER_POLICY=SECURE_REFERRER_POLICY
+SECURE_REFERRER_POLICY=os.environ.get("DJANGO_REFERRER_POLICY","same-origin")
+REFERRER_POLICY=SECURE_REFERRER_POLICY
