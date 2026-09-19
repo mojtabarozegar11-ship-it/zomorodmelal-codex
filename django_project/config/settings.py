@@ -8,8 +8,8 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
+
 DEBUG = env_bool("DJANGO_DEBUG", False)
-# CI and local checks may intentionally omit a secret; production must provide one.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or ("ci-insecure-development-key" if DEBUG else None)
 if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be configured when DEBUG=False")
@@ -34,8 +34,10 @@ CSRF_TRUSTED_ORIGINS = [
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "apps.common.apps.CommonConfig", "apps.site", "apps.agriculture.apps.AgricultureConfig", "apps.marketplace.apps.MarketplaceConfig", "apps.encyclopedia.apps.EncyclopediaConfig",
-    "apps.research.apps.ResearchConfig", "apps.services", "apps.ai", "apps.economy", "apps.studio", "apps.office",
+    "apps.common.apps.CommonConfig", "apps.site", "apps.agriculture.apps.AgricultureConfig",
+    "apps.marketplace.apps.MarketplaceConfig", "apps.encyclopedia.apps.EncyclopediaConfig",
+    "apps.research.apps.ResearchConfig", "apps.services", "apps.ai", "apps.economy",
+    "apps.studio", "apps.office",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -45,11 +47,22 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
 ]
 ROOT_URLCONF = "config.urls"
-TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [BASE_DIR / "templates"], "APP_DIRS": True,
-    "OPTIONS": {"context_processors": ["django.template.context_processors.request", "django.contrib.auth.context_processors.auth", "django.contrib.messages.context_processors.messages"]}}]
+TEMPLATES = [{
+    "BACKEND": "django.template.backends.django.DjangoTemplates",
+    "DIRS": [BASE_DIR / "templates"],
+    "APP_DIRS": True,
+    "OPTIONS": {
+        "context_processors": [
+            "django.template.context_processors.request",
+            "django.contrib.auth.context_processors.auth",
+            "django.contrib.messages.context_processors.messages",
+        ]
+    },
+}]
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 LANGUAGE_CODE = "fa"
+
 if os.environ.get("DATABASE_URL"):
     import urllib.parse
     parsed = urllib.parse.urlparse(os.environ["DATABASE_URL"])
@@ -58,13 +71,27 @@ if os.environ.get("DATABASE_URL"):
     DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql", "NAME": parsed.path.lstrip("/"), "USER": parsed.username or "", "PASSWORD": parsed.password or "", "HOST": parsed.hostname or "", "PORT": str(parsed.port or 5432)}}
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3"))}}
+
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Asia/Tehran")
 USE_I18N = True
 USE_TZ = True
+
 STATIC_URL = "/static/"
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", str(BASE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STORAGES = {\n    "default": {\n        "BACKEND": "django.core.files.storage.FileSystemStorage",\n    },\n    "staticfiles": {\n        "BACKEND": (\n            "whitenoise.storage.CompressedManifestStaticFilesStorage"\n            if not DEBUG\n            else "django.contrib.staticfiles.storage.StaticFilesStorage"\n        ),\n    },\n}
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if not DEBUG
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
+    },
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AI_PROVIDER_ENABLED = env_bool("AI_PROVIDER_ENABLED", False)
@@ -72,8 +99,6 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
-
-# Production security switches. Enable HSTS only when HTTPS is confirmed at the host.
 ECONOMIC_REAL_EXECUTION_ENABLED = env_bool("ECONOMIC_REAL_EXECUTION_ENABLED", False) and not DEBUG
 
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
