@@ -68,6 +68,14 @@ class Journal(models.Model):
     posted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("company", "journal_no"),
+                name="office_journal_company_no_uniq",
+            ),
+        ]
+
     def __str__(self):
         return self.journal_no
 
@@ -80,6 +88,25 @@ class JournalLine(models.Model):
     debit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     credit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
+    class Meta:
+        ordering = ("line_no", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("journal", "line_no"),
+                name="office_journal_line_no_uniq",
+            ),
+            models.CheckConstraint(
+                check=models.Q(debit__gte=0) & models.Q(credit__gte=0),
+                name="office_journal_line_nonnegative",
+            ),
+            models.CheckConstraint(
+                check=(
+                    (models.Q(debit__gt=0) & models.Q(credit=0))
+                    | (models.Q(debit=0) & models.Q(credit__gt=0))
+                ),
+                name="office_journal_line_one_side",
+            ),
+        ]
 
     def clean(self):
         if self.journal_id and self.account_id and self.journal.company_id != self.account.company_id:
@@ -98,10 +125,6 @@ class OfficeTask(models.Model):
     owner_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ("status", "due_date", "-created_at")
-
-
 class Employee(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="employees")
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="office_employee")
@@ -119,6 +142,14 @@ class InventoryItem(models.Model):
     unit = models.CharField(max_length=30, default="عدد")
     quantity = models.DecimalField(max_digits=20, decimal_places=3, default=0)
     reorder_point = models.DecimalField(max_digits=20, decimal_places=3, default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("company", "sku"),
+                name="office_inventory_company_sku_uniq",
+            ),
+        ]
 
 
 class CashTransaction(models.Model):
