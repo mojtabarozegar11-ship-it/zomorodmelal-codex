@@ -9,6 +9,8 @@ from worker_mojtaba.tools.center import ToolCenter
 from worker_mojtaba.tools.media_adapter import MediaToolAdapter
 from worker_mojtaba.tools.android_adapter import AndroidToolAdapter
 from worker_mojtaba.tools.automation_adapter import AutomationToolAdapter
+from worker_mojtaba.tools.research_adapter import ResearchToolAdapter
+from worker_mojtaba.tools.document_adapter import DocumentToolAdapter
 from worker_mojtaba.security.audit import AuditLog
 
 
@@ -25,6 +27,8 @@ class WorkerService:
         self.tool_center.register(MediaToolAdapter())
         self.tool_center.register(AndroidToolAdapter())
         self.tool_center.register(AutomationToolAdapter())
+        self.tool_center.register(ResearchToolAdapter())
+        self.tool_center.register(DocumentToolAdapter())
         self.tools.register(
             "echo",
             "Safe diagnostic tool that returns the received request.",
