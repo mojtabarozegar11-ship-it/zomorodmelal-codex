@@ -2,15 +2,20 @@
 from __future__ import annotations
 from typing import Any
 from worker_mojtaba.automation.engine import AutomationEngine
+from worker_mojtaba.calendar.occasions import OccasionProvider
 from worker_mojtaba.tools.adapter import ToolAdapter
 
 class AutomationToolAdapter(ToolAdapter):
     name = "automation"
     def __init__(self) -> None:
         self.engine = AutomationEngine()
+        self.occasions = OccasionProvider()
     def capabilities(self) -> list[str]:
-        return ["schedule_task", "list_tasks"]
+        return ["schedule_task", "list_tasks", "list_occasions"]
     def execute(self, capability: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if capability == "list_occasions":
+            category = payload.get("category")
+            return {"status": "completed", "occasions": [o.__dict__ for o in self.occasions.list(category)]}
         if capability == "schedule_task":
             task = self.engine.schedule(
                 str(payload.get("name", "worker-task")),
