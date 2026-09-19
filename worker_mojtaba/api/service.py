@@ -12,6 +12,8 @@ from worker_mojtaba.tools.automation_adapter import AutomationToolAdapter
 from worker_mojtaba.tools.research_adapter import ResearchToolAdapter
 from worker_mojtaba.tools.document_adapter import DocumentToolAdapter
 from worker_mojtaba.wallet.wallet import WalletManager
+from worker_mojtaba.tools.iranian_bank_adapter import IranianBankAdapter, BankAccountPolicy
+from decimal import Decimal
 from worker_mojtaba.security.audit import AuditLog
 
 
@@ -26,6 +28,15 @@ class WorkerService:
         self.tools = ToolRegistry()
         self.wallets = WalletManager()
         self.wallets.configure_default_revenue_wallets()
+        self.bank = IranianBankAdapter(
+            BankAccountPolicy(
+                account_id="owner-configured",
+                bank_name="owner-configured",
+                revenue_share_wallet_1=Decimal("0.10"),
+                revenue_share_wallet_2=Decimal("0.90"),
+                wallet_2_outbound_allowed=False,
+            )
+        )
         self.tool_center = ToolCenter()
         self.tool_center.register(MediaToolAdapter())
         self.tool_center.register(AndroidToolAdapter())
