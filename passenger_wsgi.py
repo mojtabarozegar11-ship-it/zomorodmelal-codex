@@ -1,12 +1,5 @@
-"""Passenger entrypoint for the Zomorod Melal Django project.
+"""Passenger entrypoint for the Zomorod Melal Django project."""
 
-This file is intended to be used when cPanel Passenger Application Root
-is the project directory itself:
-
-    /home/zomorodm/zomorodmelal-app/django_project
-
-The file therefore does not append a nested "django_project" directory.
-"""
 import os
 import sys
 
@@ -17,4 +10,4 @@ if BASE_DIR not in sys.path:
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-from config.wsgi import application  # noqa: E402,F401
+from config.wsgi import application
