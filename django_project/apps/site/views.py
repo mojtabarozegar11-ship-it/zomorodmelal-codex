@@ -36,4 +36,4 @@ def studio_redirect(request):
 
 
 def architecture_audit(request):
-    return render(request, "architecture_audit.html")
+    return JsonResponse({"status": "ok", "service": "architecture", "message": "Architecture audit endpoint is available."})
