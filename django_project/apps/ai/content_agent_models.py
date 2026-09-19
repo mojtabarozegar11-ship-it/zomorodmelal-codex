@@ -28,11 +28,6 @@ class ContentChannel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=("platform", "name"), name="ai_channel_platform_name_uniq"),
-        ]
-        ordering = ("platform", "name")
 
     def __str__(self):
         return self.name
@@ -112,11 +107,6 @@ class ContentAsset(models.Model):
     approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=("brief", "asset_type", "version"), name="ai_content_asset_version_uniq"),
-        ]
-        ordering = ("asset_type", "-version")
 
 
 class ContentPublication(models.Model):
