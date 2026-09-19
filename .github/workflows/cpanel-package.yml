@@ -53,7 +53,30 @@ jobs:
           java-version: "17"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_ROOT" ]; then SDK_ROOT="$HOME/android-sdk"; fi
+          if [ ! -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            FOUND="$(find "$HOME" /opt -type f -name sdkmanager 2>/dev/null | head -1 || true)"
+            if [ -n "$FOUND" ]; then
+              SDK_ROOT="$(dirname "$(dirname "$(dirname "$FOUND")")")"
+            fi
+          fi
+          if [ ! -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "Android SDK command-line tools not found"
+            find "$HOME" /opt -maxdepth 7 -type f -name sdkmanager 2>/dev/null | head -20 || true
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+
+      - name: Accept Android licenses
+        shell: bash
+        run: yes | sdkmanager --licenses >/dev/null || true
 
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
