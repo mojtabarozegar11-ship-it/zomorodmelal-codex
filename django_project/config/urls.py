@@ -9,6 +9,9 @@ from apps.ai.mobile_admin import (
 )
 
 urlpatterns = [
+    # Keep the Master Agent API before root-mounted app URLConfs so /api/*
+    # cannot be shadowed by legacy/site endpoints.
+    path("api/", include("api.urls")),
     path("", include("apps.site.urls")),
     path("agriculture/", include("apps.agriculture.urls")),
     path("marketplace/", include("apps.marketplace.urls")),
@@ -18,7 +21,6 @@ urlpatterns = [
     path("office/", include("apps.office.urls")),
     path("", include("apps.services.urls")),
     path("admin/", admin.site.urls),
-    path("api/", include("api.urls")),
     path("api/office/", include("apps.office.api_urls")),
     path("economy/", include("apps.economy.catalog_urls")),
     path("ai/", include("apps.ai.content_agent_urls")),
