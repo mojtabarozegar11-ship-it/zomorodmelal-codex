@@ -52,17 +52,26 @@ class ExecutionEngine:
         if route != "text_model":
             if self.tool_center is not None and route in center_tools:
                 capabilities = self.tool_center.list_capabilities()[route]
-                execution = {
-                    "status": "capability_selection_required",
-                    "adapter": route,
-                    "available_capabilities": capabilities,
-                }
+                capability = intent.capability
+                if capability in capabilities:
+                    execution = self.tool_center.execute(
+                        route, capability, {"request": request}
+                    )
+                    execution = {
+                        **execution,
+                        "adapter": route,
+                        "capability": capability,
+                    }
+                else:
+                    execution = {
+                        "status": "capability_selection_required",
+                        "adapter": route,
+                        "available_capabilities": capabilities,
+                    }
             else:
                 tool = self.tools.get(route)
                 if tool is not None:
-                    execution = self.executor.execute(
-                        route, {"request": request}
-                    )
+                    execution = self.executor.execute(route, {"request": request})
 
         self.memory.remember_short({
             "request": request,
