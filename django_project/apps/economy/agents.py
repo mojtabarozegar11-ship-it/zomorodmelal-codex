@@ -46,8 +46,15 @@ class StrategyAgent:
 class RiskAgent:
     role="risk"
     def validate(self,order,policy=None):
-        if policy and policy.max_order_value and order.limit_price and order.quantity*order.limit_price>policy.max_order_value: return False,"Order exceeds configured maximum value."
-        if policy and policy.require_owner_approval: return True,"Owner approval required before any real action."
+        if (
+            policy
+            and policy.max_order_value
+            and order.limit_price
+            and order.quantity * order.limit_price > policy.max_order_value
+        ):
+            return False, "Order exceeds configured maximum value."
+        if policy and policy.require_owner_approval:
+            return True, "Owner approval required before any real action."
         return True,"Risk checks passed for paper workflow."
 class PortfolioAgent:
     role="portfolio"
