@@ -29,3 +29,10 @@ def test_service_exposes_financial_adapter():
     assert "finance" in capabilities
     assert service.bank.policy.revenue_share_wallet_1 == Decimal("0.10")
     assert service.bank.policy.revenue_share_wallet_2 == Decimal("0.90")
+
+def test_service_selects_account_balance_capability():
+    result = WorkerService().handle("موجودی کیف پول را بررسی کن")
+    assert result["route"] == "finance"
+    assert result["intent"] == "wallet"
+    assert result["execution"]["status"] == "bank_bridge_required"
+    assert result["execution"]["capability"] == "account_balance"
