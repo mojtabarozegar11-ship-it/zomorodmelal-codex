@@ -22,13 +22,32 @@ class EncyclopediaArticle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ("-updated_at", "title")
+
     def __str__(self):
         return self.title
 
 
 class KnowledgeRelation(models.Model):
-    article = models.ForeignKey(EncyclopediaArticle, on_delete=models.CASCADE)
-    related_article = models.ForeignKey(EncyclopediaArticle, related_name="relations", on_delete=models.CASCADE)
+    article = models.ForeignKey(
+        EncyclopediaArticle,
+        related_name="outgoing_relations",
+        on_delete=models.CASCADE,
+    )
+    related_article = models.ForeignKey(
+        EncyclopediaArticle,
+        related_name="incoming_relations",
+        on_delete=models.CASCADE,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("article", "related_article"),
+                name="encyclopedia_relation_unique",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.article} -> {self.related_article}"
