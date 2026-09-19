@@ -10,9 +10,6 @@ class Company(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("name",)
-        verbose_name = "شرکت"
-        verbose_name_plural = "شرکت‌ها"
 
     def __str__(self):
         return self.name
@@ -30,8 +27,6 @@ class CompanyDelegation(models.Model):
 
     class Meta:
         unique_together = ("company", "user")
-        verbose_name = "واگذاری دسترسی شرکت"
-        verbose_name_plural = "واگذاری‌های دسترسی شرکت"
 
     def __str__(self):
         return f"{self.company} / {self.user}"
@@ -46,8 +41,6 @@ class LedgerAccount(models.Model):
 
     class Meta:
         unique_together = ("company", "code")
-        verbose_name = "حساب دفترکل"
-        verbose_name_plural = "حساب‌های دفترکل"
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -65,9 +58,6 @@ class AccountingEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("-entry_date", "-id")
-        verbose_name = "سند حسابداری"
-        verbose_name_plural = "اسناد حسابداری"
         constraints = [
             models.CheckConstraint(check=models.Q(debit__gte=0) & models.Q(credit__gte=0), name="office_entry_nonnegative"),
             models.CheckConstraint(check=((models.Q(debit__gt=0) & models.Q(credit=0)) | (models.Q(debit=0) & models.Q(credit__gt=0))), name="office_entry_one_side"),
@@ -92,10 +82,6 @@ class Journal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("-entry_date", "-id")
-        constraints = [models.UniqueConstraint(fields=("company", "journal_no"), name="office_journal_company_no_uniq")]
-        verbose_name = "سند دفتر روزنامه"
-        verbose_name_plural = "اسناد دفتر روزنامه"
 
     def __str__(self):
         return self.journal_no
@@ -136,8 +122,6 @@ class OfficeTask(models.Model):
 
     class Meta:
         ordering = ("status", "due_date", "-created_at")
-        verbose_name = "وظیفه اداری"
-        verbose_name_plural = "وظایف اداری"
 
 
 class Employee(models.Model):
@@ -149,8 +133,6 @@ class Employee(models.Model):
     active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "کارمند"
-        verbose_name_plural = "کارکنان"
         constraints = [models.CheckConstraint(check=models.Q(base_salary__gte=0), name="office_employee_salary_nonnegative")]
 
 
@@ -164,8 +146,6 @@ class InventoryItem(models.Model):
 
     class Meta:
         unique_together = ("company", "sku")
-        verbose_name = "قلم انبار"
-        verbose_name_plural = "اقلام انبار"
 
 
 class CashTransaction(models.Model):
@@ -178,9 +158,6 @@ class CashTransaction(models.Model):
     reference = models.CharField(max_length=100, blank=True)
 
     class Meta:
-        ordering = ("-transaction_date", "-id")
-        verbose_name = "تراکنش خزانه"
-        verbose_name_plural = "تراکنش‌های خزانه"
         constraints = [models.CheckConstraint(check=models.Q(amount__gt=0), name="office_cash_amount_positive")]
 
 
@@ -194,9 +171,6 @@ class AuditLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("-created_at",)
-        verbose_name = "لاگ حسابرسی"
-        verbose_name_plural = "لاگ‌های حسابرسی"
 
 
 class Invoice(models.Model):
@@ -210,10 +184,6 @@ class Invoice(models.Model):
     due_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("company", "number")
-        ordering = ("-issue_date", "-id")
-        verbose_name = "فاکتور"
-        verbose_name_plural = "فاکتورها"
         constraints = [models.CheckConstraint(check=models.Q(total__gte=0), name="office_invoice_total_nonnegative")]
 
 
