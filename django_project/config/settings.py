@@ -9,10 +9,10 @@ def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 DEBUG = env_bool("DJANGO_DEBUG", False)
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
-if not SECRET_KEY and not DEBUG:
+# CI and local checks may intentionally omit a secret; production must provide one.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or ("ci-insecure-development-key" if DEBUG else None)
+if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be configured when DEBUG=False")
-
 
 ALLOWED_HOSTS = [
     h.strip()
@@ -64,7 +64,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", str(BASE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage" if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AI_PROVIDER_ENABLED = env_bool("AI_PROVIDER_ENABLED", False)
