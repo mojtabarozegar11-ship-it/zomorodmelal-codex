@@ -4,3 +4,5 @@ The GitHub Actions workflow is configured to build a debug APK. This file intent
 
 
 Build diagnostics updated: 2026-09-19.
+
+SDK setup switched to runner-provided SDK.
