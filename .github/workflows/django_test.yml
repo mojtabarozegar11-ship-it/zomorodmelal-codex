@@ -33,12 +33,14 @@ jobs:
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-test-secret
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py makemigrations --check --dry-run
       - name: URL smoke tests
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-test-secret
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: |
           python -c "from django.test import Client; c=Client(); paths=['/','/economy/','/economy/services/','/economy/api/v1/services/','/architecture/']; [print(p, c.get(p).status_code) for p in paths]"
@@ -46,6 +48,7 @@ jobs:
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-test-secret
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python -m django test
 
@@ -53,6 +56,7 @@ jobs:
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-test-secret
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python -c "import config.wsgi, config.asgi; print('Primary WSGI/ASGI import OK')"
       - name: Legacy website compatibility check
