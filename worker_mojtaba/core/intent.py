@@ -10,6 +10,10 @@ class Intent:
 class IntentParser:
     _rules = (
         (("انتشار", "یوتیوب", "youtube", "شبکه اجتماعی", "social"), "social_publishing", "publish_video"),
+        (("واتساپ", "whatsapp"), "communications", "send_whatsapp"),
+        (("ایمیل", "email"), "communications", "send_email"),
+        (("پیامک", "sms"), "communications", "send_sms"),
+        (("تقویم شمسی", "تقویم قمری", "تقویم میلادی", "مناسبت"), "calendar", "calendar_event"),
         (("زمان‌بندی انتشار", "زمان بندی انتشار", "schedule video"), "social_publishing", "schedule_video"),
         (("کانال", "channels"), "social_publishing", "list_channels"),
         (("ویدئو", "ویدیو", "video", "mp4"), "media_generation", "text_to_video"),
