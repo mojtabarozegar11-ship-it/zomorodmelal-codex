@@ -1,3 +1,4 @@
+from worker_mojtaba.api.service import WorkerService
 from worker_mojtaba.core.engine import ExecutionEngine
 from worker_mojtaba.core.memory import MemoryStore
 from worker_mojtaba.tools.registry import ToolRegistry
@@ -17,8 +18,13 @@ def test_engine_detects_media_intent():
 
 
 def test_engine_executes_registered_safe_tool_for_general_request():
-    engine = ExecutionEngine(MemoryStore(), ToolRegistry())
-    from worker_mojtaba.api.service import WorkerService
     result = WorkerService().handle("سلام")
     assert result["execution"]["status"] == "completed"
     assert result["execution"]["tool"] == "echo"
+
+
+def test_service_routes_wallet_intent_into_tool_center():
+    result = WorkerService().handle("موجودی کیف پول را بررسی کن")
+    assert result["route"] == "finance"
+    assert result["execution"]["status"] == "capability_selection_required"
+    assert "account_balance" in result["execution"]["available_capabilities"]
