@@ -50,7 +50,12 @@ class WorkerService:
             _echo_tool,
         )
         self.tool_center.register(FinancialToolAdapter(self.bank, self.wallets))
-        self.engine = ExecutionEngine(self.memory, self.tools, ai_registry)
+        self.engine = ExecutionEngine(
+            self.memory,
+            self.tools,
+            ai_registry,
+            self.tool_center,
+        )
         self.audit = AuditLog()
 
     def handle(self, request: str) -> dict[str, Any]:
