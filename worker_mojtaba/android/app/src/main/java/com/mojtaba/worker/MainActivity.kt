@@ -11,15 +11,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.mojtaba.worker.network.WorkerApiClient
 import kotlinx.coroutines.*
+import com.mojtaba.worker.voice.VoicePlayer
+import com.mojtaba.worker.voice.VoiceRecorder
 
 private const val WORKER_API_BASE_URL = BuildConfig.WORKER_API_BASE_URL
 
 class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+    private lateinit var recorder: VoiceRecorder
+    private val player = VoicePlayer()
+    private var recordingFile: java.io.File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        recorder = VoiceRecorder(this)
         requestDevicePermissions()
         setContentView(buildUi())
     }
@@ -56,11 +62,31 @@ class MainActivity : ComponentActivity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; singleLine = true }
         val send = Button(this).apply { text = "ارسال" }
+        val voice = Button(this).apply { text = "🎤 پیام صوتی" }
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(send, LinearLayout.LayoutParams(-2, -2))
+        row.addView(voice, LinearLayout.LayoutParams(-2, -2))
         root.addView(row)
 
         val client = WorkerApiClient(WORKER_API_BASE_URL)
+        voice.setOnClickListener {
+            try {
+                if (recordingFile == null) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO)); return@setOnClickListener
+                    }
+                    recordingFile = recorder.start()
+                    voice.text = "⏹ توقف ضبط"
+                } else {
+                    val file = recorder.stop()
+                    recordingFile = file
+                    voice.text = "🔊 پخش پیام صوتی"
+                    player.play(file)
+                    messages.append("\n\nشما: 🎤 پیام صوتی")
+                }
+            } catch (e: Exception) { messages.append("\nخطای صوتی: " + (e.message ?: "خطا")) }
+        }
+
         send.setOnClickListener {
             val request = input.text.toString().trim()
             if (request.isEmpty()) return@setOnClickListener
@@ -82,6 +108,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        player.stop()
+        recorder.cancel()
         scope.cancel()
         super.onDestroy()
     }
