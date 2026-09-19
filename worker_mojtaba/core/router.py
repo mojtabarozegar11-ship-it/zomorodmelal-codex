@@ -11,7 +11,7 @@ class Router:
         "research": "research",
         "camera": "android",
         "audio": "android",
-        "wallet": "wallet",
+        "wallet": "finance",
     }
 
     def route(self, intent: str, available_tools: list[str]) -> str:
