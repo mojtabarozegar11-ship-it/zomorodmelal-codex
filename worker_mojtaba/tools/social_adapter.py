@@ -11,8 +11,12 @@ class SocialPublishingToolAdapter(ToolAdapter):
         return list(self.publisher.capabilities)
     def execute(self, capability: str, payload: dict[str, Any]) -> dict[str, Any]:
         request = payload.get("request", "")
+        title = payload.get("title", "")
+        description = payload.get("description", "")
+        platforms = tuple(payload.get("platforms", ("youtube",)))
+        privacy = payload.get("privacy", "private")
         if capability == "publish_video":
-            return self.publisher.publish_video(PublishRequest(media_path=request))
+            return self.publisher.publish_video(PublishRequest(media_path=request, title=title, description=description, platforms=platforms, privacy=privacy))
         if capability == "schedule_video":
             return self.publisher.schedule_video(PublishRequest(media_path=request), payload.get("publish_at", "owner-configured"))
         if capability == "list_channels":
