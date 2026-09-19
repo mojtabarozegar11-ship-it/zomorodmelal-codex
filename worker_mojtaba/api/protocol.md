@@ -16,3 +16,7 @@ The service owns an explicit Tool Center for provider-backed capabilities.
 - Unknown adapters/capabilities are rejected.
 - Media generation remains provider_required until an authorized provider is configured.
 - Provider credentials are supplied through secure runtime configuration, not source code.
+
+
+## Task response
+The task endpoint returns the selected intent/capability, execution status, AI status, plan and registered Tool Center names. Android clients may send a JSON `context` object; it is carried through the response and does not contain credentials.
