@@ -20,3 +20,6 @@ class ToolRegistry:
 
     def get(self, name: str) -> Tool | None:
         return self._tools.get(name)
+
+    def has(self, name: str) -> bool:
+        return name in self._tools
