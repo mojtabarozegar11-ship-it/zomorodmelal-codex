@@ -11,9 +11,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Create deployment ZIP
+
+      - name: Create clean cPanel package
+        shell: bash
         run: |
-          zip -r zomorodmelal-cpanel.zip . -x ".git/*" "*.pyc" "__pycache__/*"
+          set -euo pipefail
+          rm -rf package zomorodmelal-cpanel.zip
+          mkdir -p package
+          cp -a django_project package/django_project
+          for item in autonomous_core ai_engine ai_providers agents agent_runtime access api app config core database memory monitoring orchestrator planner research sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research website run_master_agent.py ai_bridge.py requirements.txt .cpanel.yml CPANEL_DEPLOYMENT.md HOST_HANDOFF_CHECKLIST.md README.md; do
+            if [ -e "$item" ]; then
+              cp -a "$item" package/
+            fi
+          done
+          find package -type d -name __pycache__ -prune -exec rm -rf {} +
+          find package -type f -name '*.pyc' -delete
+          cd package
+          zip -r ../zomorodmelal-cpanel.zip .
+          cd ..
+          unzip -l zomorodmelal-cpanel.zip | grep -E 'django_project/passenger_wsgi.py|django_project/manage.py|django_project/config/settings.py'
       - name: Upload deployment ZIP
         uses: actions/upload-artifact@v4
         with:
