@@ -9,8 +9,6 @@ class Company(models.Model):
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-
     def __str__(self):
         return self.name
 
@@ -80,8 +78,6 @@ class Journal(models.Model):
     owner_approved = models.BooleanField(default=False)
     posted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
 
     def __str__(self):
         return self.journal_no
