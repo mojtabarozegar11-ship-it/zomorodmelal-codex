@@ -1,10 +1,8 @@
-from decimal import Decimal
-
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from .models import EconomicAuditLog, OrderIntent, Position, Trade
+from .models import EconomicAuditLog, Position, Trade
 from .policies import guard_real_execution
 
 
