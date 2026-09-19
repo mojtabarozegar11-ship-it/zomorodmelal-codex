@@ -4,7 +4,7 @@ Official Iranian dates should be synchronized from the current official calendar
 international observances are based on UN-designated observances.
 """
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Iterable
 
 
 @dataclass(frozen=True)
@@ -71,3 +71,10 @@ class OccasionProvider:
             for key, title in religious
         )
         return [x for x in items if category is None or x.category == category]
+
+    def by_keys(self, keys: Iterable[str]):
+        wanted = set(keys)
+        return [item for item in self.list() if item.key in wanted]
+
+    def categories(self) -> tuple[str, ...]:
+        return self.CATEGORIES
