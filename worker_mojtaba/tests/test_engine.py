@@ -14,3 +14,11 @@ def test_engine_detects_media_intent():
     engine = ExecutionEngine(MemoryStore(), ToolRegistry())
     result = engine.run("یک ویدئو بساز")
     assert result["intent"] == "media_generation"
+
+
+def test_engine_executes_registered_safe_tool_for_general_request():
+    engine = ExecutionEngine(MemoryStore(), ToolRegistry())
+    from worker_mojtaba.api.service import WorkerService
+    result = WorkerService().handle("سلام")
+    assert result["execution"]["status"] == "completed"
+    assert result["execution"]["tool"] == "echo"
