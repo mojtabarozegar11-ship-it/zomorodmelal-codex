@@ -30,8 +30,8 @@ class ExecutionEngine:
         self.intent_parser = IntentParser()
         self.tool_center = tool_center
 
-    def run(self, request: str) -> dict[str, Any]:
-        intent = self.intent_parser.parse(request)
+    def run(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        context = context or {}\n        intent = self.intent_parser.parse(request)
         plan = self.planner.make_plan(request)
 
         registry_tools = [tool["name"] for tool in self.tools.list()]
@@ -71,7 +71,7 @@ class ExecutionEngine:
             else:
                 tool = self.tools.get(route)
                 if tool is not None:
-                    execution = self.executor.execute(route, {"request": request})
+                    execution = self.executor.execute(route, {"request": request, "context": context})
 
         self.memory.remember_short({
             "request": request,
