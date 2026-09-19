@@ -26,5 +26,5 @@ def test_engine_executes_registered_safe_tool_for_general_request():
 def test_service_routes_wallet_intent_into_tool_center():
     result = WorkerService().handle("موجودی کیف پول را بررسی کن")
     assert result["route"] == "finance"
-    assert result["execution"]["status"] == "capability_selection_required"
-    assert "account_balance" in result["execution"]["available_capabilities"]
+    assert result["execution"]["status"] == "bank_bridge_required"
+    assert result["execution"]["capability"] == "account_balance"
