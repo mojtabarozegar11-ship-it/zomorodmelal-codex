@@ -31,12 +31,6 @@ class ContentChannel(models.Model):
 
     class Meta:
         ordering = ("platform", "name")
-        constraints = [
-            models.UniqueConstraint(
-                fields=("platform", "name"),
-                name="ai_channel_platform_name_uniq",
-            ),
-        ]
 
     def __str__(self):
         return self.name
