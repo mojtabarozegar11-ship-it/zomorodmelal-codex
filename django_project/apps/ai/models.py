@@ -10,5 +10,9 @@ class AIConfiguration(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+    class Meta:
+        verbose_name = "AI Configuration"
+        verbose_name_plural = "AI Configurations"
+
     def __str__(self):
         return self.provider
