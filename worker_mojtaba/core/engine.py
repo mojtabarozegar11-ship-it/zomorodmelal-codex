@@ -12,6 +12,7 @@ from worker_mojtaba.tools.registry import ToolRegistry
 from worker_mojtaba.tools.executor import ToolExecutor
 from worker_mojtaba.tools.center import ToolCenter
 from worker_mojtaba.core.result_state import normalize_execution_status
+from worker_mojtaba.security.policy import Policy
 
 
 class ExecutionEngine:
@@ -21,6 +22,7 @@ class ExecutionEngine:
         tools: ToolRegistry,
         ai_registry: AIProviderRegistry | None = None,
         tool_center: ToolCenter | None = None,
+        policy: Policy | None = None,
     ) -> None:
         self.memory = memory
         self.tools = tools
@@ -30,6 +32,7 @@ class ExecutionEngine:
         self.router = Router()
         self.intent_parser = IntentParser()
         self.tool_center = tool_center
+        self.policy = policy or Policy()
 
     def run(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         context = context or {}\n        intent = self.intent_parser.parse(request)
@@ -45,12 +48,20 @@ class ExecutionEngine:
         route = self.router.route(intent.capability, available)
 
         ai_result = self.ai_registry.generate(request, intent.capability)
+        authorized = self.policy.check_capability(intent.capability)
         execution: dict[str, Any] = {
             "status": "planned",
             "reason": "no registered tool for this capability",
         }
 
-        if route != "text_model":
+        if route != "text_model" and not authorized:
+            execution = {
+                "status": "owner_verification_required",
+                "reason": "capability_not_authorized_by_policy",
+                "capability": intent.capability,
+            }
+            execution = normalize_execution_status(execution)
+        elif route != "text_model":
             if self.tool_center is not None and route in center_tools:
                 capabilities = self.tool_center.list_capabilities()[route]
                 capability = intent.capability
@@ -94,4 +105,5 @@ class ExecutionEngine:
             "ai": ai_result,
             "execution": execution,
             "tools": available,
+            "authorization": {"capability": intent.capability, "allowed": authorized},
         }
