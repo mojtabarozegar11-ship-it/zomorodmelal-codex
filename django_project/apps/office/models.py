@@ -89,7 +89,7 @@ class JournalLine(models.Model):
     credit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
     class Meta:
-        ordering = ["line_no", "id"]
+        ordering = ("line_no", "id")
         constraints = [
             models.UniqueConstraint(
                 fields=("journal", "line_no"),
