@@ -100,6 +100,7 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
           DJANGO_DEBUG: "False"
+          DJANGO_STATIC_ROOT: ${{ runner.temp }}/cpanel-static
           DJANGO_SECURE_SSL_REDIRECT: "False"
           DJANGO_SESSION_COOKIE_SECURE: "False"
           DJANGO_CSRF_COOKIE_SECURE: "False"
@@ -113,6 +114,7 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
           DJANGO_DEBUG: "False"
+          DJANGO_STATIC_ROOT: ${{ runner.temp }}/cpanel-static
           DJANGO_SECURE_SSL_REDIRECT: "False"
           DJANGO_SESSION_COOKIE_SECURE: "False"
           DJANGO_CSRF_COOKIE_SECURE: "False"
