@@ -4,7 +4,6 @@ plugins {
 }
 
 android { namespace = "com.mojtaba.worker"; compileSdk = 35
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     defaultConfig {
@@ -20,9 +19,5 @@ android { namespace = "com.mojtaba.worker"; compileSdk = 35
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.activity:activity-compose:1.10.0")
-    implementation("androidx.compose.ui:ui:1.5.4")
-    implementation("androidx.compose.material3:material3:1.1.2")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
