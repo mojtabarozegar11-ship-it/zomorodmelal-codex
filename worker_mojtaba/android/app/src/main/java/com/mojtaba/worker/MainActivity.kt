@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.mojtaba.worker.network.WorkerApiClient
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 private const val WORKER_API_BASE_URL = BuildConfig.WORKER_API_BASE_URL
 
@@ -68,8 +67,7 @@ fun WorkerChat() {
                     scope.launch {
                         try {
                             val result = client.sendTask(request)
-                            val json = JSONObject(result.rawJson)
-                            messages = messages + "کارگر: " + json.optString("message", result.rawJson)
+                            messages = messages + "کارگر: " + result.message()
                         } catch (e: Exception) {
                             messages = messages + "خطا: " + (e.message ?: "اتصال برقرار نشد")
                         } finally {
