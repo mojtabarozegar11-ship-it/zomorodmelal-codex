@@ -1,4 +1,4 @@
-from .models import EconomicReport, MarketDataSnapshot, OrderIntent, Portfolio, RiskPolicy
+from .models import MarketDataSnapshot, OrderIntent
 
 class EconomicResearchAgent:
     role="research"
@@ -61,5 +61,43 @@ class ExecutionAgent:
         return paper_execute(order)
 class EconomicMasterAgent:
     def __init__(self):
-        self.research=EconomicResearchAgent(); self.market_data=MarketDataAgent(); self.analysis=AnalysisAgent(); self.behavior=BehavioralEconomicsAgent(); self.markets=FinancialMarketsAgent(); self.innovation=InnovationAgent(); self.virtual_assets=VirtualAssetAgent(); self.compliance=ComplianceAgent(); self.product=ProductAgent(); self.publishing=PublishingAgent(); self.revenue=RevenueAgent(); self.analytics=AnalyticsAgent(); self.strategy=StrategyAgent(); self.risk=RiskAgent(); self.portfolio=PortfolioAgent(); self.execution=ExecutionAgent()
-    def capabilities(self): return [a.role for a in (self.research,self.market_data,self.analysis,self.behavior,self.markets,self.innovation,self.virtual_assets,self.compliance,self.product,self.publishing,self.revenue,self.analytics,self.risk,self.portfolio,self.execution)]+["paper_trading","real_execution_blocked","owner_approval_gate"]
+        self.research = EconomicResearchAgent()
+        self.market_data = MarketDataAgent()
+        self.analysis = AnalysisAgent()
+        self.behavior = BehavioralEconomicsAgent()
+        self.markets = FinancialMarketsAgent()
+        self.innovation = InnovationAgent()
+        self.virtual_assets = VirtualAssetAgent()
+        self.compliance = ComplianceAgent()
+        self.product = ProductAgent()
+        self.publishing = PublishingAgent()
+        self.revenue = RevenueAgent()
+        self.analytics = AnalyticsAgent()
+        self.strategy = StrategyAgent()
+        self.risk = RiskAgent()
+        self.portfolio = PortfolioAgent()
+        self.execution = ExecutionAgent()
+
+    def capabilities(self):
+        agents = (
+            self.research,
+            self.market_data,
+            self.analysis,
+            self.behavior,
+            self.markets,
+            self.innovation,
+            self.virtual_assets,
+            self.compliance,
+            self.product,
+            self.publishing,
+            self.revenue,
+            self.analytics,
+            self.risk,
+            self.portfolio,
+            self.execution,
+        )
+        return [agent.role for agent in agents] + [
+            "paper_trading",
+            "real_execution_blocked",
+            "owner_approval_gate",
+        ]
