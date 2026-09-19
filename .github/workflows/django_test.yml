@@ -26,6 +26,7 @@ jobs:
         working-directory: django_project
         env:
           DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-test-secret
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py check
       - name: Django migrations check
