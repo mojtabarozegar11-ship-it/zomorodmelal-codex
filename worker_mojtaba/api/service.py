@@ -18,6 +18,7 @@ from worker_mojtaba.tools.iranian_bank_adapter import IranianBankAdapter, BankAc
 from worker_mojtaba.tools.financial_adapter import FinancialToolAdapter
 from decimal import Decimal
 from worker_mojtaba.security.audit import AuditLog
+from worker_mojtaba.security.policy import Policy
 
 
 def _echo_tool(request: str) -> dict[str, Any]:
@@ -49,7 +50,10 @@ class WorkerService:
         self.tool_center.register(CommunicationsToolAdapter())
         self.tools.register("echo", "Safe diagnostic tool that returns the received request.", _echo_tool)
         self.tool_center.register(FinancialToolAdapter(self.bank, self.wallets))
-        self.engine = ExecutionEngine(self.memory, self.tools, ai_registry, self.tool_center)
+        self.policy = Policy()
+        self.engine = ExecutionEngine(
+            self.memory, self.tools, ai_registry, self.tool_center, policy=self.policy
+        )
         self.audit = AuditLog()
 
     def handle(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
