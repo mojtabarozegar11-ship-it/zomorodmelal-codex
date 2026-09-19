@@ -5,14 +5,15 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import django
-django.setup()
 
-from django.test import TestCase, override_settings
 from django.contrib.admin.sites import AdminSite
+from django.test import TestCase, override_settings
 
 from apps.ai.admin import AIConfigurationAdmin, AIConfigurationAdminForm
 from apps.ai.models import AIConfiguration
 from apps.ai.services import get_deepseek_provider
+
+django.setup()
 
 
 class AIAdminConfigurationTests(TestCase):
