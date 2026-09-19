@@ -26,6 +26,6 @@ def test_revenue_allocation_is_10_90_through_bank_policy():
 def test_service_exposes_financial_adapter():
     service = WorkerService()
     capabilities = service.tool_center.list_capabilities()
-    assert "finance" not in capabilities
+    assert "finance" in capabilities
     assert service.bank.policy.revenue_share_wallet_1 == Decimal("0.10")
     assert service.bank.policy.revenue_share_wallet_2 == Decimal("0.90")
