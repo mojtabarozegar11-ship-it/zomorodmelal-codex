@@ -1,55 +1,67 @@
 # cPanel Deployment — Zomorod Melal
 
-## معماری صحیح سایت
+## Canonical cPanel layout
 
-سایت اصلی شرکت با Django/Python اجرا می‌شود؛ بنابراین برای این پروژه نباید دنبال index.php، composer.json، vendor یا WordPress باشید.
-
-برنامه اصلی در GitHub در مسیر `django_project/` است و فایل‌های کلیدی آن:
-- `manage.py`
-- `config/settings.py`
-- `config/wsgi.py`
-- `passenger_wsgi.py`
-- `requirements.txt`
-- `apps/`
-
-درخت `website/` قدیمی/سازگاری است و نباید به عنوان برنامه اصلی Passenger ثبت شود.
-
-## تنظیم Python Application در cPanel
-
-Application Root باید به پوشه‌ای اشاره کند که همان‌جا `manage.py` و پوشه `config/` قرار دارند:
+The Django application directory is:
 
 `/home/zomorodm/zomorodmelal-app/django_project`
 
-Startup File باید فقط این مقدار باشد:
+That directory must contain:
 
-`passenger_wsgi.py`
+- `manage.py`
+- `config/`
+- `apps/`
+- `passenger_wsgi.py`
+- `requirements.txt`
 
-در Startup File مسیر کامل فایل وارد نکنید.
+Passenger must use the application directory itself as its Application Root.
 
-## اگر Directory Listing می‌بینید
+## cPanel Python Application
 
-اگر `https://zomorodmelal.ir/` به جای صفحه سایت، فهرست فایل‌های LiteSpeed مانند `cgi-bin` و `php.ini` را نشان می‌دهد، درخواست دامنه هنوز به برنامه Django/Passenger متصل نشده است.
+Use these exact values:
 
-در این حالت فایل PHP یا WordPress به public_html اضافه نکنید. باید اتصال دامنه به Python Application و Application Root صحیح بررسی شود.
+```text
+Application Root
+/home/zomorodm/zomorodmelal-app/django_project
 
-## متغیرهای محیطی
+Application URL
+https://zomorodmelal.ir
 
-`DJANGO_SETTINGS_MODULE=config.settings`
+Application Startup File
+passenger_wsgi.py
 
-`DJANGO_DEBUG=False`
+Application Entry Point
+application
+```
 
-`DJANGO_ALLOWED_HOSTS=zomorodmelal.ir,www.zomorodmelal.ir`
+Do not point Passenger at the repository root and do not use the legacy `website/` directory as the Django application.
 
-`DJANGO_SECRET_KEY=<private-production-secret>`
+## Required environment
 
-پس از تأیید کامل HTTPS می‌توان `DJANGO_SECURE_SSL_REDIRECT=True` را فعال کرد.
+Set these in cPanel's Python Application environment:
 
-## بررسی و راه‌اندازی
+```text
+DJANGO_SETTINGS_MODULE=config.settings
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=zomorodmelal.ir,www.zomorodmelal.ir
+DJANGO_CSRF_TRUSTED_ORIGINS=https://zomorodmelal.ir,https://www.zomorodmelal.ir
+DJANGO_SECRET_KEY=<private-production-secret>
+DJANGO_SECURE_SSL_REDIRECT=False
+DJANGO_SESSION_COOKIE_SECURE=False
+DJANGO_CSRF_COOKIE_SECURE=False
+```
 
-از داخل Application Root:
+After HTTPS is confirmed working through Passenger, the SSL redirect and secure-cookie settings may be enabled.
+
+## Python environment
+
+Use a Python version supported by the host and by the repository CI, preferably Python 3.11 or 3.12.
+
+From the application root:
 
 ```bash
-python -m pip install -r requirements.txt
+cd /home/zomorodm/zomorodmelal-app/django_project
+python -m pip install -r requirements-host.txt
 python manage.py check
 python manage.py check --deploy
 python manage.py migrate
@@ -57,18 +69,55 @@ python manage.py collectstatic --noinput
 python -c "import config.wsgi; print('WSGI OK')"
 ```
 
-سپس برنامه را از cPanel → Application Manager بازنشانی/Restart کنید.
+## Restart
 
-## بررسی نهایی
+After changing code or environment variables, restart the Python application from cPanel Application Manager.
 
-پس از اتصال صحیح Passenger:
+If the host exposes Passenger's restart file, the repository also provides a cPanel deployment hook that touches:
+
+`/home/zomorodm/zomorodmelal-app/django_project/tmp/restart.txt`
+
+## Directory Listing / 503 troubleshooting
+
+If `https://zomorodmelal.ir/` shows the LiteSpeed directory listing instead of Django, the domain is not reaching the Passenger application. Do not add PHP or WordPress files.
+
+Verify, in order:
+
+1. Application Root is exactly the canonical path above.
+2. Startup File is exactly `passenger_wsgi.py`.
+3. Entry Point is exactly `application`.
+4. `passenger_wsgi.py` exists inside the Application Root.
+5. The application has been restarted.
+6. The domain is mapped by LiteSpeed/Passenger to the Python application.
+
+If all six are correct and the directory listing remains, the hosting provider must rebuild/fix the LiteSpeed virtual-host mapping. That is a host-level operation and cannot be completed by GitHub alone.
+
+## cPanel package structure
+
+The GitHub cPanel workflow builds a clean package without an extra repository-name directory. After extraction, the expected structure is:
+
+```text
+/home/zomorodm/zomorodmelal-app/
+└── django_project/
+    ├── manage.py
+    ├── passenger_wsgi.py
+    ├── config/
+    ├── apps/
+    └── requirements.txt
+```
+
+Do not extract the package into:
+
+`/home/zomorodm/zomorodmelal-app/django_project/django_project/`
+
+## Final verification
+
+After Passenger is connected:
 
 ```bash
 curl -I https://zomorodmelal.ir/
 ```
 
-باید پاسخ از برنامه Django دریافت شود، نه Directory Listing پیش‌فرض LiteSpeed.
+The response must come from the Django application, not the default LiteSpeed directory listing.
 
-## مهم
-
-فایل‌ها و پوشه‌های قدیمی هاست را تا زمانی که WSGI، مهاجرت‌ها، static و درخواست HTTPS با موفقیت آزمایش نشده‌اند حذف نکنید.
+Do not delete legacy host files until the Django application, migrations, static files, HTTPS, and the root URL have been verified successfully.
