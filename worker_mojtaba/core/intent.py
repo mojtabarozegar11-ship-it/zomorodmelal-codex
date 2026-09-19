@@ -13,7 +13,7 @@ class IntentParser:
         (("واتساپ", "whatsapp"), "communications", "send_whatsapp"),
         (("ایمیل", "email"), "communications", "send_email"),
         (("پیامک", "sms"), "communications", "send_sms"),
-        (("تقویم شمسی", "تقویم قمری", "تقویم میلادی", "مناسبت"), "calendar", "calendar_event"),
+        (("فهرست رویدادهای تقویم", "لیست رویدادهای تقویم", "calendar events"), "calendar", "list_calendar_events"),\n        (("تقویم شمسی", "تقویم قمری", "تقویم میلادی", "مناسبت"), "calendar", "calendar_event"),
         (("زمان‌بندی انتشار", "زمان بندی انتشار", "schedule video"), "social_publishing", "schedule_video"),
         (("کانال", "channels"), "social_publishing", "list_channels"),
         (("ویدئو", "ویدیو", "video", "mp4"), "media_generation", "text_to_video"),
