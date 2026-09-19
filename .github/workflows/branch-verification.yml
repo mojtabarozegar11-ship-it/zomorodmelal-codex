@@ -1,0 +1,60 @@
+name: Branch Verification
+
+on:
+  push:
+    branches:
+      - "fix/all-errors-*"
+      - "integration/*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Django dependencies
+        run: |
+          python -m pip install --upgrade "pip<25.1"
+          pip install -r django_project/requirements.txt
+          pip install pytest
+
+      - name: Django checks
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-branch-secret
+          DJANGO_DEBUG: "True"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python -m django test
+
+      - name: Agent and repository tests
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-branch-secret
+          DJANGO_DEBUG: "True"
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+          AUTONOMOUS_CYCLE_INNER_TESTS: "1"
+        run: |
+          python -m unittest discover -s tests -v
+
+      - name: Passenger/WSGI import
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-branch-secret
+          DJANGO_DEBUG: "True"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          python -c "import config.wsgi, config.asgi, passenger_wsgi; print('Django and Passenger imports OK')"
