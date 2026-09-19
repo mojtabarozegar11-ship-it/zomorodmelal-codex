@@ -1,4 +1,19 @@
-"""Capability router."""
+"""Capability router with explicit capability aliases."""
+from __future__ import annotations
+
+
 class Router:
-    def route(self, intent:str, available_tools:list[str])->str:
-        return intent if intent in available_tools else "text_model"
+    _aliases = {
+        "general": "echo",
+        "media_generation": "media",
+        "task_automation": "automation",
+        "document_management": "documents",
+        "research": "research",
+        "camera": "android",
+        "audio": "android",
+        "wallet": "wallet",
+    }
+
+    def route(self, intent: str, available_tools: list[str]) -> str:
+        candidate = self._aliases.get(intent, intent)
+        return candidate if candidate in available_tools else "text_model"
