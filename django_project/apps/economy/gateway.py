@@ -11,7 +11,11 @@ class PaymentGateway:
         purchase.gateway = self.name
         purchase.authority = authority
         purchase.save(update_fields=["gateway", "authority"])
-        return {"authority": authority, "checkout_url": "/economy/signals/checkout/{}/".format(purchase.pk), "sandbox": True}
+        return {
+            "authority": authority,
+            "checkout_url": f"/economy/signals/checkout/{purchase.pk}/",
+            "sandbox": True,
+        }
 
     def verify(self, purchase, success=False):
         if not success:
