@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from django.shortcuts import get_object_or_404, redirect, render
 from .models import SitePage
 
@@ -37,3 +38,24 @@ def studio_redirect(request):
 
 def architecture_audit(request):
     return JsonResponse({"status": "ok", "service": "architecture", "message": "Architecture audit endpoint is available."})
+
+
+@require_GET
+def api_status(request):
+    return JsonResponse(
+        {
+            "status": "ok",
+            "service": "zomorod-melal-site",
+            "version": "1.0",
+            "modules": [
+                "agriculture",
+                "marketplace",
+                "research",
+                "services",
+                "economy",
+                "studio",
+                "ai",
+                "office",
+            ],
+        }
+    )
