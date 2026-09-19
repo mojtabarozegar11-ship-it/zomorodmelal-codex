@@ -1,0 +1,40 @@
+name: Worker Mojtaba Android Build
+
+on:
+  push:
+    paths:
+      - "worker_mojtaba/**"
+  workflow_dispatch:
+
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker_mojtaba/android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-mojtaba-debug-apk
+          path: worker_mojtaba/android/app/build/outputs/apk/debug/app-debug.apk
