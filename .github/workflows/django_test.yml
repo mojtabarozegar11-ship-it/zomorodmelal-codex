@@ -43,7 +43,7 @@ jobs:
           DJANGO_SECRET_KEY: ci-test-secret
           PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: |
-          python -c "import django; django.setup(); from django.test import Client; c=Client(); paths=['/','/economy/','/economy/services/','/economy/api/v1/services/','/architecture/']; [print(p, c.get(p).status_code) for p in paths]"
+          python -c "import django; django.setup(); from django.test import Client; c=Client(); paths=['/','/economy/','/economy/services/','/economy/api/v1/services/','/architecture/','/api/status/','/api/health/','/api/v1/','/api/v1/status/','/api/v1/health/']; [print(p, c.get(p).status_code) for p in paths]"
       - name: Primary Django tests
         working-directory: django_project
         env:
