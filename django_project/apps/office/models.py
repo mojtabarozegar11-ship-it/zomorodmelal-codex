@@ -68,6 +68,13 @@ class Journal(models.Model):
     posted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("company", "journal_no"),
+                name="office_journal_company_no_uniq",
+            ),
+        ]
 
     def __str__(self):
         return self.journal_no
@@ -82,7 +89,6 @@ class JournalLine(models.Model):
     credit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
     class Meta:
-        ordering = ["line_no", "id"]
         constraints = [
             models.UniqueConstraint(
                 fields=("journal", "line_no"),
