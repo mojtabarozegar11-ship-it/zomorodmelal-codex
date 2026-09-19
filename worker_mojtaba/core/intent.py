@@ -22,4 +22,4 @@ class IntentParser:
         for keywords, capability in self._rules:
             if any(k in text for k in keywords):
                 return Intent(capability, capability)
-        return Intent("general", "text_model")
+        return Intent("general", "echo")
