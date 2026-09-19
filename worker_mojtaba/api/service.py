@@ -58,9 +58,17 @@ class WorkerService:
 
     def handle(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         result = self.engine.run(request, context=context or {})
+        execution = result.get("execution") or {}
         self.audit.record(
             "task",
-            result.get("status", "unknown"),
-            {"request": request, "route": result.get("route")},
+            execution.get("result_state", result.get("status", "unknown")),
+            {
+                "request": request,
+                "route": result.get("route"),
+                "intent": result.get("intent"),
+                "capability": result.get("authorization", {}).get("capability"),
+                "authorized": result.get("authorization", {}).get("allowed"),
+                "execution_status": execution.get("status"),
+            },
         )
         return result
