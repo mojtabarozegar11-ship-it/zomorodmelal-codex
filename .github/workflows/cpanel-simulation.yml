@@ -1,0 +1,131 @@
+name: cPanel Production Simulation
+
+on:
+  push:
+    branches:
+      - "fix/all-errors-*"
+      - "integration/*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  cpanel-simulation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install host dependencies
+        run: |
+          python -m pip install --upgrade "pip<25.1"
+          pip install -r requirements.txt
+          pip install -r django_project/requirements.txt
+
+      - name: Production configuration checks
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
+          DJANGO_DEBUG: "False"
+          DJANGO_ALLOWED_HOSTS: "zomorodmelal.ir,www.zomorodmelal.ir,localhost,127.0.0.1"
+          DJANGO_CSRF_TRUSTED_ORIGINS: "https://zomorodmelal.ir,https://www.zomorodmelal.ir"
+          DJANGO_SECURE_SSL_REDIRECT: "False"
+          DJANGO_SESSION_COOKIE_SECURE: "False"
+          DJANGO_CSRF_COOKIE_SECURE: "False"
+          DJANGO_HSTS_SECONDS: "0"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          python manage.py check
+          python manage.py check --deploy
+          python manage.py makemigrations --check --dry-run
+
+      - name: Fresh database migration
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
+          DJANGO_DEBUG: "False"
+          DJANGO_DB_PATH: ${{ runner.temp }}/cpanel-simulation.sqlite3
+          DJANGO_SECURE_SSL_REDIRECT: "False"
+          DJANGO_SESSION_COOKIE_SECURE: "False"
+          DJANGO_CSRF_COOKIE_SECURE: "False"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          rm -f "$DJANGO_DB_PATH"
+          python manage.py migrate --noinput
+
+      - name: Collect static assets
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
+          DJANGO_DEBUG: "False"
+          DJANGO_STATIC_ROOT: ${{ runner.temp }}/cpanel-static
+          DJANGO_SECURE_SSL_REDIRECT: "False"
+          DJANGO_SESSION_COOKIE_SECURE: "False"
+          DJANGO_CSRF_COOKIE_SECURE: "False"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          rm -rf "$DJANGO_STATIC_ROOT"
+          python manage.py collectstatic --noinput
+          test -d "$DJANGO_STATIC_ROOT"
+          test -n "$(find "$DJANGO_STATIC_ROOT" -type f -print -quit)"
+
+      - name: Passenger and application imports
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
+          DJANGO_DEBUG: "False"
+          DJANGO_SECURE_SSL_REDIRECT: "False"
+          DJANGO_SESSION_COOKIE_SECURE: "False"
+          DJANGO_CSRF_COOKIE_SECURE: "False"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          python -c "import config.wsgi, config.asgi, passenger_wsgi; print('Passenger/WSGI/ASGI imports OK')"
+
+      - name: Production URL smoke tests
+        working-directory: django_project
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-cpanel-simulation-secret
+          DJANGO_DEBUG: "False"
+          DJANGO_SECURE_SSL_REDIRECT: "False"
+          DJANGO_SESSION_COOKIE_SECURE: "False"
+          DJANGO_CSRF_COOKIE_SECURE: "False"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          import django
+          django.setup()
+          from django.test import Client
+
+          client = Client(HTTP_HOST="zomorodmelal.ir")
+          expected = {
+              "/": {200, 301, 302},
+              "/api/status/": {200},
+              "/api/health/": {200},
+              "/api/v1/": {200},
+              "/api/v1/status/": {200},
+              "/api/v1/health/": {200},
+              "/admin/": {200, 302},
+              "/mobile-admin/manifest.json": {200, 301, 302},
+          }
+
+          failures = []
+          for path, allowed in expected.items():
+              response = client.get(path, follow=False)
+              print(path, response.status_code)
+              if response.status_code not in allowed:
+                  failures.append((path, response.status_code, sorted(allowed)))
+
+          if failures:
+              raise SystemExit(f"Smoke test failures: {failures}")
+          PY
