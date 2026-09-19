@@ -68,13 +68,6 @@ class Journal(models.Model):
     posted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=("company", "journal_no"),
-                name="office_journal_company_no_uniq",
-            ),
-        ]
 
     def __str__(self):
         return self.journal_no
