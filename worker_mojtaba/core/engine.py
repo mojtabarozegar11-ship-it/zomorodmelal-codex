@@ -11,6 +11,7 @@ from worker_mojtaba.core.memory import MemoryStore
 from worker_mojtaba.tools.registry import ToolRegistry
 from worker_mojtaba.tools.executor import ToolExecutor
 from worker_mojtaba.tools.center import ToolCenter
+from worker_mojtaba.core.result_state import normalize_execution_status
 
 
 class ExecutionEngine:
@@ -62,16 +63,19 @@ class ExecutionEngine:
                         "adapter": route,
                         "capability": capability,
                     }
+                    execution = normalize_execution_status(execution)
                 else:
                     execution = {
                         "status": "capability_selection_required",
                         "adapter": route,
                         "available_capabilities": capabilities,
                     }
+                    execution = normalize_execution_status(execution)
             else:
                 tool = self.tools.get(route)
                 if tool is not None:
                     execution = self.executor.execute(route, {"request": request, "context": context})
+                    execution = normalize_execution_status(execution)
 
         self.memory.remember_short({
             "request": request,
