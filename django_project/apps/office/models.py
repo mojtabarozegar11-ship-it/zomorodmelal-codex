@@ -52,7 +52,8 @@ class AccountingEntry(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
 
-        constraints = [
+    class Meta:
+constraints = [
             models.CheckConstraint(check=models.Q(debit__gte=0) & models.Q(credit__gte=0), name="office_entry_nonnegative"),
             models.CheckConstraint(check=((models.Q(debit__gt=0) & models.Q(credit=0)) | (models.Q(debit=0) & models.Q(credit__gt=0))), name="office_entry_one_side"),
         ]
@@ -76,7 +77,8 @@ class Journal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=("company", "journal_no"), name="office_journal_company_no_uniq")]
+    class Meta:
+constraints = [models.UniqueConstraint(fields=("company", "journal_no"), name="office_journal_company_no_uniq")]
 
     def __str__(self):
         return self.journal_no
@@ -90,7 +92,8 @@ class JournalLine(models.Model):
     debit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     credit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
-        constraints = [
+    class Meta:
+constraints = [
             models.UniqueConstraint(fields=("journal", "line_no"), name="office_journal_line_no_uniq"),
             models.CheckConstraint(check=models.Q(debit__gte=0) & models.Q(credit__gte=0), name="office_journal_line_nonnegative"),
             models.CheckConstraint(check=((models.Q(debit__gt=0) & models.Q(credit=0)) | (models.Q(debit=0) & models.Q(credit__gt=0))), name="office_journal_line_one_side"),
@@ -123,7 +126,8 @@ class Employee(models.Model):
     base_salary = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     active = models.BooleanField(default=True)
 
-        constraints = [models.CheckConstraint(check=models.Q(base_salary__gte=0), name="office_employee_salary_nonnegative")]
+    class Meta:
+constraints = [models.CheckConstraint(check=models.Q(base_salary__gte=0), name="office_employee_salary_nonnegative")]
 
 
 class InventoryItem(models.Model):
@@ -145,7 +149,8 @@ class CashTransaction(models.Model):
     transaction_date = models.DateField()
     reference = models.CharField(max_length=100, blank=True)
 
-        constraints = [models.CheckConstraint(check=models.Q(amount__gt=0), name="office_cash_amount_positive")]
+    class Meta:
+constraints = [models.CheckConstraint(check=models.Q(amount__gt=0), name="office_cash_amount_positive")]
 
 
 class AuditLog(models.Model):
@@ -170,7 +175,8 @@ class Invoice(models.Model):
     due_date = models.DateField(null=True, blank=True)
 
     class Meta:
-        constraints = [models.CheckConstraint(check=models.Q(total__gte=0), name="office_invoice_total_nonnegative")]
+    class Meta:
+constraints = [models.CheckConstraint(check=models.Q(total__gte=0), name="office_invoice_total_nonnegative")]
 
 class WorkflowApproval(models.Model):
     STATUS_CHOICES = (("pending", "در انتظار"), ("approved", "تأیید"), ("rejected", "رد"))
