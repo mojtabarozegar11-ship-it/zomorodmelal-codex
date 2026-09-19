@@ -15,11 +15,16 @@ class _DefaultExecutor:
 
 class _DefaultApprovalGateway:
     def request(self, action, reason):
-        return {"id": str(uuid.uuid4()), "action": action, "reason": reason, "approved": False}
+        return {
+            "id": str(uuid.uuid4()),
+            "action": action,
+            "reason": reason,
+            "approved": False,
+        }
 
 
 class SafeAgentLoop:
-    """Safe autonomous execution loop; every action remains approval-gated."""
+    """Safe autonomous loop: plan, request owner approval, never execute unapproved actions."""
 
     def __init__(self, planner=None, executor=None, approval_gateway=None):
         self.planner = planner or _DefaultPlanner()
@@ -39,10 +44,27 @@ class SafeAgentLoop:
 
     def run_cycle(self, goal):
         plan = self.create_plan(goal)
-        result = {"goal": goal, "steps": plan.get("actions", []), "waiting_for_approval": []}
-        for step in result["steps"]:
+        steps = list(plan.get("actions", []))
+        result = {
+            "goal": goal,
+            "status": "approval_required" if steps else "ready",
+            "steps": steps,
+            "waiting_for_approval": [],
+            "executed": [],
+        }
+        for step in steps:
             approval = self.request_approval("agent_execution", step)
-            result["waiting_for_approval"].append({"step": step, "approval_id": approval.get("id")})
+            approved = bool(approval.get("approved"))
+            item = {
+                "step": step,
+                "approval_id": approval.get("id"),
+                "approved": approved,
+            }
+            result["waiting_for_approval"].append(item)
+            if approved:
+                execution = self.executor.execute(step)
+                item["execution"] = execution
+                result["executed"].append(execution)
         result["waiting"] = result["waiting_for_approval"]
         return result
 
