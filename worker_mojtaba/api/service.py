@@ -13,6 +13,7 @@ from worker_mojtaba.tools.research_adapter import ResearchToolAdapter
 from worker_mojtaba.tools.document_adapter import DocumentToolAdapter
 from worker_mojtaba.wallet.wallet import WalletManager
 from worker_mojtaba.tools.iranian_bank_adapter import IranianBankAdapter, BankAccountPolicy
+from worker_mojtaba.tools.financial_adapter import FinancialToolAdapter
 from decimal import Decimal
 from worker_mojtaba.security.audit import AuditLog
 
@@ -48,6 +49,7 @@ class WorkerService:
             "Safe diagnostic tool that returns the received request.",
             _echo_tool,
         )
+        self.tool_center.register(FinancialToolAdapter(self.bank, self.wallets))
         self.engine = ExecutionEngine(self.memory, self.tools, ai_registry)
         self.audit = AuditLog()
 
