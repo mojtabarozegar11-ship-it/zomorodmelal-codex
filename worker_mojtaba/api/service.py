@@ -11,6 +11,7 @@ from worker_mojtaba.tools.android_adapter import AndroidToolAdapter
 from worker_mojtaba.tools.automation_adapter import AutomationToolAdapter
 from worker_mojtaba.tools.research_adapter import ResearchToolAdapter
 from worker_mojtaba.tools.document_adapter import DocumentToolAdapter
+from worker_mojtaba.wallet.wallet import WalletManager
 from worker_mojtaba.security.audit import AuditLog
 
 
@@ -23,6 +24,8 @@ class WorkerService:
     def __init__(self, ai_registry: AIProviderRegistry | None = None) -> None:
         self.memory = MemoryStore()
         self.tools = ToolRegistry()
+        self.wallets = WalletManager()
+        self.wallets.configure_default_revenue_wallets()
         self.tool_center = ToolCenter()
         self.tool_center.register(MediaToolAdapter())
         self.tool_center.register(AndroidToolAdapter())
