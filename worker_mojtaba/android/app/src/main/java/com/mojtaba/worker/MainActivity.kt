@@ -12,7 +12,7 @@ import com.mojtaba.worker.network.WorkerApiClient
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-private const val WORKER_API_BASE_URL = "https://YOUR_WORKER_API_HOST"
+private const val WORKER_API_BASE_URL = BuildConfig.WORKER_API_BASE_URL
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
