@@ -72,9 +72,7 @@ def paper_execute(order):
     )
     order.status = "paper_executed"
     order.save(update_fields=["status"])
-    EconomicAuditLog.objects.create(
-        action="paper_trade", detail=f"Order {order.pk}", approved=False
-    )
+    EconomicAuditLog.objects.create(action="paper_trade", detail=f"Order {order.pk}", approved=False)
     return True, "paper trade executed"
 
 
