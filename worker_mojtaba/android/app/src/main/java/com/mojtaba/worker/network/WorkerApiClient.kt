@@ -6,7 +6,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class WorkerResponse(val rawJson: String)
+data class WorkerResponse(val rawJson: String) {\n    fun message(): String {\n        val json = JSONObject(rawJson)\n        val execution = json.optJSONObject("execution")\n        return execution?.optString("message")?.takeIf { it.isNotBlank() }\n            ?: json.optString("message").takeIf { it.isNotBlank() }\n            ?: json.optString("status", "پاسخ دریافت شد.")\n    }\n}
 
 class WorkerApiClient(private val baseUrl: String) {
     suspend fun sendTask(request: String): WorkerResponse = withContext(Dispatchers.IO) {
