@@ -118,6 +118,14 @@ class ContentAsset(models.Model):
     approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["asset_type", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("brief", "asset_type", "version"),
+                name="ai_content_asset_version_uniq",
+            ),
+        ]
 
 
 class ContentPublication(models.Model):
