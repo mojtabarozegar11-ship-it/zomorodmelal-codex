@@ -8,3 +8,5 @@ Build diagnostics updated: 2026-09-19.
 SDK setup switched to runner-provided SDK.
 
 Robust SDK discovery added.
+
+AndroidX enabled for next build.
