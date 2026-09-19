@@ -77,6 +77,7 @@ jobs:
           python manage.py collectstatic --noinput
           test -d "$DJANGO_STATIC_ROOT"
           test -n "$(find "$DJANGO_STATIC_ROOT" -type f -print -quit)"
+          test -f "$DJANGO_STATIC_ROOT/site/logo.svg" || test -f "$(find "$DJANGO_STATIC_ROOT" -type f -name 'logo.svg' -print -quit)"
 
       - name: Passenger and application imports
         working-directory: django_project
