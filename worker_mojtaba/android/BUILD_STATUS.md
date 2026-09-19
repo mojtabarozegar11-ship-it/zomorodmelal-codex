@@ -12,3 +12,7 @@ Robust SDK discovery added.
 AndroidX enabled for next build.
 
 Java/Kotlin JVM targets aligned to 17.
+
+
+## Current CI gate
+Android CI now runs Gradle unit tests before assembling the debug APK. A successful APK must pass both the test task and assembleDebug before the artifact is considered valid.
