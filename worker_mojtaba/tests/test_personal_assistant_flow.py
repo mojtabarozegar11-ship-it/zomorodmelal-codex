@@ -13,7 +13,7 @@ def test_personal_calendar_request_executes_through_engine():
         },
     )
     assert result["intent"] == "calendar"
-    assert result["route"] == "automation"
+    assert result["route"] == "automation"\n    assert result["intent"] == "calendar"
     assert result["execution"]["status"] == "scheduled"
     assert result["execution"]["event"]["calendar"] == "persian"
 
@@ -24,6 +24,6 @@ def test_calendar_events_can_be_listed():
         "تقویم میلادی",
         context={"title": "کار", "calendar": "gregorian", "date": "2026-09-20"},
     )
-    result = service.handle("تقویم میلادی")
+    result = service.handle("فهرست رویدادهای تقویم")
     assert result["route"] == "automation"
     assert result["execution"]["status"] == "completed"
