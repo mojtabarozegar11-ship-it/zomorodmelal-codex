@@ -68,8 +68,6 @@ class ContentResearchSnapshot(models.Model):
     metrics = models.JSONField(default=dict, blank=True)
     captured_at = models.DateTimeField(auto_now_add=True)
 
-
-
 class ContentBrief(models.Model):
     STATUS_CHOICES = [
         ("idea", "Idea"), ("research", "Research"), ("briefed", "Briefed"),
@@ -127,8 +125,6 @@ class ContentPublication(models.Model):
     owner_approved = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
-
 
 class ContentPerformance(models.Model):
     publication = models.OneToOneField(ContentPublication, on_delete=models.CASCADE, related_name="performance")
