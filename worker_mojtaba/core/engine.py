@@ -56,7 +56,7 @@ class ExecutionEngine:
 
         if route != "text_model" and not authorized:
             execution = {
-                "status": "owner_verification_required",
+                "status": "blocked",
                 "reason": "capability_not_authorized_by_policy",
                 "capability": intent.capability,
             }
