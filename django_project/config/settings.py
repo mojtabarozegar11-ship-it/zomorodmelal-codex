@@ -64,7 +64,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", str(BASE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage" if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage"
+STORAGES = {\n    "default": {\n        "BACKEND": "django.core.files.storage.FileSystemStorage",\n    },\n    "staticfiles": {\n        "BACKEND": (\n            "whitenoise.storage.CompressedManifestStaticFilesStorage"\n            if not DEBUG\n            else "django.contrib.staticfiles.storage.StaticFilesStorage"\n        ),\n    },\n}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AI_PROVIDER_ENABLED = env_bool("AI_PROVIDER_ENABLED", False)
