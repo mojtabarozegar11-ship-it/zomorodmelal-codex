@@ -12,6 +12,7 @@ from worker_mojtaba.tools.automation_adapter import AutomationToolAdapter
 from worker_mojtaba.tools.research_adapter import ResearchToolAdapter
 from worker_mojtaba.tools.document_adapter import DocumentToolAdapter
 from worker_mojtaba.tools.social_adapter import SocialPublishingToolAdapter
+from worker_mojtaba.tools.communications_adapter import CommunicationsToolAdapter
 from worker_mojtaba.wallet.wallet import WalletManager
 from worker_mojtaba.tools.iranian_bank_adapter import IranianBankAdapter, BankAccountPolicy
 from worker_mojtaba.tools.financial_adapter import FinancialToolAdapter
@@ -46,6 +47,7 @@ class WorkerService:
         self.tool_center.register(ResearchToolAdapter())
         self.tool_center.register(DocumentToolAdapter())
         self.tool_center.register(SocialPublishingToolAdapter())
+        self.tool_center.register(CommunicationsToolAdapter())
         self.tools.register(
             "echo",
             "Safe diagnostic tool that returns the received request.",
