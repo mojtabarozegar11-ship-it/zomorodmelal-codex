@@ -1,8 +1,12 @@
 package com.mojtaba.worker
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,9 +19,20 @@ import org.json.JSONObject
 private const val WORKER_API_BASE_URL = BuildConfig.WORKER_API_BASE_URL
 
 class MainActivity : ComponentActivity() {
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ -> }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestDevicePermissions()
         setContent { WorkerChat() }
+    }
+
+    private fun requestDevicePermissions() {
+        val requested = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+            .filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (requested.isNotEmpty()) permissionLauncher.launch(requested.toTypedArray())
     }
 }
 
