@@ -23,9 +23,6 @@ class CompanyDelegation(models.Model):
     ends_at = models.DateTimeField(null=True, blank=True)
     owner_approved = models.BooleanField(default=False)
 
-    class Meta:
-        unique_together = ("company", "user")
-
     def __str__(self):
         return f"{self.company} / {self.user}"
 
@@ -36,9 +33,6 @@ class LedgerAccount(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="ledger_accounts")
     account_type = models.CharField(max_length=30, default="general")
     active = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = ("company", "code")
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -125,9 +119,6 @@ class InventoryItem(models.Model):
     unit = models.CharField(max_length=30, default="عدد")
     quantity = models.DecimalField(max_digits=20, decimal_places=3, default=0)
     reorder_point = models.DecimalField(max_digits=20, decimal_places=3, default=0)
-
-    class Meta:
-        unique_together = ("company", "sku")
 
 
 class CashTransaction(models.Model):
