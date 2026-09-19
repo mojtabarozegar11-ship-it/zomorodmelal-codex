@@ -21,7 +21,6 @@ from worker_mojtaba.security.audit import AuditLog
 
 
 def _echo_tool(request: str) -> dict[str, Any]:
-    """Deterministic built-in tool used to validate the safe tool boundary."""
     return {"status": "completed", "tool": "echo", "request": request}
 
 
@@ -48,22 +47,13 @@ class WorkerService:
         self.tool_center.register(DocumentToolAdapter())
         self.tool_center.register(SocialPublishingToolAdapter())
         self.tool_center.register(CommunicationsToolAdapter())
-        self.tools.register(
-            "echo",
-            "Safe diagnostic tool that returns the received request.",
-            _echo_tool,
-        )
+        self.tools.register("echo", "Safe diagnostic tool that returns the received request.", _echo_tool)
         self.tool_center.register(FinancialToolAdapter(self.bank, self.wallets))
-        self.engine = ExecutionEngine(
-            self.memory,
-            self.tools,
-            ai_registry,
-            self.tool_center,
-        )
+        self.engine = ExecutionEngine(self.memory, self.tools, ai_registry, self.tool_center)
         self.audit = AuditLog()
 
-    def handle(self, request: str) -> dict[str, Any]:
-        result = self.engine.run(request)
+    def handle(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        result = self.engine.run(request, context=context or {})
         self.audit.record(
             "task",
             result.get("status", "unknown"),
