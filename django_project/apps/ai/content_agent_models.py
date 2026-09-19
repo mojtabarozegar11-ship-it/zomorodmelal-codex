@@ -119,7 +119,7 @@ class ContentAsset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["asset_type", "-version"]
+        ordering = ("asset_type", "-version")
         constraints = [
             models.UniqueConstraint(
                 fields=("brief", "asset_type", "version"),
