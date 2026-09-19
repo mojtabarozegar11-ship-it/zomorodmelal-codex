@@ -10,3 +10,5 @@ SDK setup switched to runner-provided SDK.
 Robust SDK discovery added.
 
 AndroidX enabled for next build.
+
+Java/Kotlin JVM targets aligned to 17.
