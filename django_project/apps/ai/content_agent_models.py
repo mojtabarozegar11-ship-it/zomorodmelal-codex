@@ -29,6 +29,15 @@ class ContentChannel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+    class Meta:
+        ordering = ("platform", "name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("platform", "name"),
+                name="ai_channel_platform_name_uniq",
+            ),
+        ]
+
     def __str__(self):
         return self.name
 
@@ -67,6 +76,10 @@ class ContentResearchSnapshot(models.Model):
     summary = models.TextField(blank=True)
     metrics = models.JSONField(default=dict, blank=True)
     captured_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-captured_at",)
+
 
 class ContentBrief(models.Model):
     STATUS_CHOICES = [
@@ -125,6 +138,10 @@ class ContentPublication(models.Model):
     owner_approved = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
 
 class ContentPerformance(models.Model):
     publication = models.OneToOneField(ContentPublication, on_delete=models.CASCADE, related_name="performance")
