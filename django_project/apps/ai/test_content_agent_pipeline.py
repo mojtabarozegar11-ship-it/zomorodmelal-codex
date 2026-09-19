@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from unittest.mock import patch
 
-from .content_agent import ContentAgent
-from .content_agent_models import ContentAsset, ContentChannel
+from apps.ai.content_agent import ContentAgent
+from apps.ai.content_agent_models import ContentAsset, ContentChannel
 
 
 class ContentAgentPipelineTests(TestCase):
