@@ -424,7 +424,7 @@ class ContentAgent:
 class SocialPlatformAdapter:
     platform = "manual"
 
-    def publish(self, *, publication: ContentPublication, payload: Dict[str, object]):
+    def publish(self, *, publication: ContentPublication, payload: dict[str, object]):
         return {
             "ok": True,
             "sandbox": True,
