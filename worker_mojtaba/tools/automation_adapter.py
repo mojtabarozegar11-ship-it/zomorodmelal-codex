@@ -11,8 +11,17 @@ class AutomationToolAdapter(ToolAdapter):
         self.engine = AutomationEngine()
         self.occasions = OccasionProvider()
     def capabilities(self) -> list[str]:
-        return ["schedule_task", "list_tasks", "list_occasions"]
+        return ["schedule_task", "list_tasks", "list_occasions", "schedule_for_occasion"]
     def execute(self, capability: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if capability == "schedule_for_occasion":
+            task = self.engine.schedule_for_occasion(
+                str(payload.get("occasion_key", "")),
+                str(payload.get("name", "occasion-task")),
+                str(payload.get("expression", "")),
+                str(payload.get("calendar", "gregorian")),
+                payload.get("action", {}),
+            )
+            return {"status": "scheduled", **task.__dict__}
         if capability == "list_occasions":
             category = payload.get("category")
             return {"status": "completed", "occasions": [o.__dict__ for o in self.occasions.list(category)]}
