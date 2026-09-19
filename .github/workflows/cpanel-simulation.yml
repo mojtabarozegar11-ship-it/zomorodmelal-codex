@@ -109,7 +109,7 @@ jobs:
 
           client = Client(HTTP_HOST="zomorodmelal.ir")
           expected = {
-              "/": {200, 301, 302},
+              "/api/status/": {200},\n              "/": {200, 301, 302},
               "/api/status/": {200},
               "/api/health/": {200},
               "/api/v1/": {200},
