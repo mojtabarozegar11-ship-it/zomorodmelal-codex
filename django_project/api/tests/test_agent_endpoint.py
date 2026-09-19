@@ -36,3 +36,28 @@ class AgentEndpointTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["goal"], "اجرای آزمایشی")
         self.assertTrue(payload["waiting_for_approval"])
+
+    def test_v1_discovery(self):
+        response = Client().get("/api/v1/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["version"], "v1")
+        self.assertTrue(payload["owner_approval_required"])
+
+    def test_v1_status(self):
+        response = Client().get("/api/v1/status/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["version"], "v1")
+
+    def test_v1_health(self):
+        response = Client().get("/api/v1/health/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+
+    def test_v1_execute_requires_goal(self):
+        response = Client().post(
+            "/api/v1/agent/execute/",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
