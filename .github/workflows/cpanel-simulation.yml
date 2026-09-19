@@ -78,6 +78,21 @@ jobs:
           test -d "$DJANGO_STATIC_ROOT"
           test -n "$(find "$DJANGO_STATIC_ROOT" -type f -print -quit)"
           test -f "$DJANGO_STATIC_ROOT/site/logo.svg" || test -f "$(find "$DJANGO_STATIC_ROOT" -type f -name 'logo.svg' -print -quit)"
+          test -f "$DJANGO_STATIC_ROOT/staticfiles.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["DJANGO_STATIC_ROOT"])
+          manifest_path = root / "staticfiles.json"
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          paths = manifest.get("paths", {})
+          assert "site/logo.svg" in paths, "site/logo.svg missing from staticfiles.json manifest"
+          hashed = paths["site/logo.svg"]
+          assert (root / hashed).is_file(), f"Manifest target missing: {hashed}"
+          print(f"Manifest OK: site/logo.svg -> {hashed}")
+          PY
 
       - name: Passenger and application imports
         working-directory: django_project
