@@ -31,6 +31,11 @@ class ExecutionEngine:
         route = self.router.route(intent.capability, available)
 
         ai_result = self.ai_registry.generate(request, intent.capability)
+        execution = {"status": "planned", "reason": "no registered tool for this capability"}
+        if route != "text_model":
+            tool = self.tools.get(route)
+            if tool is not None:
+                execution = self.executor.execute(route, {"request": request})
         self.memory.remember_short({
             "request": request,
             "intent": intent.name,
@@ -45,5 +50,6 @@ class ExecutionEngine:
             "route": route,
             "plan": plan,
             "ai": ai_result,
+            "execution": execution,
             "tools": self.tools.list(),
         }
