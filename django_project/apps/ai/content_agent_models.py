@@ -73,8 +73,6 @@ class ContentResearchSnapshot(models.Model):
     metrics = models.JSONField(default=dict, blank=True)
     captured_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ("-captured_at",)
 
 
 class ContentBrief(models.Model):
@@ -140,8 +138,6 @@ class ContentPublication(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ("-created_at",)
 
 
 class ContentPerformance(models.Model):
