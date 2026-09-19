@@ -9,17 +9,20 @@ class Intent:
 
 class IntentParser:
     _rules = (
-        (("ویدئو", "ویدیو", "video", "mp4"), "media_generation"),
-        (("یادآوری", "reminder", "یادداشت"), "task_automation"),
-        (("کیف پول", "wallet", "درآمد", "تراکنش"), "wallet"),
-        (("تحقیق", "پژوهش", "مطالعه"), "research"),
-        (("فایل", "سند", "document"), "document_management"),
-        (("دوربین", "camera"), "camera"),
-        (("صدا", "میکروفون", "microphone"), "audio"),
+        (("ویدئو", "ویدیو", "video", "mp4"), "media_generation", "text_to_video"),
+        (("یادآوری", "reminder"), "task_automation", "schedule_task"),
+        (("کیف پول", "wallet", "موجودی"), "wallet", "account_balance"),
+        (("تراکنش", "transaction"), "wallet", "transactions"),
+        (("درآمد", "تقسیم درآمد", "allocate revenue"), "wallet", "allocate_revenue"),
+        (("تحقیق", "پژوهش", "مطالعه"), "research", "research"),
+        (("فایل", "سند", "document"), "document_management", "document_status"),
+        (("متادیتای فایل", "document metadata"), "document_management", "document_metadata"),
+        (("دوربین", "camera"), "camera", "camera"),
+        (("صدا", "میکروفون", "microphone"), "audio", "microphone"),
     )
     def parse(self, request: str) -> Intent:
         text = request.strip().lower()
-        for keywords, capability in self._rules:
+        for keywords, name, capability in self._rules:
             if any(k in text for k in keywords):
-                return Intent(capability, capability)
+                return Intent(name, capability)
         return Intent("general", "echo")
