@@ -1,6 +1,5 @@
 from uuid import uuid4
 from django.utils import timezone
-from .models import SignalPurchase
 
 
 class PaymentGateway:
