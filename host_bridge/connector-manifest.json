@@ -34,7 +34,7 @@
   ],
   "security": {
     "token_location": "/home/zomorodm/.host_bridge_token",
-    "root": "/home/zomorodm/zomorodmelal-app/django_project",
+    "root": "/home/zomorodm/zomorodmelal-app",
     "no_shell_execution": true,
     "https_required": true
   }
