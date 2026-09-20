@@ -31,7 +31,6 @@ class WorkerResponseTest {
     }
 
     @Test
-    @Test
     fun blankBaseUrlIsRejected() {
         val client = com.mojtaba.worker.network.WorkerApiClient("   ")
         val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
