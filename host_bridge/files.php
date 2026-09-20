@@ -37,6 +37,9 @@ function token(): string {
     return is_readable($file) ? trim((string)file_get_contents($file)) : '';
 }
 function auth(): void {
+    if (($_SERVER['HTTPS'] ?? '') !== 'on' && (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https') {
+        respond(400, ['ok'=>false, 'error'=>'https_required']);
+    }
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
     if ($header === '' && function_exists('getallheaders')) {
         foreach (getallheaders() as $k => $v) {
@@ -144,7 +147,7 @@ try {
             $content=file_get_contents($path);
             if ($content===false) respond(500,['ok'=>false,'error'=>'read_failed']);
             audit($action,$relative,true);
-            respond(200,['ok'=>true,'path'=>$relative,'content'=>$content,'size'=>$size]);
+            respond(200,['ok'=>true,'path'=>$relative,'content'=>$content,'size'=>$size,'sha256'=>hash('sha256',$content)]);
 
         case 'write_file':
         case 'create_file':
@@ -157,6 +160,7 @@ try {
             $exists=file_exists($target);
             if ($action==='create_file' && $exists) respond(409,['ok'=>false,'error'=>'file_already_exists']);
             if ($exists) {
+                if (is_link($target)) respond(400,['ok'=>false,'error'=>'symlink_target_rejected']);
                 $target=realpath($target);
                 if ($target===false || !inside($target,$root) || !is_file($target)) respond(400,['ok'=>false,'error'=>'existing_target_invalid']);
             } else {
@@ -167,7 +171,7 @@ try {
                 audit($action,$relative,false); respond(500,['ok'=>false,'error'=>'write_failed']);
             }
             audit($action,$relative,true);
-            respond(200,['ok'=>true,'path'=>$relative,'bytes'=>strlen($content)]);
+            respond(200,['ok'=>true,'path'=>$relative,'bytes'=>strlen($content),'sha256'=>hash('sha256',$content)]);
 
         case 'create_directory':
             if ($relative==='') respond(400,['ok'=>false,'error'=>'directory_path_required']);
