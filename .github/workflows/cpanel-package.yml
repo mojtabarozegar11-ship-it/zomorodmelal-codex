@@ -12,6 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify cPanel source layout
+        run: python scripts/verify_cpanel_layout.py
+
       - name: Create clean cPanel package
         shell: bash
         run: |
