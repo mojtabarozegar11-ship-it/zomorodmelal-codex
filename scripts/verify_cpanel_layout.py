@@ -2,32 +2,42 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+APP = ROOT / "django_project"
+WORKFLOW = ROOT / ".github" / "workflows" / "cpanel-package.yml"
 
 required = [
-    ROOT / "manage.py",
-    ROOT / "passenger_wsgi.py",
-    ROOT / "requirements.txt",
-    ROOT / "requirements-host.txt",
-    ROOT / "config",
+    APP / "manage.py",
+    APP / "passenger_wsgi.py",
+    APP / "config" / "settings.py",
+    APP / "config" / "wsgi.py",
+    APP / "requirements.txt",
+    APP / "requirements-host.txt",
 ]
 
-legacy = ROOT / "django_project"
-
 missing = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
-
-if legacy.exists():
-    print("ERROR: legacy django_project/ directory must not exist in the canonical release layout")
-    sys.exit(1)
-
 if missing:
-    print("ERROR: missing required paths:")
+    print("ERROR: missing cPanel runtime source files:")
     for item in missing:
         print(f" - {item}")
     sys.exit(1)
 
-requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
-if "-r django_project/" in requirements or "django_project/" in requirements:
-    print("ERROR: requirements.txt contains a legacy django_project reference")
+if not WORKFLOW.exists():
+    print("ERROR: cPanel packaging workflow is missing")
     sys.exit(1)
 
-print("CPANEL_LAYOUT_OK")
+workflow = WORKFLOW.read_text(encoding="utf-8")
+required_markers = [
+    "cp -a django_project/. package/zomorodmelal-app/",
+    "test -f zomorodmelal-app/manage.py",
+    "test -f zomorodmelal-app/passenger_wsgi.py",
+    "test -f zomorodmelal-app/config/settings.py",
+    "test -f zomorodmelal-app/requirements-host.txt",
+]
+missing_markers = [m for m in required_markers if m not in workflow]
+if missing_markers:
+    print("ERROR: cPanel packaging workflow is not flattening the Django runtime correctly:")
+    for item in missing_markers:
+        print(f" - {item}")
+    sys.exit(1)
+
+print("CPANEL_SOURCE_LAYOUT_OK")
