@@ -1,35 +1,29 @@
 # Host Handoff Checklist
 
-## Repository readiness
-- [x] Django application root is canonical and root-level
-- [x] Passenger WSGI entrypoint present
-- [x] ASGI entrypoint present
-- [x] Production settings use environment variables
-- [x] Root requirements.txt is self-contained
-- [x] requirements-host.txt exists
-- [x] cPanel deployment instructions match repository layout
-- [x] CI release checks defined
+## Repository / release
+- [x] Django runtime source is `django_project/`
+- [x] Passenger WSGI entrypoint exists in the Django source
+- [x] cPanel package workflow flattens `django_project/` into `zomorodmelal-app/`
+- [x] cPanel package validates manage.py, WSGI, settings and host requirements
+- [x] CI validates the Django source tree
 
-## Host-side actions
-- [ ] Upload the release package to /home/zomorodm/zomorodmelal-app
-- [ ] Create/activate the host Python virtual environment
+## cPanel
+- [ ] Application Root = /home/zomorodm/zomorodmelal-app
+- [ ] Application URL = https://zomorodmelal.ir
+- [ ] Startup File = passenger_wsgi.py
+- [ ] Entry Point = application
+- [ ] Python = 3.11.x
+- [ ] Application status = Started
 - [ ] Install requirements-host.txt
-- [ ] Set private production environment values
-- [ ] Run python manage.py check
-- [ ] Run python manage.py check --deploy
-- [ ] Run python manage.py migrate
-- [ ] Run python manage.py collectstatic --noinput
-- [ ] Create a Django superuser
+- [ ] Set production environment variables
+- [ ] Run migrate
+- [ ] Run collectstatic
+- [ ] Restart Passenger
+- [ ] Verify public root URL
 - [ ] Verify /admin/
-- [ ] Verify the public root URL
-- [ ] Restart Passenger after deployment
-- [ ] Verify HTTPS and static files
-- [ ] Verify LiteSpeed/Passenger vhost mapping
+- [ ] Verify static assets
+- [ ] Verify LiteSpeed/Passenger mapping
 
-## Security
-- [x] Secrets are not stored in repository configuration
-- [ ] Rotate any existing host credentials if they were previously exposed
-- [ ] Enable secure cookies/SSL redirect after HTTPS is confirmed
+## Critical rule
 
-## Important
-GitHub can prepare and validate the source release, but it cannot prove host-level Passenger/vhost mapping, DNS, HTTPS, database credentials, or service startup on the real cPanel server.
+Do not place the Git repository itself at the cPanel Application Root. Upload/extract the generated `ZOMORODMEL.IR.zip` package so that `manage.py` and `passenger_wsgi.py` are directly in the Application Root.
