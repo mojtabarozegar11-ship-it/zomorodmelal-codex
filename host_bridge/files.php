@@ -37,7 +37,9 @@ function token(): string {
     return is_readable($file) ? trim((string)file_get_contents($file)) : '';
 }
 function auth(): void {
-    if (($_SERVER['HTTPS'] ?? '') !== 'on' && (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https') {
+    $https = (($_SERVER['HTTPS'] ?? '') === 'on');
+    $forwarded = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    if (!$https && $forwarded !== 'https') {
         respond(400, ['ok'=>false, 'error'=>'https_required']);
     }
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
