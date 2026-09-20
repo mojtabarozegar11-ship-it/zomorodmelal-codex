@@ -3,7 +3,7 @@ from datetime import datetime
 from django.test import TestCase
 from django.utils import timezone
 
-from .seo_blog_agent import DEFAULT_LANGUAGES, RUN_TIME, SeoBlogOperationsAgent, should_run_at
+from .seo_blog_agent import DEFAULT_LANGUAGES, SeoBlogOperationsAgent, should_run_at
 from .content_agent_models import BlogPlatform
 
 
