@@ -100,23 +100,6 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) { appendMessage("\nخطای صوتی: " + (e.message ?: "خطا")) }
         }
 
-        send.setOnClickListener {
-            val request = input.text.toString().trim()
-            if (request.isEmpty()) return@setOnClickListener
-            input.setText("")
-            send.isEnabled = false
-            appendMessage("\n\nشما: $request")
-            scope.launch {
-                try {
-                    val result = withContext(Dispatchers.IO) { client.sendTask(request) }
-                    appendMessage("\nکارگر: " + result.message())
-                } catch (e: Exception) {
-                    appendMessage("\nخطا: " + (e.message ?: "اتصال برقرار نشد"))
-                } finally {
-                    send.isEnabled = true
-                }
-            }
-        }
         send.setOnClickListener { submitRequest(client) }
         input.setOnEditorActionListener { _, actionId, event ->
             val sendAction = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND
