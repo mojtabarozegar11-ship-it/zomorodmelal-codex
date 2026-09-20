@@ -2,9 +2,11 @@
 
 ## Canonical cPanel layout
 
-The Django application directory is:
+The cPanel Python application root is:
 
-`/home/zomorodm/zomorodmelal-app/django_project`
+`/home/zomorodm/zomorodmelal-app`
+
+The Django runtime files are placed directly in that root.
 
 That directory must contain:
 
@@ -22,7 +24,7 @@ Use these exact values:
 
 ```text
 Application Root
-/home/zomorodm/zomorodmelal-app/django_project
+/home/zomorodm/zomorodmelal-app
 
 Application URL
 https://zomorodmelal.ir
@@ -60,7 +62,7 @@ Use a Python version supported by the host and by the repository CI, preferably 
 From the application root:
 
 ```bash
-cd /home/zomorodm/zomorodmelal-app/django_project
+cd /home/zomorodm/zomorodmelal-app
 python -m pip install -r requirements-host.txt
 python manage.py check
 python manage.py check --deploy
@@ -75,7 +77,7 @@ After changing code or environment variables, restart the Python application fro
 
 If the host exposes Passenger's restart file, the repository also provides a cPanel deployment hook that touches:
 
-`/home/zomorodm/zomorodmelal-app/django_project/tmp/restart.txt`
+`/home/zomorodm/zomorodmelal-app/tmp/restart.txt`
 
 ## Directory Listing / 503 troubleshooting
 
@@ -83,7 +85,7 @@ If `https://zomorodmelal.ir/` shows the LiteSpeed directory listing instead of D
 
 Verify, in order:
 
-1. Application Root is exactly the canonical path above.
+1. Application Root is exactly `/home/zomorodm/zomorodmelal-app`.
 2. Startup File is exactly `passenger_wsgi.py`.
 3. Entry Point is exactly `application`.
 4. `passenger_wsgi.py` exists inside the Application Root.
@@ -98,17 +100,19 @@ The GitHub cPanel workflow builds a clean package without an extra repository-na
 
 ```text
 /home/zomorodm/zomorodmelal-app/
-└── django_project/
-    ├── manage.py
-    ├── passenger_wsgi.py
-    ├── config/
-    ├── apps/
-    └── requirements.txt
+├── manage.py
+├── passenger_wsgi.py
+├── config/
+├── apps/
+├── templates/
+├── static/
+├── requirements.txt
+└── host_bridge/
 ```
 
 Do not extract the package into:
 
-`/home/zomorodm/zomorodmelal-app/django_project/django_project/`
+`/home/zomorodm/zomorodmelal-app/django_project/`
 
 ## Final verification
 
