@@ -27,6 +27,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var input: EditText
     private lateinit var send: Button
+    private lateinit var voice: Button
+    private lateinit var clear: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,15 +74,18 @@ class MainActivity : ComponentActivity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; setSingleLine(true); imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND }
         send = Button(this).apply { text = "ارسال" }
-        val voice = Button(this).apply { text = "🎤 پیام صوتی" }
-        val clear = Button(this).apply { text = "پاک کردن" }
+        voice = Button(this).apply { text = "🎤 پیام صوتی" }
+        clear = Button(this).apply { text = "پاک کردن" }
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(send, LinearLayout.LayoutParams(-2, -2))
         row.addView(voice, LinearLayout.LayoutParams(-2, -2))
         row.addView(clear, LinearLayout.LayoutParams(-2, -2))
         root.addView(row)
 
-        clear.setOnClickListener { messages.text = "کارگر مجتبی آماده است." }
+        clear.setOnClickListener {
+            messages.text = "کارگر مجتبی آماده است."
+            scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+        }
 
         val client = WorkerApiClient(WORKER_API_BASE_URL)
         voice.setOnClickListener {
@@ -120,6 +125,11 @@ class MainActivity : ComponentActivity() {
         return root
     }
 
+    private fun resetVoiceButton() {
+        isRecording = false
+        voice.text = "🎤 پیام صوتی"
+    }
+
     private fun submitRequest(client: WorkerApiClient) {
         val request = input.text.toString().trim()
         if (request.isEmpty()) return
@@ -141,6 +151,8 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         player.stop()
         recorder.cancel()
+        resetVoiceButton()
+        recordingFile?.delete()
         scope.cancel()
         super.onDestroy()
     }
