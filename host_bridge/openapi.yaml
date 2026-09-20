@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Zomorod Melal Host Bridge File API
+  version: 1.0.0
+  description: Authenticated, root-confined file operations for the Django deployment tree. Arbitrary shell execution is intentionally not exposed.
+servers:
+  - url: https://zomorodmelal.ir/host_bridge
+security:
+  - bearerAuth: []
+paths:
+  /files.php:
+    post:
+      operationId: hostFileOperation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Status'
+                - $ref: '#/components/schemas/PathAction'
+                - $ref: '#/components/schemas/WriteAction'
+      responses:
+        '200':
+          description: Operation succeeded
+        '400':
+          description: Invalid request
+        '401':
+          description: Missing or invalid bearer token
+        '404':
+          description: Path not found or outside configured root
+        '409':
+          description: Target already exists
+        '413':
+          description: Request or file exceeds configured limit
+        '500':
+          description: Bridge configuration or filesystem error
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Status:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [status]
+    PathAction:
+      type: object
+      required: [action, path]
+      properties:
+        action:
+          type: string
+          enum: [list_directory, read_file, file_info, delete_file]
+        path:
+          type: string
+    WriteAction:
+      type: object
+      required: [action, path, content]
+      properties:
+        action:
+          type: string
+          enum: [write_file, create_file]
+        path:
+          type: string
+        content:
+          type: string
