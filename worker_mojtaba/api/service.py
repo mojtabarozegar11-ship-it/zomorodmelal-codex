@@ -50,7 +50,14 @@ class WorkerService:
         self.tool_center.register(CommunicationsToolAdapter())
         self.tools.register("echo", "Safe diagnostic tool that returns the received request.", _echo_tool)
         self.tool_center.register(FinancialToolAdapter(self.bank, self.wallets))
-        self.policy = Policy()
+        self.policy = Policy({
+            "echo",
+            "account_balance",
+            "transactions",
+            "calendar_event",
+            "list_calendar_events",
+            "publish_video",
+        })
         self.engine = ExecutionEngine(
             self.memory, self.tools, ai_registry, self.tool_center, policy=self.policy
         )
