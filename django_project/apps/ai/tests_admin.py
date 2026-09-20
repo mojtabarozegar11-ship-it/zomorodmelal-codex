@@ -10,9 +10,9 @@ from django.test import TestCase, override_settings
 
 django.setup()
 
-from apps.ai.admin import AIConfigurationAdmin, AIConfigurationAdminForm
-from apps.ai.models import AIConfiguration
-from apps.ai.services import get_deepseek_provider
+from apps.ai.admin import AIConfigurationAdmin, AIConfigurationAdminForm  # noqa: E402
+from apps.ai.models import AIConfiguration  # noqa: E402
+from apps.ai.services import get_deepseek_provider  # noqa: E402
 
 
 class AIAdminConfigurationTests(TestCase):
