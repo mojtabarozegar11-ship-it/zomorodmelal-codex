@@ -9,9 +9,44 @@ def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 DEBUG = env_bool("DJANGO_DEBUG", False)
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
-if not SECRET_KEY and not DEBUG:
-    raise RuntimeError("DJANGO_SECRET_KEY must be configured when DEBUG=False")
+
+
+def load_runtime_secret():
+    """Load the production secret from env or create a persistent private host secret.
+
+    The current cPanel application has no environment variables configured, so the
+    first production boot must be able to initialize itself without requiring the
+    owner to paste a secret into cPanel. The secret is stored outside the web root
+    in the cPanel account home directory with restrictive permissions.
+    """
+    configured = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+    if configured:
+        return configured
+
+    if DEBUG:
+        return "local-development-secret-change-me"
+
+    secret_path = Path.home() / ".zomorodmelal_secret_key"
+    try:
+        secret_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            secret_path.write_text(__import__("secrets").token_urlsafe(64), encoding="utf-8", newline="")
+            os.chmod(secret_path, 0o600)
+        except FileExistsError:
+            pass
+        secret = secret_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise RuntimeError(
+            "DJANGO_SECRET_KEY is not configured and the persistent host secret "
+            f"could not be created/read at {secret_path}."
+        ) from exc
+
+    if not secret:
+        raise RuntimeError("The persistent host secret is empty.")
+    return secret
+
+
+SECRET_KEY = load_runtime_secret()
 
 
 ALLOWED_HOSTS = [
