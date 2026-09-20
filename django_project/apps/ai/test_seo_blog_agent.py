@@ -22,6 +22,7 @@ class SeoBlogAgentTests(TestCase):
 
     def test_run_time_is_exactly_three_am(self):
         self.assertTrue(should_run_at(timezone.make_aware(datetime(2026, 9, 20, 3, 0))))
+        self.assertFalse(should_run_at(timezone.make_aware(datetime(2026, 9, 20, 3, 1))))
         self.assertFalse(should_run_at(timezone.make_aware(datetime(2026, 9, 20, 4, 0))))
 
     def test_daily_run_builds_five_text_only_items(self):
