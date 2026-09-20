@@ -31,6 +31,25 @@ class WorkerResponseTest {
     }
 
     @Test
+    @Test
+    fun blankBaseUrlIsRejected() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("   ")
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendTask("سلام") }
+        }
+        assertEquals("Worker API URL تنظیم نشده است.", thrown.message)
+    }
+
+    @Test
+    fun invalidBaseUrlIsRejected() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("not-a-url")
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendTask("سلام") }
+        }
+        assertEquals("Worker API URL نامعتبر است.", thrown.message)
+    }
+
+    @Test
     fun statusIsUsedWhenNoMessageExists() {
         val response = WorkerResponse("""{"status":"provider_configuration_required"}""")
         assertEquals("provider_configuration_required", response.message())
