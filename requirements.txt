@@ -1,3 +1,4 @@
 # Runtime dependencies for the Django application and supporting services
--r django_project/requirements.txt
-python-telegram-bot
+Django>=4.2,<5.3
+python-telegram-bot>=21,<23
+gunicorn>=22,<24
