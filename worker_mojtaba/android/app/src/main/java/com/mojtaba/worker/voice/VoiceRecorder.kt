@@ -35,7 +35,7 @@ class VoiceRecorder(private val context: Context) {
     }
 
     fun cancel() {
-        recorder?.runCatching { stop() }?.onFailure { release() }
+        recorder?.runCatching { stop() }?.onFailure { recorder?.release() }
         recorder = null
         output?.delete()
         output = null
