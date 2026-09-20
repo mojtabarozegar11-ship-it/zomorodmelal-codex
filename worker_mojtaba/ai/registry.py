@@ -1,5 +1,6 @@
 """Registry connecting configured AI capabilities to provider adapters."""
 from __future__ import annotations
+
 from worker_mojtaba.ai.adapter import AIProviderAdapter, UnconfiguredProvider
 from worker_mojtaba.ai.router import AIRouter
 
@@ -10,7 +11,13 @@ class AIProviderRegistry:
         self.adapters: dict[str, AIProviderAdapter] = {}
         self.fallback = UnconfiguredProvider()
 
-    def register(self, adapter: AIProviderAdapter, capabilities: list[str], *, priority: int = 100) -> None:
+    def register(
+        self,
+        adapter: AIProviderAdapter,
+        capabilities: list[str],
+        *,
+        priority: int = 100,
+    ) -> None:
         self.adapters[adapter.name] = adapter
         self.router.register(adapter.name, capabilities, priority=priority)
 
