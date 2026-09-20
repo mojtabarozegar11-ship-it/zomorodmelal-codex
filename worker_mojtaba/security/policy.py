@@ -16,7 +16,7 @@ class Policy:
         name = capability.strip()
         if not self.enabled or not name:
             return False
-        return not self.allowed or name in self.allowed
+        return name in self.allowed
 
     def allow(self, capability: str) -> None:
         name = capability.strip()
