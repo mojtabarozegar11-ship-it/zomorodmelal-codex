@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
     private val player = VoicePlayer()
     private var recordingFile: java.io.File? = null
     private lateinit var messages: TextView
+    private lateinit var scroll: ScrollView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +36,11 @@ class MainActivity : ComponentActivity() {
         val requested = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
             .filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (requested.isNotEmpty()) permissionLauncher.launch(requested.toTypedArray())
+    }
+
+    private fun appendMessage(text: String) {
+        messages.append(text)
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
     private fun buildUi(): LinearLayout {
@@ -50,7 +56,7 @@ class MainActivity : ComponentActivity() {
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
 
-        val scroll = ScrollView(this)
+        scroll = ScrollView(this)
         messages = TextView(this).apply {
             text = "کارگر مجتبی آماده است."
             textSize = 17f
@@ -87,9 +93,9 @@ class MainActivity : ComponentActivity() {
                     recordingFile = file
                     voice.text = "🔊 پخش پیام صوتی"
                     player.play(file)
-                    messages.append("\n\nشما: 🎤 پیام صوتی")
+                    appendMessage("\n\nشما: 🎤 پیام صوتی")
                 }
-            } catch (e: Exception) { messages.append("\nخطای صوتی: " + (e.message ?: "خطا")) }
+            } catch (e: Exception) { appendMessage("\nخطای صوتی: " + (e.message ?: "خطا")) }
         }
 
         send.setOnClickListener {
@@ -97,13 +103,13 @@ class MainActivity : ComponentActivity() {
             if (request.isEmpty()) return@setOnClickListener
             input.setText("")
             send.isEnabled = false
-            messages.append("\n\nشما: $request")
+            appendMessage("\n\nشما: $request")
             scope.launch {
                 try {
                     val result = withContext(Dispatchers.IO) { client.sendTask(request) }
-                    messages.append("\nکارگر: " + result.message())
+                    appendMessage("\nکارگر: " + result.message())
                 } catch (e: Exception) {
-                    messages.append("\nخطا: " + (e.message ?: "اتصال برقرار نشد"))
+                    appendMessage("\nخطا: " + (e.message ?: "اتصال برقرار نشد"))
                 } finally {
                     send.isEnabled = true
                 }
