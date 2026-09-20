@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var recorder: VoiceRecorder
     private val player = VoicePlayer()
     private var recordingFile: java.io.File? = null
+    private lateinit var messages: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,7 +51,7 @@ class MainActivity : ComponentActivity() {
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
 
         val scroll = ScrollView(this)
-        val messages = TextView(this).apply {
+        messages = TextView(this).apply {
             text = "کارگر مجتبی آماده است."
             textSize = 17f
             setTextColor(Color.DKGRAY)
@@ -63,10 +64,14 @@ class MainActivity : ComponentActivity() {
         val input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; setSingleLine(true) }
         val send = Button(this).apply { text = "ارسال" }
         val voice = Button(this).apply { text = "🎤 پیام صوتی" }
+        val clear = Button(this).apply { text = "پاک کردن" }
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(send, LinearLayout.LayoutParams(-2, -2))
         row.addView(voice, LinearLayout.LayoutParams(-2, -2))
+        row.addView(clear, LinearLayout.LayoutParams(-2, -2))
         root.addView(row)
+
+        clear.setOnClickListener { messages.text = "کارگر مجتبی آماده است." }
 
         val client = WorkerApiClient(WORKER_API_BASE_URL)
         voice.setOnClickListener {
