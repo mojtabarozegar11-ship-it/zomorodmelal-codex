@@ -101,4 +101,22 @@ class WorkerResponseTest {
             file.delete()
         }
     }
+    @Test
+    fun httpBaseUrlIsRejected() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("http://example.com")
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendTask("سلام") }
+        }
+        assertEquals("Worker API فقط از HTTPS پشتیبانی می‌کند.", thrown.message)
+    }
+
+    @Test
+    fun credentialsInBaseUrlAreRejected() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("https://user:pass@example.com")
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendTask("سلام") }
+        }
+        assertEquals("Worker API URL نباید شامل اطلاعات کاربری باشد.", thrown.message)
+    }
+
 }
