@@ -17,7 +17,18 @@ data class WorkerResponse(val rawJson: String) {
     }
 }
 
-NaN
+private const val VOICE_BOUNDARY = "WorkerMojtabaBoundary"
+private const val TASK_PATH = "/v1/tasks"
+private const val VOICE_PATH = "/v1/voice"
+
+class WorkerApiClient(private val baseUrl: String) {
+    private fun configuredBaseUrl(): String {
+        require(baseUrl.isNotBlank()) { "Worker API URL تنظیم نشده است." }
+        require(!baseUrl.contains("YOUR_WORKER_API_HOST")) { "Worker API URL هنوز پیکربندی نشده است." }
+        require(runCatching { URL(baseUrl) }.isSuccess) { "Worker API URL نامعتبر است." }
+        return baseUrl.trimEnd('/')
+    }
+
     suspend fun sendVoice(file: File, request: String = ""): WorkerResponse = withContext(Dispatchers.IO) {
         val apiBaseUrl = configuredBaseUrl()
         require(file.exists() && file.length() > 0L) { "فایل صوتی خالی یا نامعتبر است." }
@@ -49,6 +60,7 @@ NaN
             connection.disconnect()
         }
     }
+
     suspend fun sendTask(request: String): WorkerResponse = withContext(Dispatchers.IO) {
         val apiBaseUrl = configuredBaseUrl()
         require(request.isNotBlank()) { "درخواست خالی است." }
@@ -66,12 +78,7 @@ NaN
             connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
 
             val responseCode = connection.responseCode
-            val stream = if (responseCode in 200..299) {
-                connection.inputStream
-            } else {
-                connection.errorStream
-            }
-
+            val stream = if (responseCode in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
             if (responseCode !in 200..299) {
                 throw IllegalStateException("Worker API HTTP $responseCode: $response")
