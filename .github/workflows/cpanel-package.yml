@@ -26,7 +26,7 @@ jobs:
           # passenger_wsgi.py, manage.py, config/, apps/, requirements.txt, etc.
           cp -a django_project/. package/zomorodmelal-app/
           # Add non-conflicting project/runtime modules and deployment helpers.
-          for item in autonomous_core ai_engine ai_providers agents agent_runtime access memory monitoring orchestrator planner sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research run_master_agent.py ai_bridge.py .cpanel.yml CPANEL_DEPLOYMENT.md HOST_HANDOFF_CHECKLIST.md HOST_BRIDGE_SETUP.md README.md host_bridge; do
+          for item in autonomous_core django_integration ai_engine ai_providers agents agent_runtime access memory monitoring orchestrator planner sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research run_master_agent.py ai_bridge.py .cpanel.yml CPANEL_DEPLOYMENT.md HOST_HANDOFF_CHECKLIST.md HOST_BRIDGE_SETUP.md README.md host_bridge; do
             if [ -e "$item" ]; then
               cp -a "$item" package/zomorodmelal-app/
             fi
