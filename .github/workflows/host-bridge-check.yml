@@ -44,7 +44,8 @@ jobs:
           text = pathlib.Path("host_bridge/openapi.yaml").read_text(encoding="utf-8")
           required = [
               "openapi: 3.0.3",
-              "POST /files.php",
+              "/files.php:",
+              "post:",
               "bearerAuth",
               "read_file",
               "write_file",
