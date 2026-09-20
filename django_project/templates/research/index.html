@@ -1,6 +1,0 @@
-{% extends "base.html" %}
-{% block title %}مرکز پژوهش | زمرد ملل{% endblock %}
-{% block content %}
-<section class="hero"><span class="eyebrow">RESEARCH CENTER</span><h1>مرکز پژوهش و توسعه</h1><p>پروژه‌های پژوهشی، مطالعات بازار و مسیر انتقال دانش به تولید و محصول.</p></section>
-<section class="section"><div class="cards">{% for project in projects %}<article><span class="pill">{{ project.status }}</span><h3><a href="{% url 'research-project' project.id %}">{{ project.title }}</a></h3><p>{{ project.summary }}</p></article>{% empty %}<article><h3>هنوز پروژه پژوهشی ثبت نشده است.</h3></article>{% endfor %}</div></section>
-{% endblock %}

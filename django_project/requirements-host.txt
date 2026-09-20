@@ -1,2 +1,0 @@
-# Production host dependency set
--r requirements.txt

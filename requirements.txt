@@ -1,3 +1,0 @@
-# Root-level orchestration dependencies
--r django_project/requirements.txt
-python-telegram-bot

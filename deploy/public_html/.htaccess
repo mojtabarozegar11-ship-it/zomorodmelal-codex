@@ -1,2 +1,0 @@
-# Keep LiteSpeed from exposing the hosting account's public directory.
-Options -Indexes
