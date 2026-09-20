@@ -39,6 +39,7 @@ jobs:
           DJANGO_SECRET_KEY: "ci-only-secret"
           DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
           DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py check
 
       - name: Django deploy check
@@ -48,6 +49,7 @@ jobs:
           DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
           DJANGO_CSRF_TRUSTED_ORIGINS: "https://localhost"
           DJANGO_SECURE_SSL_REDIRECT: "False"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py check --deploy
 
       - name: Migration consistency
@@ -55,6 +57,7 @@ jobs:
           DJANGO_DEBUG: "True"
           DJANGO_SECRET_KEY: "ci-only-secret"
           DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py makemigrations --check --dry-run
 
       - name: Tests
@@ -62,6 +65,7 @@ jobs:
           DJANGO_DEBUG: "True"
           DJANGO_SECRET_KEY: "ci-only-secret"
           DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+          PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
         run: python manage.py test
 
   repository-tests:
@@ -77,8 +81,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install python-dotenv python-telegram-bot
+          python -m pip install pytest fastapi httpx python-dotenv python-telegram-bot
       - name: Compile repository
         run: python -m compileall -q .
       - name: Unit tests
-        run: python -m unittest discover -s tests -v
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/django_project
+          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_SECRET_KEY: ci-root-secret
+          DJANGO_DEBUG: "True"
+        run: pytest -q tests worker_mojtaba/tests worker_mojtaba/api/test_server.py
