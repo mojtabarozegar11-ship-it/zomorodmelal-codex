@@ -15,7 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .content_agent import ContentAgent
-from .content_agent_models import BlogPlatform, ContentChannel, SeoBlogItem, SeoBlogRun
+from .content_agent_models import BlogPlatform, SeoBlogItem, SeoBlogRun
 
 
 RUN_TIME = time(hour=3, minute=0)
@@ -127,17 +127,15 @@ class SeoBlogOperationsAgent:
                     "status": "ready",
                 },
             )
-            if blog.credentials_configured:
-                item.status = "ready"
-                pending += 1
-            else:
-                item.status = "pending_access"
-                pending += 1
+            # No external publisher adapter is wired into this agent yet.
+            # Never report a generated draft as published.
+            item.status = "pending_access"
+            pending += 1
             item.save(update_fields=["status"])
         run.published_count = published
         run.pending_count = pending
         run.failed_count = failed
-        run.status = "completed" if not failed and not pending else "partial"
+        run.status = "partial" if pending else ("failed" if failed else "completed")
         run.report = {
             "supervised_by": ContentAgent.__name__,
             "text_only": True,
