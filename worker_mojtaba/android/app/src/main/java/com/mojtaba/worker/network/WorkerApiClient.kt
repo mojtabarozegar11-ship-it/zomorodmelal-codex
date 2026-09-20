@@ -30,7 +30,7 @@ class WorkerApiClient(private val baseUrl: String) {
         val parsed = URI(baseUrl)
         require(parsed.scheme == "https") { "Worker API فقط از HTTPS پشتیبانی می‌کند." }
         require(parsed.userInfo.isNullOrBlank()) { "Worker API URL نباید شامل اطلاعات کاربری باشد." }
-        require(parsed.fragment.isNullOrBlank()) { "Worker API URL نباید fragment داشته باشد." }
+        require(parsed.getRef().isNullOrBlank()) { "Worker API URL نباید fragment داشته باشد." }
         return baseUrl.trimEnd('/')
     }
 
