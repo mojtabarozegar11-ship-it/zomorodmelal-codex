@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var recorder: VoiceRecorder
     private val player = VoicePlayer()
     private var recordingFile: java.io.File? = null
+    private var isRecording = false
     private lateinit var messages: TextView
     private lateinit var scroll: ScrollView
     private lateinit var input: EditText
@@ -84,15 +85,17 @@ class MainActivity : ComponentActivity() {
         val client = WorkerApiClient(WORKER_API_BASE_URL)
         voice.setOnClickListener {
             try {
-                if (recordingFile == null) {
+                if (!isRecording) {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                         permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO)); return@setOnClickListener
                     }
                     recordingFile = recorder.start()
+                    isRecording = true
                     voice.text = "⏹ توقف ضبط"
                 } else {
                     val file = recorder.stop()
                     recordingFile = file
+                    isRecording = false
                     voice.text = "🔊 پخش پیام صوتی"
                     player.play(file)
                     appendMessage("\n\nشما: 🎤 پیام صوتی")
