@@ -35,15 +35,16 @@ class WorkerApiClient(private val baseUrl: String) {
             val body = JSONObject().put("request", request).toString()
             connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
 
-            val stream = if (connection.responseCode in 200..299) {
+            val responseCode = connection.responseCode
+            val stream = if (responseCode in 200..299) {
                 connection.inputStream
             } else {
                 connection.errorStream
             }
 
             val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
-            if (connection.responseCode !in 200..299) {
-                throw IllegalStateException("Worker API HTTP ${connection.responseCode}: $response")
+            if (responseCode !in 200..299) {
+                throw IllegalStateException("Worker API HTTP $responseCode: $response")
             }
             WorkerResponse(response)
         } finally {
