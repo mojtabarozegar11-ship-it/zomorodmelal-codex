@@ -144,6 +144,83 @@ class ContentPublication(models.Model):
         ordering = ("-created_at",)
 
 
+
+class BlogPlatform(models.Model):
+    """Legal external blog platform configuration used by the scheduled SEO publisher."""
+    name = models.CharField(max_length=180, unique=True)
+    platform = models.CharField(max_length=80)
+    base_url = models.URLField()
+    language = models.CharField(max_length=30, default="en")
+    signup_url = models.URLField(blank=True)
+    publish_url = models.URLField(blank=True)
+    api_endpoint = models.URLField(blank=True)
+    active = models.BooleanField(default=True)
+    legal_terms_reviewed = models.BooleanField(default=False)
+    account_ready = models.BooleanField(default=False)
+    credentials_configured = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("name",)
+
+
+class SeoBlogRun(models.Model):
+    """One daily 03:00 SEO/blog operations run; isolated from normal site requests."""
+    STATUS_CHOICES = [
+        ("planned", "Planned"),
+        ("running", "Running"),
+        ("completed", "Completed"),
+        ("partial", "Partial"),
+        ("failed", "Failed"),
+    ]
+    run_date = models.DateField()
+    scheduled_time = models.TimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="planned")
+    target_languages = models.JSONField(default=list, blank=True)
+    target_count = models.PositiveIntegerField(default=5)
+    published_count = models.PositiveIntegerField(default=0)
+    pending_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    report = models.JSONField(default=dict, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("run_date", "scheduled_time"), name="ai_seo_blog_run_date_time_uniq"),
+        ]
+        ordering = ("-run_date", "-scheduled_time")
+
+
+class SeoBlogItem(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("ready", "Ready"),
+        ("published", "Published"),
+        ("pending_access", "Pending access"),
+        ("failed", "Failed"),
+    ]
+    run = models.ForeignKey(SeoBlogRun, on_delete=models.CASCADE, related_name="items")
+    blog = models.ForeignKey(BlogPlatform, on_delete=models.PROTECT, related_name="items")
+    language = models.CharField(max_length=30)
+    topic = models.CharField(max_length=300)
+    title = models.CharField(max_length=300)
+    body = models.TextField()
+    seo_metadata = models.JSONField(default=dict, blank=True)
+    external_url = models.URLField(blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="draft")
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("run", "blog"), name="ai_seo_blog_item_run_blog_uniq"),
+        ]
+        ordering = ("blog__name", "language")
+
 class ContentPerformance(models.Model):
     publication = models.OneToOneField(ContentPublication, on_delete=models.CASCADE, related_name="performance")
     impressions = models.PositiveBigIntegerField(default=0)
