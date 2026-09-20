@@ -135,4 +135,13 @@ class WorkerResponseTest {
         assertEquals("Worker API URL نباید fragment داشته باشد.", thrown.message)
     }
 
+    @Test
+    fun malformedPortUrlIsRejected() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("https://example.com:")
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendTask("سلام") }
+        }
+        assertEquals("Worker API URL نامعتبر است.", thrown.message)
+    }
+
 }
