@@ -13,7 +13,8 @@ def test_personal_calendar_request_executes_through_engine():
         },
     )
     assert result["intent"] == "calendar"
-    assert result["route"] == "automation"\n    assert result["intent"] == "calendar"
+    assert result["route"] == "automation"
+    assert result["intent"] == "calendar"
     assert result["execution"]["status"] == "scheduled"
     assert result["execution"]["event"]["calendar"] == "persian"
 
