@@ -48,6 +48,8 @@ jobs:
               "bearerAuth",
               "read_file",
               "write_file",
+              "create_directory",
+              "sha256",
           ]
           missing = [x for x in required if x not in text]
           if missing:
