@@ -96,6 +96,14 @@ class MainActivity : ComponentActivity() {
                     voice.text = "🔊 پخش پیام صوتی"
                     player.play(file)
                     appendMessage("\n\nشما: 🎤 پیام صوتی")
+                    scope.launch {
+                        try {
+                            val result = withContext(Dispatchers.IO) { client.sendVoice(file) }
+                            appendMessage("\nکارگر: " + result.message())
+                        } catch (e: Exception) {
+                            appendMessage("\nخطای ارسال صوت: " + (e.message ?: "اتصال برقرار نشد"))
+                        }
+                    }
                 }
             } catch (e: Exception) { appendMessage("\nخطای صوتی: " + (e.message ?: "خطا")) }
         }
