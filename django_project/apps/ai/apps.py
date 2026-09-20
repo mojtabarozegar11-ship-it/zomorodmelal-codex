@@ -9,4 +9,5 @@ class AIConfig(AppConfig):
     verbose_name = "AI"
 
     def ready(self):
+        import_module("apps.ai.content_agent_models")
         import_module("apps.ai.content_agent_admin")
