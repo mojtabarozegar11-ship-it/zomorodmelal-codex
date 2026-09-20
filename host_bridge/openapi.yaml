@@ -1,8 +1,10 @@
 openapi: 3.0.3
 info:
   title: Zomorod Melal Host Bridge File API
-  version: 1.0.0
-  description: Authenticated, root-confined file operations for the Django deployment tree. Arbitrary shell execution is intentionally not exposed.
+  version: 1.1.0
+  description: >
+    Authenticated, root-confined file operations for the Django deployment tree.
+    Arbitrary shell execution is intentionally not exposed.
 servers:
   - url: https://zomorodmelal.ir/host_bridge
 security:
@@ -22,21 +24,50 @@ paths:
                 - $ref: '#/components/schemas/Status'
                 - $ref: '#/components/schemas/PathAction'
                 - $ref: '#/components/schemas/WriteAction'
+                - $ref: '#/components/schemas/CreateDirectoryAction'
       responses:
         '200':
           description: Operation succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
         '400':
           description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Path not found or outside configured root
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: Target already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '413':
           description: Request or file exceeds configured limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Bridge configuration or filesystem error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -70,3 +101,50 @@ components:
           type: string
         content:
           type: string
+    CreateDirectoryAction:
+      type: object
+      required: [action, path]
+      properties:
+        action:
+          type: string
+          enum: [create_directory]
+        path:
+          type: string
+    SuccessResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        path:
+          type: string
+        content:
+          type: string
+        size:
+          type: integer
+        bytes:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+        file:
+          type: object
+    ErrorResponse:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          const: false
+        error:
+          type: string
+        max:
+          type: integer
+        size:
+          type: integer
+        actions:
+          type: array
+          items:
+            type: string
