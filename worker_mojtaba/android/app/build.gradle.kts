@@ -12,7 +12,8 @@ android { namespace = "com.mojtaba.worker"; compileSdk = 35
         targetSdk = 35
         versionCode = 1
         versionName = "0.3.0"
-        buildConfigField("String", "WORKER_API_BASE_URL", "\"https://YOUR_WORKER_API_HOST\"")
+        buildConfigField("String", "WORKER_API_BASE_URL", "\"https://YOUR_WORKER_API_HOST\"" )
+        // Production URL must be supplied by deployment configuration; never hard-code secrets here.
     }
     buildFeatures { buildConfig = true }
 }
