@@ -30,4 +30,4 @@ jobs:
           DJANGO_SECRET_KEY: ci-mvp-secret
           DJANGO_DEBUG: "True"
           AUTONOMOUS_CYCLE_INNER_TESTS: "1"
-        run: pytest -q
+        run: pytest -q tests worker_mojtaba/tests worker_mojtaba/api/test_server.py
