@@ -1,0 +1,13 @@
+Options -Indexes
+
+<FilesMatch "^(\.env|.*\.log|.*\.json)$">
+    Require all denied
+</FilesMatch>
+
+<Files "receive.php">
+    Require all granted
+</Files>
+
+<Files "status.php">
+    Require all granted
+</Files>
