@@ -51,7 +51,8 @@ class Position(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.PROTECT)
     quantity = models.DecimalField(max_digits=30, decimal_places=10, default=0)
     average_price = models.DecimalField(max_digits=24, decimal_places=10, default=0)
-    class Meta: unique_together = [("portfolio", "asset")]
+    class Meta:
+        unique_together = [("portfolio", "asset")]
 
 class OrderIntent(models.Model):
     SIDES = [("buy", "Buy"), ("sell", "Sell")]
@@ -130,6 +131,8 @@ class SignalSubscription(models.Model):
     expires_at = models.DateTimeField()
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
 class SignalCoupon(models.Model):
     code = models.CharField(max_length=50, unique=True)
     percent = models.PositiveIntegerField(default=0)
@@ -137,6 +140,8 @@ class SignalCoupon(models.Model):
     max_uses = models.PositiveIntegerField(default=0)
     used_count = models.PositiveIntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
+
+
 class SignalPerformance(models.Model):
     signal = models.OneToOneField(Signal, on_delete=models.PROTECT, related_name="performance")
     outcome = models.CharField(max_length=30, default="open")
