@@ -66,3 +66,32 @@ class WorkerResponseTest {
         assertEquals("provider_configuration_required", response.message())
     }
 }
+
+@Test
+fun blankVoiceFileIsRejected() {
+    val client = com.mojtaba.worker.network.WorkerApiClient("https://example.com")
+    val file = java.io.File.createTempFile("worker-empty-", ".m4a")
+    try {
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendVoice(file) }
+        }
+        assertEquals("فایل صوتی خالی یا نامعتبر است.", thrown.message)
+    } finally {
+        file.delete()
+    }
+}
+
+@Test
+fun placeholderUrlIsRejectedForVoice() {
+    val client = com.mojtaba.worker.network.WorkerApiClient("https://YOUR_WORKER_API_HOST")
+    val file = java.io.File.createTempFile("worker-voice-", ".m4a")
+    file.writeText("audio")
+    try {
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendVoice(file) }
+        }
+        assertEquals("Worker API URL هنوز پیکربندی نشده است.", thrown.message)
+    } finally {
+        file.delete()
+    }
+}
