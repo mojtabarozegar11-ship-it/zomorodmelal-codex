@@ -48,7 +48,6 @@ class ExecutionEngine:
         available = sorted(set(registry_tools + center_tools))
         route = self.router.route(intent.capability, available)
 
-        ai_result = self.ai_registry.generate(request, intent.capability)
         authorized = self.policy.check_capability(intent.capability)
         execution: dict[str, Any] = {
             "status": "planned",
@@ -56,19 +55,21 @@ class ExecutionEngine:
         }
 
         if route != "text_model" and not authorized:
-            execution = {
-                "status": "blocked",
-                "reason": "capability_not_authorized_by_policy",
-                "capability": intent.capability,
-            }
-            execution = normalize_execution_status(execution)
+            execution = normalize_execution_status(
+                {
+                    "status": "blocked",
+                    "reason": "capability_not_authorized_by_policy",
+                    "capability": intent.capability,
+                }
+            )
         elif route != "text_model":
+            payload = {"request": request, **context}
             if self.tool_center is not None and route in center_tools:
                 capabilities = self.tool_center.list_capabilities()[route]
                 capability = intent.capability
                 if capability in capabilities:
                     execution = self.tool_center.execute(
-                        route, capability, {"request": request}
+                        route, capability, payload
                     )
                     execution = {
                         **execution,
@@ -77,29 +78,52 @@ class ExecutionEngine:
                     }
                     execution = normalize_execution_status(execution)
                 else:
-                    execution = {
-                        "status": "capability_selection_required",
-                        "adapter": route,
-                        "available_capabilities": capabilities,
-                    }
-                    execution = normalize_execution_status(execution)
+                    execution = normalize_execution_status(
+                        {
+                            "status": "capability_selection_required",
+                            "adapter": route,
+                            "available_capabilities": capabilities,
+                        }
+                    )
             else:
                 tool = self.tools.get(route)
                 if tool is not None:
-                    execution = self.executor.execute(route, {"request": request})
-                    execution = normalize_execution_status(execution)
+                    execution = normalize_execution_status(
+                        self.executor.execute(route, payload)
+                    )
 
-        self.memory.remember_short({
-            "request": request,
-            "intent": intent.name,
-            "route": route,
-            "plan": plan,
-            "ai_status": ai_result.get("status"),
-            "execution_status": execution.get("status"),
-        })
-        top_status = execution.get("status") if execution.get("result_state") == "completed" else ai_result.get("status", "planned")
-        if execution.get("status") in {"scheduled", "completed", "allocated", "blocked", "bank_bridge_required", "provider_connection_required", "provider_required", "device_permission_required"}:
+        ai_result = self.ai_registry.generate(request, intent.capability)
+
+        self.memory.remember_short(
+            {
+                "request": request,
+                "intent": intent.name,
+                "route": route,
+                "plan": plan,
+                "ai_status": ai_result.get("status"),
+                "execution_status": execution.get("status"),
+            }
+        )
+
+        if execution.get("result_state") == "completed":
+            top_status = execution.get("status", "completed")
+        elif execution.get("status") in {
+            "scheduled",
+            "completed",
+            "allocated",
+            "blocked",
+            "bank_bridge_required",
+            "provider_connection_required",
+            "provider_required",
+            "device_permission_required",
+            "document_bridge_required",
+            "metadata_planned",
+            "research_planned",
+        }:
             top_status = execution.get("status")
+        else:
+            top_status = ai_result.get("status", "planned")
+
         return {
             "status": top_status,
             "request": request,
@@ -109,5 +133,8 @@ class ExecutionEngine:
             "ai": ai_result,
             "execution": execution,
             "tools": available,
-            "authorization": {"capability": intent.capability, "allowed": authorized},
+            "authorization": {
+                "capability": intent.capability,
+                "allowed": authorized,
+            },
         }
