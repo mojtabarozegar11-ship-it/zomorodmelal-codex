@@ -20,12 +20,16 @@ def test_bank_revenue_split_is_10_90():
 
 
 def test_bank_policy_rejects_wallet_2_outbound():
-    with pytest.raises(PermissionError):
+    try:
         BankAccountPolicy(
             "acct",
             "bank",
             wallet_2_outbound_allowed=True,
         ).validate()
+    except PermissionError:
+        pass
+    else:
+        raise AssertionError("wallet_2 outbound must be rejected")
 
 
 def test_bank_adapter_does_not_execute_without_bridge():
