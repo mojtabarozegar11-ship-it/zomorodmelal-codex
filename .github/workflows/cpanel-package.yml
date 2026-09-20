@@ -30,12 +30,12 @@ jobs:
           done
           # The installed cPanel application root is /home/zomorodm/zomorodmelal-app.
           # Generate a package-local restart rule for that root.
-          cat > package/.cpanel.yml <<'YAML'
-deployment:
-  tasks:
-    - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/tmp
-    - /bin/touch /home/zomorodm/zomorodmelal-app/tmp/restart.txt
-YAML
+          printf '%s\n' \
+            'deployment:' \
+            '  tasks:' \
+            '    - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/tmp' \
+            '    - /bin/touch /home/zomorodm/zomorodmelal-app/tmp/restart.txt' \
+            > package/.cpanel.yml
           find package -type d -name __pycache__ -prune -exec rm -rf {} +
           find package -type f -name '*.pyc' -delete
           cd package
