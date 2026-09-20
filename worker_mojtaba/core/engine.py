@@ -86,7 +86,7 @@ class ExecutionEngine:
             else:
                 tool = self.tools.get(route)
                 if tool is not None:
-                    execution = self.executor.execute(route, {"request": request, "context": context})
+                    execution = self.executor.execute(route, {"request": request})
                     execution = normalize_execution_status(execution)
 
         self.memory.remember_short({
@@ -97,8 +97,11 @@ class ExecutionEngine:
             "ai_status": ai_result.get("status"),
             "execution_status": execution.get("status"),
         })
+        top_status = execution.get("status") if execution.get("result_state") == "completed" else ai_result.get("status", "planned")
+        if execution.get("status") in {"scheduled", "completed", "allocated", "blocked", "bank_bridge_required", "provider_connection_required", "provider_required", "device_permission_required"}:
+            top_status = execution.get("status")
         return {
-            "status": ai_result.get("status", "planned"),
+            "status": top_status,
             "request": request,
             "intent": intent.name,
             "route": route,
