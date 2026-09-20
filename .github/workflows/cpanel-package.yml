@@ -16,16 +16,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf package zomorodmelal-cpanel.zip
-          mkdir -p package
+          rm -rf package ZOMORODMEL.IR.zip
+          mkdir -p package/zomorodmelal-app
           # cPanel is already configured with Application Root=zomorodmelal-app.
           # Therefore the Django runtime must be placed directly at that root:
           # passenger_wsgi.py, manage.py, config/, apps/, requirements.txt, etc.
-          cp -a django_project/. package/
+          cp -a django_project/. package/zomorodmelal-app/
           # Add non-conflicting project/runtime modules and deployment helpers.
           for item in autonomous_core ai_engine ai_providers agents agent_runtime access memory monitoring orchestrator planner sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research run_master_agent.py ai_bridge.py .cpanel.yml CPANEL_DEPLOYMENT.md HOST_HANDOFF_CHECKLIST.md HOST_BRIDGE_SETUP.md README.md host_bridge; do
             if [ -e "$item" ]; then
-              cp -a "$item" package/
+              cp -a "$item" package/zomorodmelal-app/
             fi
           done
           # The installed cPanel application root is /home/zomorodm/zomorodmelal-app.
@@ -35,18 +35,18 @@ jobs:
             '  tasks:' \
             '    - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/tmp' \
             '    - /bin/touch /home/zomorodm/zomorodmelal-app/tmp/restart.txt' \
-            > package/.cpanel.yml
+            > package/zomorodmelal-app/.cpanel.yml
           find package -type d -name __pycache__ -prune -exec rm -rf {} +
           find package -type f -name '*.pyc' -delete
           cd package
-          zip -r ../zomorodmelal-cpanel.zip .
+          zip -r ../ZOMORODMEL.IR.zip .
           cd ..
-          unzip -l zomorodmelal-cpanel.zip | grep -E '(^| )passenger_wsgi.py|(^| )manage.py|(^| )config/settings.py|(^| )requirements-host.txt'
+          unzip -l ZOMORODMEL.IR.zip | grep -E '(^| )passenger_wsgi.py|(^| )manage.py|(^| )config/settings.py|(^| )requirements-host.txt'
       - name: Upload deployment ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: zomorodmelal-cpanel
-          path: zomorodmelal-cpanel.zip
+          name: ZOMORODMEL.IR
+          path: ZOMORODMEL.IR.zip
           retention-days: 7
 
   android-build:
