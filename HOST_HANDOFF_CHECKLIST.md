@@ -11,7 +11,7 @@
 - [x] Masked DeepSeek key entry
 - [x] DeepSeek runtime configuration bridge
 - [x] Host dependency manifest
-- [x] Deployment remains owner-approved and disabled by default
+- [x] Deployment authorization has been granted for this project; execution still requires real host credentials and target availability
 
 ## Host-side actions
 - [ ] Upload repository
@@ -31,7 +31,7 @@
 The repository is currently small; a 1 GB host can support the initial deployment. Growth will come from the database, static/media files, logs, and future content. The planned 30 GB upgrade provides substantially more operating room.
 
 ## Security
-Never commit secrets. Keep the real environment file outside Git and keep production deployment disabled until explicitly approved.
+Never commit secrets. Keep the real environment file outside Git. Deployment may proceed once the real host credentials and target configuration are present.
 
 ## Important
-The repository is prepared for host handoff, but host-side commands, migrations, HTTPS, DNS, and service startup have not been executed from GitHub and therefore remain pending external actions.
+The repository is prepared for host handoff. Host-side commands, migrations, HTTPS, DNS, Passenger/vhost mapping, and service startup must still be verified against the actual cPanel environment; GitHub source access alone cannot perform or prove those host-level operations.
