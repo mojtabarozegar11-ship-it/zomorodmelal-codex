@@ -1,1 +1,1 @@
-from .publisher import PublishRequest, SocialPublisher\n
+from .publisher import PublishRequest, SocialPublisher
