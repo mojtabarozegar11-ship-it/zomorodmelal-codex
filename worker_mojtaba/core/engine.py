@@ -46,7 +46,7 @@ class ExecutionEngine:
             else []
         )
         available = sorted(set(registry_tools + center_tools))
-        route = self.router.route(intent.capability, available)
+        route = self.router.route(intent.name, available)
 
         authorized = self.policy.check_capability(intent.capability)
         execution: dict[str, Any] = {
@@ -68,9 +68,7 @@ class ExecutionEngine:
                 capabilities = self.tool_center.list_capabilities()[route]
                 capability = intent.capability
                 if capability in capabilities:
-                    execution = self.tool_center.execute(
-                        route, capability, payload
-                    )
+                    execution = self.tool_center.execute(route, capability, payload)
                     execution = {
                         **execution,
                         "adapter": route,
