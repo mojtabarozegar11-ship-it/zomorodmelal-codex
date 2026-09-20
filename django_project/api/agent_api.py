@@ -3,7 +3,10 @@ import json
 
 from django.http import JsonResponse
 
-from autonomous_core.safe_agent_loop import SafeAgentLoop
+try:
+    from autonomous_core.safe_agent_loop import SafeAgentLoop
+except ModuleNotFoundError:
+    from ..autonomous_core.safe_agent_loop import SafeAgentLoop
 
 
 def agent_status(request):
