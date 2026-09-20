@@ -20,6 +20,8 @@ jobs:
     defaults:
       run:
         working-directory: django_project
+    env:
+      PYTHONPATH: ${{ github.workspace }}/django_project:${{ github.workspace }}
 
     steps:
       - name: Checkout
