@@ -1,24 +1,18 @@
 # cPanel Deployment — Zomorod Melal
 
-## Canonical application layout
+## Source-of-truth architecture
 
-The Django application root is:
+The Git repository is the development/automation repository. The Django runtime source is:
 
-`/home/zomorodm/zomorodmelal-app`
+`/django_project`
 
-The Django runtime files must be directly in that directory:
+cPanel does **not** run the repository root.
 
-- `manage.py`
-- `config/`
-- `apps/`
-- `passenger_wsgi.py`
-- `requirements.txt`
-- `requirements-host.txt`
-- `templates/`
-- `static/`
-- `host_bridge/`
+The GitHub cPanel packaging workflow copies the contents of `django_project/` into the package directory:
 
-There is no `django_project/` subdirectory in the canonical release layout.
+`zomorodmelal-app/`
+
+Therefore after extraction the cPanel Application Root contains the Django files directly.
 
 ## cPanel Python Application
 
@@ -36,13 +30,27 @@ passenger_wsgi.py
 
 Application Entry Point
 application
+
+Python version
+3.11.x
 ```
 
-Do not point Passenger at the Git repository parent directory.
+The application root must contain:
+
+- `manage.py`
+- `passenger_wsgi.py`
+- `config/`
+- `apps/`
+- `templates/`
+- `static/`
+- `requirements.txt`
+- `requirements-host.txt`
+
+There must be **no** `django_project/` subdirectory inside the cPanel Application Root.
 
 ## Environment
 
-Set production values in cPanel's Python Application environment:
+Set these in cPanel:
 
 ```text
 DJANGO_SETTINGS_MODULE=config.settings
@@ -56,59 +64,61 @@ Keep secrets outside Git.
 
 ## Installation and verification
 
-From the application root:
+From the cPanel Application Root:
 
 ```bash
 cd /home/zomorodm/zomorodmelal-app
-python -m pip install --upgrade pip
 python -m pip install -r requirements-host.txt
 python manage.py check
 python manage.py check --deploy
 python manage.py migrate
 python manage.py collectstatic --noinput
-python -c "import config.wsgi; print('WSGI OK')"
+python -c "import config.wsgi; import passenger_wsgi; print('WSGI OK')"
 ```
 
-Restart the Python application after code or environment changes.
+Restart the Python application from cPanel after installation or code changes.
 
-## Directory Listing / 503 troubleshooting
+## Directory Listing / 503 diagnosis
 
-If the domain shows a LiteSpeed directory listing, verify:
+If the domain shows a LiteSpeed directory listing:
 
-1. Application Root is exactly `/home/zomorodm/zomorodmelal-app`.
-2. Startup File is exactly `passenger_wsgi.py`.
-3. Entry Point is exactly `application`.
-4. `passenger_wsgi.py` exists in the application root.
-5. The Python application has been restarted.
-6. LiteSpeed/Passenger has the domain mapped to that application.
+1. Confirm the Python Application is **Started**.
+2. Confirm Application Root is exactly `/home/zomorodm/zomorodmelal-app`.
+3. Confirm Startup File is exactly `passenger_wsgi.py`.
+4. Confirm Entry Point is exactly `application`.
+5. Confirm `passenger_wsgi.py` is physically inside the Application Root.
+6. Confirm the package was extracted directly into the Application Root.
+7. Restart the Python application.
+8. If all seven pass and directory listing remains, the remaining fault is LiteSpeed/Passenger virtual-host mapping.
 
-If all six are correct and directory listing continues, the remaining work is host-side virtual-host/Passenger mapping.
+If a 503 occurs, inspect the Passenger application error log before changing Python versions or paths.
 
-## cPanel package rules
+## Release package
 
-The release archive must extract directly to the application root.
+The authoritative release artifact is produced by:
 
-Correct:
+`.github/workflows/cpanel-package.yml`
+
+It creates:
+
+`ZOMORODMEL.IR.zip`
+
+with this extraction layout:
 
 ```text
-/home/zomorodm/zomorodmelal-app/
+/home/zomorodm/zomorodmel-app/
 ├── manage.py
 ├── passenger_wsgi.py
 ├── config/
 ├── apps/
 ├── templates/
 ├── static/
-├── host_bridge/
 ├── requirements.txt
 └── requirements-host.txt
 ```
 
-Incorrect:
+Do not manually upload the repository root as the cPanel application.
 
-```text
-/home/zomorodm/zomorodmelal-app/django_project/
-```
+## Important
 
-## Release requirement
-
-A package is considered cPanel-ready only when CI has passed the deployment-layout check and the Django/WSGI checks. Host-level Passenger mapping, DNS, HTTPS certificates, migrations, and database credentials still require verification on the actual server.
+GitHub can build and validate the release package. The actual LiteSpeed/Passenger mapping, DNS, HTTPS, database credentials, migrations, and running process still have to be verified on the cPanel server.
