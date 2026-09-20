@@ -1,7 +1,5 @@
 from decimal import Decimal
 
-import pytest
-
 from worker_mojtaba.wallet.wallet import WalletManager
 
 
