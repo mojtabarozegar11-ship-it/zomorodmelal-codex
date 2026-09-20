@@ -35,7 +35,8 @@ class ExecutionEngine:
         self.policy = policy or Policy()
 
     def run(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
-        context = context or {}\n        intent = self.intent_parser.parse(request)
+        context = context or {}
+        intent = self.intent_parser.parse(request)
         plan = self.planner.make_plan(request)
 
         registry_tools = [tool["name"] for tool in self.tools.list()]
