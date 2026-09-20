@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python test dependencies
-        run: python -m pip install --disable-pip-version-check pytest fastapi httpx
+        run: python -m pip install --disable-pip-version-check pytest fastapi httpx python-multipart
 
       - name: Run Worker Mojtaba tests
         env:
@@ -81,4 +81,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: worker-mojtaba-debug-apk
-          path: worker_mojtaba/android/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
