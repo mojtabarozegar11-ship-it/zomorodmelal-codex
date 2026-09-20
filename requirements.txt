@@ -1,4 +1,3 @@
-# Runtime dependencies for the Django application and supporting services
-Django>=4.2,<5.3
-python-telegram-bot>=21,<23
-gunicorn>=22,<24
+# Root-level orchestration dependencies
+-r django_project/requirements.txt
+python-telegram-bot
