@@ -39,9 +39,13 @@ jobs:
           find package -type d -name __pycache__ -prune -exec rm -rf {} +
           find package -type f -name '*.pyc' -delete
           cd package
+          test -f zomorodmelal-app/passenger_wsgi.py
+          test -f zomorodmelal-app/manage.py
+          test -f zomorodmelal-app/config/settings.py
+          test -f zomorodmelal-app/requirements-host.txt
           zip -r ../ZOMORODMEL.IR.zip .
           cd ..
-          unzip -l ZOMORODMEL.IR.zip | grep -E '(^| )passenger_wsgi.py|(^| )manage.py|(^| )config/settings.py|(^| )requirements-host.txt'
+          unzip -l ZOMORODMEL.IR.zip | grep -E '(^| )zomorodmelal-app/passenger_wsgi.py|(^| )zomorodmelal-app/manage.py|(^| )zomorodmelal-app/config/settings.py|(^| )zomorodmelal-app/requirements-host.txt'
       - name: Upload deployment ZIP
         uses: actions/upload-artifact@v4
         with:
