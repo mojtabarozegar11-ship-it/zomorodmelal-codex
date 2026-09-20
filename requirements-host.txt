@@ -1,0 +1,2 @@
+# cPanel / Passenger host dependencies
+-r requirements.txt
