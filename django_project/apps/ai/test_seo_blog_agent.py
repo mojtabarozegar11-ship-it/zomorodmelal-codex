@@ -31,3 +31,7 @@ class SeoBlogAgentTests(TestCase):
         self.assertEqual(run.target_languages, list(DEFAULT_LANGUAGES))
         self.assertEqual(run.items.count(), 5)
         self.assertTrue(all(item.seo_metadata["text_only"] for item in run.items.all()))
+        self.assertEqual(run.published_count, 0)
+        self.assertEqual(run.pending_count, 5)
+        self.assertEqual(run.status, "partial")
+
