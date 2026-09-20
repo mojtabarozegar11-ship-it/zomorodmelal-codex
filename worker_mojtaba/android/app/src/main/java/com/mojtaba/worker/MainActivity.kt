@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; singleLine = true }
+        val input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; setSingleLine(true) }
         val send = Button(this).apply { text = "ارسال" }
         val voice = Button(this).apply { text = "🎤 پیام صوتی" }
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
