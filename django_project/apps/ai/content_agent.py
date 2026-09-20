@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
