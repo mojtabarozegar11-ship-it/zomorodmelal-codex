@@ -126,4 +126,13 @@ class WorkerResponseTest {
         assertEquals("https://example.com", field.invoke(client))
     }
 
+    @Test
+    fun fragmentInBaseUrlIsRejected() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("https://example.com/#worker")
+        val thrown = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            kotlinx.coroutines.runBlocking { client.sendTask("سلام") }
+        }
+        assertEquals("Worker API URL نباید fragment داشته باشد.", thrown.message)
+    }
+
 }
