@@ -3,9 +3,9 @@ package com.mojtaba.worker.network
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.io.File
 
 data class WorkerResponse(val rawJson: String) {
     fun message(): String {
@@ -17,6 +17,8 @@ data class WorkerResponse(val rawJson: String) {
     }
 }
 
+private const val VOICE_BOUNDARY = "WorkerMojtabaBoundary"
+
 class WorkerApiClient(private val baseUrl: String) {
     suspend fun sendVoice(file: File, request: String = ""): WorkerResponse = withContext(Dispatchers.IO) {
         require(baseUrl.isNotBlank()) { "Worker API URL تنظیم نشده است." }
@@ -24,7 +26,7 @@ class WorkerApiClient(private val baseUrl: String) {
         require(file.exists() && file.length() > 0L) { "فایل صوتی خالی یا نامعتبر است." }
         require(runCatching { URL(baseUrl) }.isSuccess) { "Worker API URL نامعتبر است." }
 
-        val boundary = "WorkerMojtabaBoundary"
+        val boundary = VOICE_BOUNDARY
         val connection = (URL(baseUrl.trimEnd('/') + "/v1/voice").openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = "POST"
