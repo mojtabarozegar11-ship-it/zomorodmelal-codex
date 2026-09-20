@@ -74,6 +74,9 @@ jobs:
       - name: Verify Android source tree
         run: test -f app/src/main/AndroidManifest.xml && test -f app/src/main/java/com/mojtaba/worker/MainActivity.kt && test -f app/src/main/java/com/mojtaba/worker/network/WorkerApiClient.kt
 
+      - name: Validate Gradle project files
+        run: test -f settings.gradle.kts && test -f build.gradle.kts && test -f app/build.gradle.kts
+
       - name: Run Android unit tests
         run: gradle --no-daemon --stacktrace test
 
