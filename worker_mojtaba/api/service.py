@@ -1,4 +1,5 @@
 """Application service boundary for Android clients."""
+from decimal import Decimal
 from typing import Any
 
 from worker_mojtaba.ai.registry import AIProviderRegistry
@@ -16,7 +17,6 @@ from worker_mojtaba.tools.communications_adapter import CommunicationsToolAdapte
 from worker_mojtaba.wallet.wallet import WalletManager
 from worker_mojtaba.tools.iranian_bank_adapter import IranianBankAdapter, BankAccountPolicy
 from worker_mojtaba.tools.financial_adapter import FinancialToolAdapter
-from decimal import Decimal
 from worker_mojtaba.security.audit import AuditLog
 from worker_mojtaba.security.policy import Policy
 
