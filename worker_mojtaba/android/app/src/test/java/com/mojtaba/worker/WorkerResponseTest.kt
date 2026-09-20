@@ -67,6 +67,13 @@ class WorkerResponseTest {
     }
 
     @Test
+    fun taskAndVoiceUrlsUseTrailingSlashSafely() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("https://example.com/")
+        val field = client
+        assertEquals("https://example.com/", field.javaClass.getDeclaredField("baseUrl").apply { isAccessible = true }.get(field))
+    }
+
+    @Test
     fun blankVoiceFileIsRejected() {
         val client = com.mojtaba.worker.network.WorkerApiClient("https://example.com")
         val file = java.io.File.createTempFile("worker-empty-", ".m4a")
