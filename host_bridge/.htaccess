@@ -1,6 +1,6 @@
 Options -Indexes
 
-<FilesMatch "^(\.env|.*\.log|.*\.json)$">
+<FilesMatch "^(\.env|.*\.log|.*\.json|README\.md)$">
     Require all denied
 </FilesMatch>
 
@@ -9,5 +9,9 @@ Options -Indexes
 </Files>
 
 <Files "status.php">
+    Require all granted
+</Files>
+
+<Files "files.php">
     Require all granted
 </Files>

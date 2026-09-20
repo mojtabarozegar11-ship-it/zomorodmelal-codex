@@ -19,7 +19,7 @@ jobs:
           rm -rf package zomorodmelal-cpanel.zip
           mkdir -p package
           cp -a django_project package/django_project
-          for item in autonomous_core ai_engine ai_providers agents agent_runtime access api app config core database memory monitoring orchestrator planner research sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research website run_master_agent.py ai_bridge.py requirements.txt .cpanel.yml CPANEL_DEPLOYMENT.md HOST_HANDOFF_CHECKLIST.md README.md; do
+          for item in autonomous_core ai_engine ai_providers agents agent_runtime access api app config core database memory monitoring orchestrator planner research sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research website run_master_agent.py ai_bridge.py requirements.txt .cpanel.yml CPANEL_DEPLOYMENT.md HOST_HANDOFF_CHECKLIST.md HOST_BRIDGE_SETUP.md README.md host_bridge; do
             if [ -e "$item" ]; then
               cp -a "$item" package/
             fi
