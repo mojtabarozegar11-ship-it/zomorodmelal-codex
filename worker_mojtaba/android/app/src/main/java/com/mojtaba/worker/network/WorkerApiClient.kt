@@ -33,7 +33,10 @@ class WorkerApiClient(private val baseUrl: String) {
         require(parsed.userInfo.isNullOrBlank()) { "Worker API URL نباید شامل اطلاعات کاربری باشد." }
         require(parsed.rawFragment.isNullOrBlank()) { "Worker API URL نباید fragment داشته باشد." }
         require(parsed.host?.isNotBlank() == true) { "Worker API URL نامعتبر است." }
-        require(parsed.port == -1 || parsed.port in 1..65535) { "Worker API URL نامعتبر است." }
+        require(!parsed.rawAuthority.orEmpty().endsWith(":")) { "Worker API URL نامعتبر است." }
+        val parsedPort = runCatching { parsed.port }
+            .getOrElse { throw IllegalArgumentException("Worker API URL نامعتبر است.") }
+        require(parsedPort == -1 || parsedPort in 1..65535) { "Worker API URL نامعتبر است." }
         return baseUrl.trimEnd('/')
     }
 
