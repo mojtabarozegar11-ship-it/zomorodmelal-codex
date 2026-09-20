@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
     private val player = VoicePlayer()
     private var recordingFile: java.io.File? = null
     private var isRecording = false
+    private var isSending = false
     private lateinit var messages: TextView
     private lateinit var scroll: ScrollView
     private lateinit var input: EditText
@@ -131,10 +132,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun submitRequest(client: WorkerApiClient) {
+        if (isSending) return
         val request = input.text.toString().trim()
         if (request.isEmpty()) return
         input.setText("")
-        send.isEnabled = false
+        isSending = true
+        setControlsEnabled(false)
         appendMessage("\n\nشما: $request")
         scope.launch {
             try {
@@ -143,9 +146,17 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 appendMessage("\nخطا: " + (e.message ?: "اتصال برقرار نشد"))
             } finally {
-                send.isEnabled = true
+                isSending = false
+                setControlsEnabled(true)
             }
         }
+    }
+
+    private fun setControlsEnabled(enabled: Boolean) {
+        send.isEnabled = enabled
+        input.isEnabled = enabled
+        clear.isEnabled = enabled
+        if (!isRecording) voice.isEnabled = enabled
     }
 
     override fun onDestroy() {
