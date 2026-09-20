@@ -26,8 +26,9 @@ class WorkerApiClient(private val baseUrl: String) {
     private fun configuredBaseUrl(): String {
         require(baseUrl.isNotBlank()) { "Worker API URL تنظیم نشده است." }
         require(!baseUrl.contains("YOUR_WORKER_API_HOST")) { "Worker API URL هنوز پیکربندی نشده است." }
-        require(runCatching { URL(baseUrl) }.isSuccess) { "Worker API URL نامعتبر است." }
+        require(runCatching { URI(baseUrl) }.isSuccess) { "Worker API URL نامعتبر است." }
         val parsed = URI(baseUrl)
+        require(parsed.isAbsolute) { "Worker API URL نامعتبر است." }
         require(parsed.scheme == "https") { "Worker API فقط از HTTPS پشتیبانی می‌کند." }
         require(parsed.userInfo.isNullOrBlank()) { "Worker API URL نباید شامل اطلاعات کاربری باشد." }
         require(parsed.getRef().isNullOrBlank()) { "Worker API URL نباید fragment داشته باشد." }
