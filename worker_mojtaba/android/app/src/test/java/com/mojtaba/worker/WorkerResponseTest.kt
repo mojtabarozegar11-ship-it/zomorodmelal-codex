@@ -49,6 +49,18 @@ class WorkerResponseTest {
     }
 
     @Test
+    fun emptyJsonFallsBackToDefaultMessage() {
+        val response = WorkerResponse("""{}""")
+        assertEquals("پاسخ دریافت شد.", response.message())
+    }
+
+    @Test
+    fun blankExecutionMessageFallsBackToTopLevelMessage() {
+        val response = WorkerResponse("""{"execution":{"message":""},"message":"پیام اصلی"}""")
+        assertEquals("پیام اصلی", response.message())
+    }
+
+    @Test
     fun statusIsUsedWhenNoMessageExists() {
         val response = WorkerResponse("""{"status":"provider_configuration_required"}""")
         assertEquals("provider_configuration_required", response.message())
