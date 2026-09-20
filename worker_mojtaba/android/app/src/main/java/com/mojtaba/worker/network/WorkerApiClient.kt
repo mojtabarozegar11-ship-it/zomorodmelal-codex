@@ -17,17 +17,13 @@ data class WorkerResponse(val rawJson: String) {
     }
 }
 
-private const val VOICE_BOUNDARY = "WorkerMojtabaBoundary"
-
-class WorkerApiClient(private val baseUrl: String) {
+NaN
     suspend fun sendVoice(file: File, request: String = ""): WorkerResponse = withContext(Dispatchers.IO) {
-        require(baseUrl.isNotBlank()) { "Worker API URL تنظیم نشده است." }
-        require(!baseUrl.contains("YOUR_WORKER_API_HOST")) { "Worker API URL هنوز پیکربندی نشده است." }
+        val apiBaseUrl = configuredBaseUrl()
         require(file.exists() && file.length() > 0L) { "فایل صوتی خالی یا نامعتبر است." }
-        require(runCatching { URL(baseUrl) }.isSuccess) { "Worker API URL نامعتبر است." }
 
         val boundary = VOICE_BOUNDARY
-        val connection = (URL(baseUrl.trimEnd('/') + "/v1/voice").openConnection() as HttpURLConnection)
+        val connection = (URL(apiBaseUrl + VOICE_PATH).openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Accept", "application/json")
@@ -54,12 +50,10 @@ class WorkerApiClient(private val baseUrl: String) {
         }
     }
     suspend fun sendTask(request: String): WorkerResponse = withContext(Dispatchers.IO) {
-        require(baseUrl.isNotBlank()) { "Worker API URL تنظیم نشده است." }
-        require(!baseUrl.contains("YOUR_WORKER_API_HOST")) { "Worker API URL هنوز پیکربندی نشده است." }
+        val apiBaseUrl = configuredBaseUrl()
         require(request.isNotBlank()) { "درخواست خالی است." }
-        require(runCatching { URL(baseUrl) }.isSuccess) { "Worker API URL نامعتبر است." }
 
-        val connection = (URL(baseUrl.trimEnd('/') + "/v1/tasks").openConnection() as HttpURLConnection)
+        val connection = (URL(apiBaseUrl + TASK_PATH).openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Accept", "application/json")
