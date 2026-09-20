@@ -71,6 +71,9 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      - name: Verify Android source tree
+        run: test -f app/src/main/AndroidManifest.xml && test -f app/src/main/java/com/mojtaba/worker/MainActivity.kt && test -f app/src/main/java/com/mojtaba/worker/network/WorkerApiClient.kt
+
       - name: Run Android unit tests
         run: gradle --no-daemon --stacktrace test
 
