@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Zomorod Melal Host Bridge File API
-  version: 1.1.0
+  version: 1.2.0
   description: >
     Authenticated, root-confined file operations for the Django deployment tree.
     Arbitrary shell execution is intentionally not exposed.
@@ -125,6 +125,32 @@ components:
           type: integer
         bytes:
           type: integer
+        sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}
+          type: array
+          items:
+            type: object
+        file:
+          type: object
+    ErrorResponse:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          const: false
+        error:
+          type: string
+        max:
+          type: integer
+        size:
+          type: integer
+        actions:
+          type: array
+          items:
+            type: string
+
         items:
           type: array
           items:
