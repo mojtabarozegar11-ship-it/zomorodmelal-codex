@@ -12,7 +12,7 @@ $readToken = getenv('GIT_BRIDGE_READ_TOKEN') ?: '';
 
 if ($readToken !== '') {
     $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    if (!preg_match('/^Bearer\\s+(.+)$/i', $auth, $m) || !hash_equals($readToken, trim($m[1]))) {
+    if (!preg_match('/^Bearer\s+(.+)$/i', $auth, $m) || !hash_equals($readToken, trim($m[1]))) {
         http_response_code(401);
         echo json_encode(['ok' => false, 'error' => 'Unauthorized'], JSON_UNESCAPED_UNICODE);
         exit;
