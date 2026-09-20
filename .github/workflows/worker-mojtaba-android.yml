@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "worker_mojtaba/**"
+      - ".github/workflows/worker-mojtaba-android.yml"
   workflow_dispatch:
 
 jobs:
