@@ -31,7 +31,7 @@ The production token must never be committed to GitHub or pasted into chat.
 GitHub changes alone cannot create a runtime connector inside ChatGPT. A compatible external Connector/Action must be registered against this HTTPS endpoint and supplied the token through its secret store.
 
 Once the Connector is active, the first live diagnostic should inspect:
-- project root existence
+- cPanel application root `/home/zomorodm/zomorodmelal-app` existence
 - Passenger entrypoint
 - Python runtime/dependencies
 - Django settings
