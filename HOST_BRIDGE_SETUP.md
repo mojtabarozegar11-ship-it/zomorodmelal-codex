@@ -2,7 +2,7 @@
 
 The authenticated file API is `host_bridge/files.php`.
 
-It supports controlled read/list/create/update/delete operations inside `/home/zomorodm/zomorodmelal-app/django_project` and rejects path traversal. It does not execute arbitrary shell commands.
+It supports controlled read/list/create/update/delete operations inside `/home/zomorodm/zomorodmelal-app` and rejects path traversal. It does not execute arbitrary shell commands.
 
 Configure `HOST_BRIDGE_TOKEN_FILE=/home/zomorodm/.host_bridge_token` or `HOST_BRIDGE_TOKEN` outside GitHub. The token file must contain only the random token.
 
