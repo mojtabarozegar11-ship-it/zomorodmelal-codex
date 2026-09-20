@@ -1,8 +1,6 @@
 """Banking policy tests."""
 from decimal import Decimal
 
-import pytest
-
 from worker_mojtaba.tools.iranian_bank_adapter import (
     BankAccountPolicy,
     IranianBankAdapter,
