@@ -90,7 +90,7 @@ class ExecutionEngine:
                         self.executor.execute(route, payload)
                     )
 
-        ai_result = self.ai_registry.generate(request, intent.capability)
+        ai_result = self.ai_registry.generate(request, "text_model" if route == "text_model" else intent.capability)
 
         self.memory.remember_short(
             {
