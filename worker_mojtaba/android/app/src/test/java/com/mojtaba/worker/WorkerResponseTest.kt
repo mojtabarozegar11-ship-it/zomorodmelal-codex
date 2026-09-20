@@ -119,4 +119,11 @@ class WorkerResponseTest {
         assertEquals("Worker API URL نباید شامل اطلاعات کاربری باشد.", thrown.message)
     }
 
+    @Test
+    fun blankCredentiallessHttpsUrlIsAcceptedByValidation() {
+        val client = com.mojtaba.worker.network.WorkerApiClient("https://example.com/")
+        val field = client.javaClass.getDeclaredMethod("configuredBaseUrl").apply { isAccessible = true }
+        assertEquals("https://example.com", field.invoke(client))
+    }
+
 }
