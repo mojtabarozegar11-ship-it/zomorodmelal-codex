@@ -24,6 +24,8 @@ class MainActivity : ComponentActivity() {
     private var recordingFile: java.io.File? = null
     private lateinit var messages: TextView
     private lateinit var scroll: ScrollView
+    private lateinit var input: EditText
+    private lateinit var send: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,8 +69,8 @@ class MainActivity : ComponentActivity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; setSingleLine(true) }
-        val send = Button(this).apply { text = "ارسال" }
+        input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; setSingleLine(true); imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND }
+        send = Button(this).apply { text = "ارسال" }
         val voice = Button(this).apply { text = "🎤 پیام صوتی" }
         val clear = Button(this).apply { text = "پاک کردن" }
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
@@ -115,7 +117,31 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        send.setOnClickListener { submitRequest(client) }
+        input.setOnEditorActionListener { _, actionId, event ->
+            val sendAction = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+            val enterKey = event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
+            if (sendAction || enterKey) { submitRequest(client); true } else false
+        }
         return root
+    }
+
+    private fun submitRequest(client: WorkerApiClient) {
+        val request = input.text.toString().trim()
+        if (request.isEmpty()) return
+        input.setText("")
+        send.isEnabled = false
+        appendMessage("\n\nشما: $request")
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { client.sendTask(request) }
+                appendMessage("\nکارگر: " + result.message())
+            } catch (e: Exception) {
+                appendMessage("\nخطا: " + (e.message ?: "اتصال برقرار نشد"))
+            } finally {
+                send.isEnabled = true
+            }
+        }
     }
 
     override fun onDestroy() {
