@@ -17,8 +17,12 @@ def test_wallet_2_is_deposit_only():
     manager = WalletManager()
     manager.configure_default_revenue_wallets()
     manager.assert_deposit_allowed("wallet_2")
-    with pytest.raises(PermissionError):
+    try:
         manager.assert_withdraw_allowed("wallet_2")
+    except PermissionError:
+        pass
+    else:
+        raise AssertionError("wallet_2 must be deposit-only")
 
 
 def test_wallet_1_withdrawal_is_allowed_by_policy():
