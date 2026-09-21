@@ -63,7 +63,7 @@ class ExecutionEngine:
                 }
             )
         elif route != "text_model":
-            payload = {"request": request, **context}
+            payload = {"request": request, **{k: v for k, v in context.items() if k != "require_approval"}}
             if self.tool_center is not None and route in center_tools:
                 capabilities = self.tool_center.list_capabilities()[route]
                 capability = intent.capability
