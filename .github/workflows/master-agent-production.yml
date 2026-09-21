@@ -63,11 +63,14 @@ jobs:
         with:
           gradle-version: "8.10.2"
       - name: Validate Android project
+        env:
+          WORKER_API_BASE_URL: ""
         run: |
           test -f settings.gradle.kts
           test -f build.gradle.kts
           test -f app/build.gradle.kts
           test -f app/src/main/AndroidManifest.xml
+          grep -q 'applicationId = "com.mojtaba.worker"' app/build.gradle.kts
       - name: Unit tests
         run: gradle --no-daemon --stacktrace test
       - name: Build debug APK
