@@ -35,7 +35,7 @@ class MasterCapability:
     ) -> dict[str, Any]:
         task = self.build_plan(goal)
         plan = self._planner(task.goal)
-        if not approved and context and context.get("require_approval", False):
+        if not approved and (not context or context.get("require_approval", True)):
             return {"status": "approval_required", "goal": task.goal, "plan": plan}
         result = dispatch(task.goal, context or {})
         valid = bool(self._validator(result))
