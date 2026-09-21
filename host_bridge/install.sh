@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${HOST_BRIDGE_ROOT:-/home/zomorodm/zomorodmelal-app/django_project}"
+ROOT="${HOST_BRIDGE_ROOT:-/home/zomorodm/zomorodmelal-app}"
 TOKEN_FILE="${HOST_BRIDGE_TOKEN_FILE:-/home/zomorodm/.host_bridge_token}"
 AUDIT_FILE="${HOST_BRIDGE_AUDIT_FILE:-/home/zomorodm/.host_bridge_audit.log}"
 
