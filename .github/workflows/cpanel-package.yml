@@ -2,8 +2,13 @@ name: Build cPanel ZIP
 
 on:
   push:
-    branches: [main, integration/zomorodmelal-full-project-20260921]
+    branches:
+      - main
+      - integration/zomorodmelal-full-project-20260921
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   package:
@@ -27,6 +32,7 @@ jobs:
               cp -a "$item" package/zomorodmelal-app/
             fi
           done
+          mkdir -p package/zomorodmelal-app/tmp
           printf '%s\n' \
             'deployment:' \
             '  tasks:' \
@@ -43,71 +49,11 @@ jobs:
           zip -r ../ZOMORODMEL.IR.zip .
           cd ..
           unzip -l ZOMORODMEL.IR.zip | grep -E '(^| )zomorodmelal-app/passenger_wsgi.py|(^| )zomorodmelal-app/manage.py|(^| )zomorodmelal-app/config/settings.py|(^| )zomorodmelal-app/requirements-host.txt'
+
       - name: Upload deployment ZIP
         uses: actions/upload-artifact@v4
         with:
           name: ZOMORODMEL.IR
           path: ZOMORODMEL.IR.zip
-          retention-days: 7
-
-  android-build:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: worker_mojtaba/android
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Set up Android SDK
-        shell: bash
-        run: |
-          set -euo pipefail
-          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          if [ -z "$SDK_ROOT" ]; then SDK_ROOT="$HOME/android-sdk"; fi
-          if [ ! -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            FOUND="$(find "$HOME" /opt -type f -name sdkmanager 2>/dev/null | head -1 || true)"
-            if [ -n "$FOUND" ]; then
-              SDK_ROOT="$(dirname "$(dirname "$(dirname "$FOUND")")")"
-            fi
-          fi
-          if [ ! -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            echo "Android SDK command-line tools not found"
-            find "$HOME" /opt -maxdepth 7 -type f -name sdkmanager 2>/dev/null | head -20 || true
-            exit 1
-          fi
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-
-      - name: Accept Android licenses
-        shell: bash
-        run: yes | sdkmanager --licenses >/dev/null || true
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.10.2"
-
-      - name: Run Android unit tests
-        run: gradle --no-daemon --stacktrace test
-
-      - name: Build debug APK
-        run: gradle --no-daemon --stacktrace assembleDebug
-
-      - name: Upload Worker Mojtaba APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: worker-mojtaba-debug-apk
-          path: worker_mojtaba/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 7
