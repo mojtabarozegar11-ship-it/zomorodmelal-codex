@@ -90,7 +90,17 @@ class ExecutionEngine:
                         self.executor.execute(route, payload)
                     )
 
-        ai_result = self.ai_registry.generate(request, "text_model" if route == "text_model" else intent.capability)
+        try:
+            ai_result = self.ai_registry.generate(
+                request,
+                "text_model" if route == "text_model" else intent.capability,
+            )
+        except Exception as exc:  # provider boundaries must never crash the API
+            ai_result = {
+                "status": "provider_error",
+                "capability": intent.capability,
+                "message": str(exc),
+            }
 
         self.memory.remember_short(
             {
@@ -102,6 +112,9 @@ class ExecutionEngine:
                 "execution_status": execution.get("status"),
             }
         )
+
+        if execution.get("status") == "provider_error":
+            execution = normalize_execution_status(execution)
 
         if execution.get("result_state") == "completed":
             top_status = execution.get("status", "completed")
