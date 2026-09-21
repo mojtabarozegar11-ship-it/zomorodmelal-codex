@@ -1,36 +1,32 @@
-# Zomorod Melal — Android Master Agent
+# زمرد ملل — معماری و انتشار
 
-## Product
-Zomorod Melal is an **Android application installed on a mobile device**.
+پروژه «زمرد ملل» دو لایهٔ قابل‌اجرا دارد:
 
-The production runtime is local to Android. The project is **not deployed to cPanel, Passenger, or a web host**.
+- **اپلیکیشن اندروید / کارگر مجتبی** در `worker_mojtaba/android`
+- **سرویس Django/Passenger** در `django_project` برای استقرار اختیاری روی Pars Web Server / cPanel و ارائه API
 
-## Canonical architecture
+## مسیرهای انتشار
 
-`Android App → Canonical Master Agent → autonomous_core.MasterCore → task/worker orchestration → device-local state`
+### Android
+هستهٔ اصلی Android از `MasterAgentCoordinator` و `MasterAgentEngine` استفاده می‌کند. اجرای عملیات واقعی خارجی به‌صورت پیش‌فرض غیرفعال است و نقاط حساس نیازمند تأیید مالک هستند.
 
-The canonical application/runtime boundary is:
+خروجی‌های CI:
+- APK برای نصب/آزمون
+- AAB برای انتشار
 
-- Android project: `worker_mojtaba/android`
-- Master Agent entry point: `master_agent.CanonicalMasterAgent`
-- Python orchestration kernel: `autonomous_core.MasterCore`
+### Pars Web Server / cPanel
+برای دامنهٔ `https://zomorodmelal.ir`، مسیر رسمی استقرار Django با Passenger در `CPANEL_DEPLOYMENT.md` مستند شده است.
 
-Network/API integrations are optional capabilities of the application; they are not the location where the Master Agent runs.
+قرارداد:
+- Application Root: `/home/zomorodm/zomorodmelal-app`
+- Startup File: `passenger_wsgi.py`
+- Entry Point: `application`
+- Python: 3.11.x
 
-## Build outputs
+بستهٔ cPanel توسط workflow مربوطه ساخته می‌شود و شامل runtime Django و ماژول‌های ریشه‌ای لازم است.
 
-- **APK**: install directly on an Android device for testing/installation.
-- **AAB**: release bundle for app distribution.
+## امنیت
+کلیدها و رمزهای سرویس در Environment/Secrets نگهداری شوند و داخل commit قرار نگیرند. اجرای واقعی و عملیات حساس باید صریح و کنترل‌شده باشد.
 
-The GitHub Actions Android pipeline validates the Gradle project, runs Android unit tests, and builds both debug APK and release AAB.
-
-## Production rules
-
-- No cPanel deployment.
-- No Passenger/Django host runtime.
-- No server deployment as a production gate.
-- No credentials embedded in the APK or source tree.
-- Critical external actions remain behind explicit owner approval.
-
-## Legacy code
-Server/Django directories may still exist while migration cleanup is completed. They are not production runtime dependencies for the Android application.
+## وضعیت واقعی
+CI می‌تواند صحت ساختار، syntax، تست‌ها و قرارداد بستهٔ استقرار را بررسی کند؛ اجرای واقعی روی Pars Web Server فقط با دسترسی به همان حساب/هاست قابل تأیید است.
