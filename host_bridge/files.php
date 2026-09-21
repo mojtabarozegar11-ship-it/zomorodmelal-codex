@@ -39,7 +39,8 @@ function token(): string {
 function auth(): void {
     $https = (($_SERVER['HTTPS'] ?? '') === 'on');
     $forwarded = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
-    if (!$https && $forwarded !== 'https') {
+    $trustedForwarded = ($_SERVER['REMOTE_ADDR'] ?? '') !== '' && (($_SERVER['REMOTE_ADDR'] ?? '') === ($_SERVER['SERVER_ADDR'] ?? ''));
+    if (!$https && (!$trustedForwarded || $forwarded !== 'https')) {
         respond(400, ['ok'=>false, 'error'=>'https_required']);
     }
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
