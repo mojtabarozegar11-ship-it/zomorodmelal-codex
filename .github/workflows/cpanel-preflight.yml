@@ -34,11 +34,35 @@ jobs:
           test -f .cpanel.yml
           test -f .github/workflows/deploy-cpanel-ssh.yml
           grep -q 'zomorodmelal.ir' CPANEL_DEPLOYMENT.md
+          grep -q '/home/zomorodm/zomorodmelal-app' CPANEL_DEPLOYMENT.md
           grep -q 'passenger_wsgi.py' CPANEL_DEPLOYMENT.md
+          grep -q 'Entry Point.*application' CPANEL_DEPLOYMENT.md
+          grep -q 'Python.*3.11' CPANEL_DEPLOYMENT.md
+          grep -q 'manage.py check --deploy' CPANEL_DEPLOYMENT.md
           grep -q 'manage.py migrate' CPANEL_DEPLOYMENT.md
           grep -q 'collectstatic' CPANEL_DEPLOYMENT.md
 
-      - name: Verify no obvious secrets
+      - name: Verify package contract matches deployment source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/verify_cpanel_layout.py
+          rm -rf package
+          mkdir -p package/zomorodmelal-app
+          cp -a django_project/. package/zomorodmelal-app/
+          for path in autonomous_core django_integration ai_engine ai_providers agents agent_runtime access memory monitoring orchestrator planner sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research; do
+            if [ -e "$path" ]; then cp -a "$path" package/zomorodmelal-app/; fi
+          done
+          for file in run_master_agent.py ai_bridge.py README.md CPANEL_DEPLOYMENT.md HOST_FINAL_INSTALL_CHECKLIST.md; do
+            if [ -e "$file" ]; then cp -a "$file" package/zomorodmelal-app/; fi
+          done
+          test -f package/zomorodmelal-app/manage.py
+          test -f package/zomorodmelal-app/passenger_wsgi.py
+          test -f package/zomorodmelal-app/requirements-host.txt
+          test -d package/zomorodmelal-app/config
+          python -m py_compile package/zomorodmelal-app/manage.py package/zomorodmelal-app/passenger_wsgi.py
+
+      - name: Verify no obvious secret material
         run: |
           if grep -RInE '(sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY)' --exclude-dir=.git .; then
             echo "Potential secret material detected"
