@@ -1,4 +1,6 @@
-"""HTTP transport for Worker Mojtaba."""
+"""HTTP transport for Worker Mojtaba, the single execution runtime."""
+from __future__ import annotations
+
 import os
 from typing import Any
 
@@ -7,11 +9,12 @@ from pydantic import BaseModel, Field
 
 from worker_mojtaba.api.service import WorkerService
 
-app = FastAPI(title="Worker Mojtaba API", version="0.6.0")
+app = FastAPI(title="Worker Mojtaba API", version="0.6.1")
 service = WorkerService()
 
 MAX_REQUEST_LENGTH = 8_000
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
+ALLOWED_AUDIO_EXTENSIONS = (".m4a", ".mp3", ".wav", ".ogg", ".webm")
 
 
 class TaskRequest(BaseModel):
@@ -45,7 +48,12 @@ def _require_token(authorization: str | None) -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "worker-mojtaba", "version": "0.6.0"}
+    return {
+        "status": "ok",
+        "service": "worker-mojtaba",
+        "role": "execution-runtime",
+        "version": "0.6.1",
+    }
 
 
 @app.post("/v1/tasks", response_model=TaskResponse)
@@ -54,8 +62,7 @@ def create_task(
     authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     _require_token(authorization)
-    result = service.handle(payload.request, payload.context, approved=payload.approved)
-    return result
+    return service.handle(payload.request, payload.context, approved=payload.approved)
 
 
 @app.post("/v1/voice")
@@ -69,8 +76,7 @@ async def upload_voice(
         raise HTTPException(status_code=400, detail="audio_filename_required")
 
     content_type = audio.content_type or ""
-    allowed_extensions = (".m4a", ".mp3", ".wav", ".ogg", ".webm")
-    if not content_type.startswith("audio/") and not audio.filename.lower().endswith(allowed_extensions):
+    if not content_type.startswith("audio/") and not audio.filename.lower().endswith(ALLOWED_AUDIO_EXTENSIONS):
         raise HTTPException(status_code=415, detail="unsupported_audio_type")
 
     data = await audio.read(MAX_AUDIO_BYTES + 1)
@@ -79,6 +85,7 @@ async def upload_voice(
     if len(data) > MAX_AUDIO_BYTES:
         raise HTTPException(status_code=413, detail="audio_too_large")
 
+    speech_provider = os.environ.get("SPEECH_PROVIDER", "").strip()
     return {
         "status": "received",
         "filename": audio.filename,
@@ -87,5 +94,6 @@ async def upload_voice(
         "request": request,
         "transcription": None,
         "audio_response": None,
-        "provider_required": "speech_provider_required",
+        "provider_required": None if speech_provider else "speech_provider_required",
+        "speech_provider": speech_provider or None,
     }
