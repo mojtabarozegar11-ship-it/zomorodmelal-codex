@@ -1,13 +1,14 @@
 {
-  "runtime_name": "zomorodmelal-canonical-master-agent",
-  "runtime_version": "1.0.0",
-  "kernel": "autonomous_core.MasterCore",
-  "public_entrypoint": "python -m master_agent",
-  "execution_mode": "sandbox_control_plane",
-  "production_runtime": "master_agent",
-  "retired_parallel_runtimes": ["auto_agent/runtime", "orchestrator"],
+  "product": "Zomorod Melal Android Application",
+  "production_target": "android",
+  "canonical_runtime": "master_agent.CanonicalMasterAgent",
+  "canonical_kernel": "autonomous_core.MasterCore",
+  "android_project": "worker_mojtaba/android",
+  "install_artifact": "APK",
+  "release_artifact": "AAB",
+  "server_hosting": false,
+  "cpanel_production": false,
+  "django_production_runtime": false,
   "external_execution": false,
-  "owner_approval_required": true,
-  "credential_acquisition": false,
-  "real_world_deployment": false
+  "owner_approval_required": true
 }
