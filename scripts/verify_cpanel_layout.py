@@ -28,10 +28,10 @@ if not WORKFLOW.exists():
 workflow = WORKFLOW.read_text(encoding="utf-8")
 required_markers = [
     "cp -a django_project/. package/zomorodmelal-app/",
-    "test -f zomorodmelal-app/manage.py",
-    "test -f zomorodmelal-app/passenger_wsgi.py",
-    "test -f zomorodmelal-app/config/settings.py",
-    "test -f zomorodmelal-app/requirements-host.txt",
+    "test -f package/zomorodmelal-app/manage.py",
+    "test -f package/zomorodmelal-app/passenger_wsgi.py",
+    "test -f package/zomorodmelal-app/requirements-host.txt",
+    "test -d package/zomorodmelal-app/config",
 ]
 missing_markers = [m for m in required_markers if m not in workflow]
 if missing_markers:
