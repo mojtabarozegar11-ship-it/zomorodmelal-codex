@@ -1,4 +1,4 @@
-name: DEPRECATED - Server Deployment Disabled
+name: Deprecated server deployment gate
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ jobs:
     steps:
       - name: Explain
         run: |
-          echo "Server/cPanel deployment is intentionally disabled."
-          echo "Production target is the installable Android application."
+          echo "This legacy production-deploy workflow is intentionally disabled."
+          echo "Use cPanel package/deploy workflows for the Django host runtime."
+          echo "Use the Android production workflow for APK/AAB validation."
           exit 1
