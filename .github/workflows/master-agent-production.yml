@@ -1,36 +1,73 @@
-name: Master Agent Production Validation
+name: Android Master Agent Production
 
 on:
   push:
-    branches: ["master-agent-production", "main"]
+    branches: [master-agent-production, main]
+    paths:
+      - "master_agent/**"
+      - "autonomous_core/**"
+      - "worker_mojtaba/android/**"
+      - "tests/test_canonical_master_agent_runtime.py"
+      - ".github/workflows/master-agent-production.yml"
   pull_request:
-    branches: ["master-agent-production", "main"]
+    branches: [master-agent-production, main]
   workflow_dispatch:
 
+concurrency:
+  group: android-master-agent-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  canonical-runtime:
     runs-on: ubuntu-latest
-    env:
-      DJANGO_DEBUG: "true"
-      DJANGO_SECRET_KEY: "ci-test-secret"
-      DJANGO_DB_PATH: /tmp/zomorodmelal-ci.sqlite3
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install project dependencies
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Verify canonical runtime
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r worker_mojtaba/requirements.txt
-      - name: Canonical runtime readiness
-        run: python -m master_agent --check --json
-      - name: Canonical runtime smoke cycle
-        run: python -m master_agent --once --goal "CI production runtime smoke test" --json
-      - name: Django system checks
-        working-directory: django_project
-        run: python manage.py check
-      - name: Test suite
-        run: pytest -q --disable-warnings
+          python -m master_agent --check --json
+          python -m master_agent --once --goal "Android production smoke test" --json
+          python -m pytest -q tests/test_canonical_master_agent_runtime.py
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker_mojtaba/android
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Validate Android project
+        run: |
+          test -f settings.gradle.kts
+          test -f build.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/src/main/AndroidManifest.xml
+      - name: Unit tests
+        run: gradle --no-daemon --stacktrace test
+      - name: Build debug APK
+        run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Build release AAB
+        run: gradle --no-daemon --stacktrace bundleRelease
+      - name: Verify release artifacts
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zomorodmelal-android-artifacts
+          path: |
+            worker_mojtaba/android/app/build/outputs/apk/debug/app-debug.apk
+            worker_mojtaba/android/app/build/outputs/bundle/release/app-release.aab
