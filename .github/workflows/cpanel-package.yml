@@ -1,14 +1,50 @@
-name: DEPRECATED - cPanel Packaging Disabled
+name: Build cPanel deployment package
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - release/cpanel-final-20260921
+
+permissions:
+  contents: read
 
 jobs:
-  blocked:
+  package:
     runs-on: ubuntu-latest
     steps:
-      - name: Explain
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare deployment layout
+        shell: bash
         run: |
-          echo "cPanel packaging is intentionally disabled."
-          echo "The product is an Android application, not a hosted web application."
-          exit 1
+          set -euo pipefail
+          rm -rf package ZOMORODMEL.IR.zip
+          mkdir -p package/zomorodmelal-app
+          cp -a django_project/. package/zomorodmelal-app/
+          for path in autonomous_core django_integration ai_engine ai_providers agents agent_runtime access memory monitoring orchestrator planner sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research; do
+            if [ -e "$path" ]; then cp -a "$path" package/zomorodmelal-app/; fi
+          done
+          for file in run_master_agent.py ai_bridge.py README.md CPANEL_DEPLOYMENT.md HOST_FINAL_INSTALL_CHECKLIST.md; do
+            if [ -e "$file" ]; then cp -a "$file" package/zomorodmelal-app/; fi
+          done
+          test -f package/zomorodmelal-app/manage.py
+          test -f package/zomorodmelal-app/passenger_wsgi.py
+          test -f package/zomorodmelal-app/requirements-host.txt
+          test -d package/zomorodmelal-app/config
+
+      - name: Build archive
+        run: |
+          cd package
+          zip -qr ../ZOMORODMEL.IR.zip zomorodmelal-app
+          cd ..
+          sha256sum ZOMORODMEL.IR.zip > ZOMORODMEL.IR.zip.sha256
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZOMORODMEL-IR-cpanel
+          path: |
+            ZOMORODMEL.IR.zip
+            ZOMORODMEL.IR.zip.sha256
