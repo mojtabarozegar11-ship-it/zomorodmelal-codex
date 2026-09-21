@@ -76,8 +76,8 @@ class WorkerService:
         approved: bool = False,
     ) -> dict[str, Any]:
         execution_context = dict(context or {})
-        if not execution_context:
-            execution_context = {"require_approval": False}
+        if context is None:
+            execution_context["require_approval"] = False
         lifecycle = self.master.run(
             request,
             approved=approved,
