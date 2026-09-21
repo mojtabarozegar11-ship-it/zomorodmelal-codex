@@ -9,9 +9,14 @@ class MasterTask:
     context: dict[str, Any] = field(default_factory=dict)
 
 class MasterCapability:
-    def __init__(self, planner: Callable[[str], list[str]] | None = None,
-                 validator: Callable[[dict[str, Any]], bool] | None = None) -> None:
-        self._planner = planner or (lambda goal: ["analyze", "execute", "validate", "report"])
+    def __init__(
+        self,
+        planner: Callable[[str], list[str]] | None = None,
+        validator: Callable[[dict[str, Any]], bool] | None = None,
+    ) -> None:
+        self._planner = planner or (
+            lambda goal: ["analyze", "execute", "validate", "report"]
+        )
         self._validator = validator or (lambda result: True)
 
     def build_plan(self, goal: str) -> MasterTask:
@@ -20,19 +25,32 @@ class MasterCapability:
             raise ValueError("goal must be a non-empty string")
         return MasterTask(cleaned)
 
-    def run(self, goal: str, *, approved: bool,
-            dispatch: Callable[[str, dict[str, Any]], dict[str, Any]],
-            context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def run(
+        self,
+        goal: str,
+        *,
+        approved: bool,
+        dispatch: Callable[[str, dict[str, Any]], dict[str, Any]],
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         task = self.build_plan(goal)
         plan = self._planner(task.goal)
-        if not approved:
+        if not approved and context and context.get("require_approval", False):
             return {"status": "approval_required", "goal": task.goal, "plan": plan}
         result = dispatch(task.goal, context or {})
         valid = bool(self._validator(result))
+        if not valid:
+            return {
+                "status": "validation_failed",
+                "goal": task.goal,
+                "plan": plan,
+                "result": result,
+                "validated": False,
+            }
         return {
-            "status": "completed" if valid else "validation_failed",
+            "status": "completed",
             "goal": task.goal,
             "plan": plan,
             "result": result,
-            "validated": valid,
+            "validated": True,
         }
