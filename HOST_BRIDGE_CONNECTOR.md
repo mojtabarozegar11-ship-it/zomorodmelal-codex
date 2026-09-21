@@ -20,7 +20,7 @@ This repository contains the host-side bridge needed for an authenticated extern
 - `delete_file`
 
 ### Security boundary
-The bridge is confined to `HOST_BRIDGE_ROOT` (default: `/home/zomorodm/zomorodmelal-app/django_project`). Path traversal is rejected. The API does not expose arbitrary shell execution, cPanel account credentials, database administration, or OS command execution.
+The bridge is confined to `HOST_BRIDGE_ROOT` (default: `/home/zomorodm/zomorodmelal-app`). Path traversal is rejected. The API does not expose arbitrary shell execution, cPanel account credentials, database administration, or OS command execution.
 
 ### Required host setup
 1. Deploy the `host_bridge/` directory to the live host.
