@@ -3,18 +3,24 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-android { namespace = "com.mojtaba.worker"; compileSdk = 35
-    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+android {
+    namespace = "com.mojtaba.worker"
+    compileSdk = 35
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
     kotlinOptions { jvmTarget = "17" }
+
     defaultConfig {
         applicationId = "com.mojtaba.worker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.3.0"
-        buildConfigField("String", "WORKER_API_BASE_URL", "\"https://api.invalid.local\"" )
-        // Network integration is optional; the Master Agent runs locally on Android. Do not embed secrets.
+        versionCode = 10
+        versionName = "1.0.0"
+        buildConfigField("String", "WORKER_API_BASE_URL", ""${WORKER_API_BASE_URL:-}"")
     }
+
     buildFeatures { buildConfig = true }
 }
 
