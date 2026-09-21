@@ -9,12 +9,10 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.mojtaba.worker.network.WorkerApiClient
-import kotlinx.coroutines.*
+import com.mojtaba.worker.agent.MasterAgentCoordinator
 import com.mojtaba.worker.voice.VoicePlayer
 import com.mojtaba.worker.voice.VoiceRecorder
-
-private const val WORKER_API_BASE_URL = BuildConfig.WORKER_API_BASE_URL
+import kotlinx.coroutines.*
 
 class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -24,6 +22,7 @@ class MainActivity : ComponentActivity() {
     private var recordingFile: java.io.File? = null
     private var isRecording = false
     private var isSending = false
+    private lateinit var masterAgent: MasterAgentCoordinator
     private lateinit var messages: TextView
     private lateinit var scroll: ScrollView
     private lateinit var input: EditText
@@ -34,6 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         recorder = VoiceRecorder(this)
+        masterAgent = MasterAgentCoordinator(this)
         requestDevicePermissions()
         setContentView(buildUi())
     }
@@ -55,8 +55,8 @@ class MainActivity : ComponentActivity() {
             setPadding(32, 32, 32, 24)
         }
         val title = TextView(this).apply {
-            text = "کارگر مجتبی"
-            textSize = 28f
+            text = "کارگر مجتبی — Master Agent"
+            textSize = 26f
             setTextColor(Color.BLACK)
             gravity = Gravity.CENTER
         }
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
 
         scroll = ScrollView(this)
         messages = TextView(this).apply {
-            text = "کارگر مجتبی آماده است."
+            text = "Master Agent محلی آماده است."
             textSize = 17f
             setTextColor(Color.DKGRAY)
             setPadding(0, 24, 0, 24)
@@ -73,7 +73,11 @@ class MainActivity : ComponentActivity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        input = EditText(this).apply { hint = "چه کاری انجام بدهم؟"; setSingleLine(true); imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND }
+        input = EditText(this).apply {
+            hint = "چه کاری انجام بدهم؟"
+            setSingleLine(true)
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+        }
         send = Button(this).apply { text = "ارسال" }
         voice = Button(this).apply { text = "🎤 پیام صوتی" }
         clear = Button(this).apply { text = "پاک کردن" }
@@ -83,17 +87,14 @@ class MainActivity : ComponentActivity() {
         row.addView(clear, LinearLayout.LayoutParams(-2, -2))
         root.addView(row)
 
-        clear.setOnClickListener {
-            messages.text = "کارگر مجتبی آماده است."
-            scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
-        }
+        clear.setOnClickListener { messages.text = "Master Agent محلی آماده است." }
 
-        val client = WorkerApiClient(WORKER_API_BASE_URL)
         voice.setOnClickListener {
             try {
                 if (!isRecording) {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                        permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO)); return@setOnClickListener
+                        permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+                        return@setOnClickListener
                     }
                     recordingFile = recorder.start()
                     isRecording = true
@@ -105,33 +106,24 @@ class MainActivity : ComponentActivity() {
                     voice.text = "🔊 پخش پیام صوتی"
                     player.play(file)
                     appendMessage("\n\nشما: 🎤 پیام صوتی")
-                    scope.launch {
-                        try {
-                            val result = withContext(Dispatchers.IO) { client.sendVoice(file) }
-                            appendMessage("\nکارگر: " + result.message())
-                        } catch (e: Exception) {
-                            appendMessage("\nخطای ارسال صوت: " + (e.message ?: "اتصال برقرار نشد"))
-                        }
-                    }
+                    appendMessage("\nMaster Agent: فایل صوتی روی دستگاه ثبت شد؛ اجرای بیرونی فعال نیست.")
                 }
-            } catch (e: Exception) { appendMessage("\nخطای صوتی: " + (e.message ?: "خطا")) }
+            } catch (e: Exception) {
+                appendMessage("\nخطای صوتی: " + (e.message ?: "خطا"))
+                resetVoiceButton()
+            }
         }
 
-        send.setOnClickListener { submitRequest(client) }
+        send.setOnClickListener { submitRequest() }
         input.setOnEditorActionListener { _, actionId, event ->
             val sendAction = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND
             val enterKey = event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
-            if (sendAction || enterKey) { submitRequest(client); true } else false
+            if (sendAction || enterKey) { submitRequest(); true } else false
         }
         return root
     }
 
-    private fun resetVoiceButton() {
-        isRecording = false
-        voice.text = "🎤 پیام صوتی"
-    }
-
-    private fun submitRequest(client: WorkerApiClient) {
+    private fun submitRequest() {
         if (isSending) return
         val request = input.text.toString().trim()
         if (request.isEmpty()) return
@@ -141,10 +133,10 @@ class MainActivity : ComponentActivity() {
         appendMessage("\n\nشما: $request")
         scope.launch {
             try {
-                val result = withContext(Dispatchers.IO) { client.sendTask(request) }
-                appendMessage("\nکارگر: " + result.message())
+                val result = masterAgent.submit(request)
+                appendMessage("\nMaster Agent: " + result.message)
             } catch (e: Exception) {
-                appendMessage("\nخطا: " + (e.message ?: "اتصال برقرار نشد"))
+                appendMessage("\nخطا: " + (e.message ?: "اجرای محلی ناموفق بود"))
             } finally {
                 isSending = false
                 setControlsEnabled(true)
@@ -159,10 +151,14 @@ class MainActivity : ComponentActivity() {
         if (!isRecording) voice.isEnabled = enabled
     }
 
+    private fun resetVoiceButton() {
+        isRecording = false
+        voice.text = "🎤 پیام صوتی"
+    }
+
     override fun onDestroy() {
         player.stop()
         recorder.cancel()
-        resetVoiceButton()
         recordingFile?.delete()
         scope.cancel()
         super.onDestroy()
