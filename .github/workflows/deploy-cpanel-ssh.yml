@@ -1,0 +1,109 @@
+name: Deploy to Pars Web Server cPanel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in CPANEL_SSH_HOST CPANEL_SSH_PORT CPANEL_SSH_USER CPANEL_SSH_PRIVATE_KEY CPANEL_SSH_KNOWN_HOSTS CPANEL_APP_ROOT; do
+            test -n "${!v}" || { echo "Missing secret: $v"; exit 1; }
+          done
+        env:
+          CPANEL_SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+          CPANEL_SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+          CPANEL_SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+          CPANEL_SSH_PRIVATE_KEY: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+          CPANEL_SSH_KNOWN_HOSTS: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+          CPANEL_APP_ROOT: ${{ secrets.CPANEL_APP_ROOT }}
+
+      - name: Build package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf package ZOMORODMEL.IR.zip
+          mkdir -p package/zomorodmelal-app
+          cp -a django_project/. package/zomorodmelal-app/
+          for path in autonomous_core django_integration ai_engine ai_providers agents agent_runtime access memory monitoring orchestrator planner sandbox security self_audit self_improvement site_integration tasks telegram_control testing tools versioning web_research; do
+            if [ -e "$path" ]; then cp -a "$path" package/zomorodmelal-app/; fi
+          done
+          for file in run_master_agent.py ai_bridge.py README.md CPANEL_DEPLOYMENT.md HOST_FINAL_INSTALL_CHECKLIST.md; do
+            if [ -e "$file" ]; then cp -a "$file" package/zomorodmelal-app/; fi
+          done
+          test -f package/zomorodmelal-app/manage.py
+          test -f package/zomorodmelal-app/passenger_wsgi.py
+          test -f package/zomorodmelal-app/requirements-host.txt
+          cd package
+          zip -qr ../ZOMORODMEL.IR.zip zomorodmelal-app
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.CPANEL_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Upload archive
+        run: |
+          scp -P "${{ secrets.CPANEL_SSH_PORT }}" ZOMORODMEL.IR.zip "${{ secrets.CPANEL_SSH_USER }}@${{ secrets.CPANEL_SSH_HOST }}:~/ZOMORODMEL.IR.zip"
+
+      - name: Install, migrate, collect static and restart Passenger
+        shell: bash
+        env:
+          CPANEL_SSH_HOST: ${{ secrets.CPANEL_SSH_HOST }}
+          CPANEL_SSH_PORT: ${{ secrets.CPANEL_SSH_PORT }}
+          CPANEL_SSH_USER: ${{ secrets.CPANEL_SSH_USER }}
+          CPANEL_APP_ROOT: ${{ secrets.CPANEL_APP_ROOT }}
+        run: |
+          set -euo pipefail
+          ssh -p "$CPANEL_SSH_PORT" "$CPANEL_SSH_USER@$CPANEL_SSH_HOST" "APP_ROOT='$CPANEL_APP_ROOT' bash -s" <<'REMOTE'
+          set -euo pipefail
+          : "${APP_ROOT:?CPANEL_APP_ROOT is required}"
+          RELEASE_DIR="$HOME/.zomorodmelal-release-$(date +%Y%m%d%H%M%S)"
+          mkdir -p "$RELEASE_DIR"
+          unzip -q "$HOME/ZOMORODMEL.IR.zip" -d "$RELEASE_DIR"
+          APP_SOURCE="$RELEASE_DIR/zomorodmelal-app"
+          test -f "$APP_SOURCE/manage.py"
+          test -f "$APP_SOURCE/passenger_wsgi.py"
+          test -f "$APP_SOURCE/requirements-host.txt"
+
+          mkdir -p "$APP_ROOT"
+          if [ ! -x "$APP_ROOT/.venv/bin/python" ]; then
+            python3.11 -m venv "$APP_ROOT/.venv"
+          fi
+
+          "$APP_ROOT/.venv/bin/python" -m pip install --upgrade pip
+          "$APP_ROOT/.venv/bin/python" -m pip install -r "$APP_SOURCE/requirements-host.txt"
+
+          cd "$APP_SOURCE"
+          "$APP_ROOT/.venv/bin/python" manage.py check
+          "$APP_ROOT/.venv/bin/python" manage.py migrate
+          "$APP_ROOT/.venv/bin/python" manage.py collectstatic --noinput
+          "$APP_ROOT/.venv/bin/python" -c "import config.wsgi; import passenger_wsgi; print('WSGI OK')"
+
+          mkdir -p "$APP_ROOT/tmp"
+          find "$APP_ROOT" -mindepth 1 -maxdepth 1 ! -name .venv ! -name tmp -exec rm -rf {} +
+          cp -a "$APP_SOURCE/." "$APP_ROOT/"
+          touch "$APP_ROOT/tmp/restart.txt"
+
+          rm -f "$HOME/ZOMORODMEL.IR.zip"
+          rm -rf "$RELEASE_DIR"
+          REMOTE
+
+      - name: HTTPS smoke test
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 30 https://zomorodmelal.ir/ >/dev/null
