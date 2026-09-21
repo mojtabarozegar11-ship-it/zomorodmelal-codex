@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class MasterAgentCoordinator(context: Context) {
-    private val engine = MasterAgentEngine(context)
+    private val engine = MasterAgentEngine(context.filesDir)
 
     suspend fun submit(goal: String): AgentResult = withContext(Dispatchers.Default) {
         engine.submit(goal)

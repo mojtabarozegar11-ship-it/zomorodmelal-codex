@@ -1,6 +1,5 @@
 package com.mojtaba.worker.agent
 
-import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -12,9 +11,9 @@ data class AgentResult(
     val data: JSONObject
 )
 
-class MasterAgentEngine(context: Context) {
-    private val stateFile = File(context.filesDir, "master_agent_state.json")
-    private val missionFile = File(context.filesDir, "master_agent_missions.json")
+class MasterAgentEngine(private val rootDir: File) {
+    private val stateFile = File(rootDir, "master_agent_state.json")
+    private val missionFile = File(rootDir, "master_agent_missions.json")
     private val sequence = AtomicLong(loadState().optLong("sequence", 0L))
 
     @Synchronized
@@ -47,12 +46,13 @@ class MasterAgentEngine(context: Context) {
         queue.put(mission)
         saveMissions(queue)
 
-        val state = loadState()
+        val currentState = loadState()
+        val state = currentState
             .put("sequence", id)
             .put("last_goal", clean)
             .put("last_mission_id", id)
             .put("phase", "next_goal")
-            .put("cycles", loadState().optLong("cycles", 0L) + 1L)
+            .put("cycles", currentState.optLong("cycles", 0L) + 1L)
         saveState(state)
 
         val response = JSONObject()
@@ -95,7 +95,7 @@ class MasterAgentEngine(context: Context) {
     }.getOrElse { JSONObject() }
 
     private fun saveState(value: JSONObject) {
-        stateFile.parentFile?.mkdirs()
+        rootDir.mkdirs()
         stateFile.writeText(value.toString(2))
     }
 
@@ -104,7 +104,7 @@ class MasterAgentEngine(context: Context) {
     }.getOrElse { JSONArray() }
 
     private fun saveMissions(value: JSONArray) {
-        missionFile.parentFile?.mkdirs()
+        rootDir.mkdirs()
         missionFile.writeText(value.toString(2))
     }
 }
