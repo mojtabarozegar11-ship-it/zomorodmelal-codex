@@ -79,6 +79,7 @@ jobs:
           test -f "$APP_SOURCE/manage.py"
           test -f "$APP_SOURCE/passenger_wsgi.py"
           test -f "$APP_SOURCE/requirements-host.txt"
+          case "$APP_ROOT" in */public_html|*/public_html/*) echo "Refusing public_html deployment root"; exit 1;; esac
 
           mkdir -p "$APP_ROOT"
           if [ ! -x "$APP_ROOT/.venv/bin/python" ]; then
