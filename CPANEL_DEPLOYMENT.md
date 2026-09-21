@@ -2,10 +2,11 @@
 
 این نسخه برای اجرای Django با Passenger آماده شده است.
 
-## قرارداد اجرای تولید
+## قرارداد اجرای تولید و cPanel
 
 - دامنه: `https://zomorodmelal.ir`
 - Application Root: `/home/zomorodm/zomorodmelal-app`
+- Python App root must expose `manage.py` and `passenger_wsgi.py` directly
 - Startup File: `passenger_wsgi.py`
 - Entry Point: `application`
 - Python: 3.11.x
@@ -44,7 +45,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
 
 کلیدهای سرویس‌های AI فقط در Environment Variables هاست قرار گیرند و داخل Git commit نشوند.
 
-## نصب دستی
+## نصب دستی و بررسی Passenger
 
 از Terminal/SSH هاست:
 
