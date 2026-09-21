@@ -17,9 +17,9 @@ class MasterAgentEngineTest {
         assertEquals("planned", result.status)
         assertTrue(result.data.getJSONObject("safety").getBoolean("sandbox_only"))
         assertFalse(result.data.getJSONObject("execution").getBoolean("real_world_action"))
-        assertTrue(
-            MasterAgentEngine(tempFolder.root).status()
-                .getString("runtime") == "zomorodmelal-android-local"
+        assertEquals(
+            "zomorodmelal-android",
+            MasterAgentEngine(tempFolder.root).status().getString("runtime")
         )
     }
 }
