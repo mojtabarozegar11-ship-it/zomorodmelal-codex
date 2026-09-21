@@ -55,7 +55,8 @@ class MainActivity : ComponentActivity() {
             setPadding(32, 32, 32, 24)
         }
         val title = TextView(this).apply {
-            text = "کارگر مجتبی — Master Agent"
+            text = "کارگر مجتبی"
+
             textSize = 26f
             setTextColor(Color.BLACK)
             gravity = Gravity.CENTER
@@ -64,7 +65,8 @@ class MainActivity : ComponentActivity() {
 
         scroll = ScrollView(this)
         messages = TextView(this).apply {
-            text = "Master Agent محلی آماده است."
+            text = "دستیار آماده است. درخواست خود را بنویسید یا با صدا بگویید."
+
             textSize = 17f
             setTextColor(Color.DKGRAY)
             setPadding(0, 24, 0, 24)
@@ -74,20 +76,23 @@ class MainActivity : ComponentActivity() {
 
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         input = EditText(this).apply {
-            hint = "چه کاری انجام بدهم؟"
+            hint = "چه کاری برایتان انجام بدهم؟"
+
             setSingleLine(true)
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
         }
-        send = Button(this).apply { text = "ارسال" }
+        send = Button(this).apply { text = "اجرا" }
+
         voice = Button(this).apply { text = "🎤 پیام صوتی" }
-        clear = Button(this).apply { text = "پاک کردن" }
+        clear = Button(this).apply { text = "پاک‌سازی" }
+
         row.addView(input, LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(send, LinearLayout.LayoutParams(-2, -2))
         row.addView(voice, LinearLayout.LayoutParams(-2, -2))
         row.addView(clear, LinearLayout.LayoutParams(-2, -2))
         root.addView(row)
 
-        clear.setOnClickListener { messages.text = "Master Agent محلی آماده است." }
+        clear.setOnClickListener { messages.text = "دستیار آماده است. درخواست خود را بنویسید یا با صدا بگویید." }
 
         voice.setOnClickListener {
             try {
@@ -103,10 +108,18 @@ class MainActivity : ComponentActivity() {
                     val file = recorder.stop()
                     recordingFile = file
                     isRecording = false
-                    voice.text = "🔊 پخش پیام صوتی"
+                    voice.text = "🔊 پخش صدا"
+
                     player.play(file)
                     appendMessage("\n\nشما: 🎤 پیام صوتی")
-                    appendMessage("\nMaster Agent: فایل صوتی روی دستگاه ثبت شد؛ اجرای بیرونی فعال نیست.")
+                    scope.launch {
+                        try {
+                            val result = masterAgent.submitVoice(file)
+                            appendMessage("\nدستیار: " + result.message)
+                        } catch (e: Exception) {
+                            appendMessage("\nخطا در پردازش صدا: " + (e.message ?: "خطای ناشناخته"))
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 appendMessage("\nخطای صوتی: " + (e.message ?: "خطا"))
