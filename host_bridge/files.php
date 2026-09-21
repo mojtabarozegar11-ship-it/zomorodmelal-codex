@@ -7,14 +7,14 @@ declare(strict_types=1);
  * Required:
  *   HOST_BRIDGE_TOKEN or HOST_BRIDGE_TOKEN_FILE
  * Optional:
- *   HOST_BRIDGE_ROOT (defaults to the Django project root)
+ *   HOST_BRIDGE_ROOT (defaults to the cPanel application root)
  *   HOST_BRIDGE_AUDIT_FILE
  *
  * This endpoint intentionally provides file operations only.
  * It never executes arbitrary shell commands.
  */
 
-const DEFAULT_ROOT = '/home/zomorodm/zomorodmelal-app/django_project';
+const DEFAULT_ROOT = '/home/zomorodm/zomorodmelal-app';
 const DEFAULT_TOKEN_FILE = '/home/zomorodm/.host_bridge_token';
 const DEFAULT_AUDIT_FILE = '/home/zomorodm/.host_bridge_audit.log';
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
