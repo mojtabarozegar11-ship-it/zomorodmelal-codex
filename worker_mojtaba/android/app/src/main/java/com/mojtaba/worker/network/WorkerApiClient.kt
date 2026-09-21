@@ -34,6 +34,8 @@ class WorkerApiClient(private val baseUrl: String) {
         require(parsed.rawFragment.isNullOrBlank()) { "Worker API URL نباید fragment داشته باشد." }
         require(parsed.host?.isNotBlank() == true) { "Worker API URL نامعتبر است." }
         require(parsed.port == -1 || parsed.port in 1..65535) { "Worker API URL نامعتبر است." }
+        val authority = parsed.rawAuthority.orEmpty().substringAfter('@')
+        require(!authority.endsWith(":")) { "Worker API URL نامعتبر است." }
         return baseUrl.trimEnd('/')
     }
 
