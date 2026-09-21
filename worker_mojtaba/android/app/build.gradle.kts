@@ -20,7 +20,7 @@ android {
         targetSdk = 35
         versionCode = 10
         versionName = "1.0.0"
-        buildConfigField("String", "WORKER_API_BASE_URL", """")
+        buildConfigField("String", "WORKER_API_BASE_URL", "\"\"")
     }
 
     buildFeatures { buildConfig = true }
