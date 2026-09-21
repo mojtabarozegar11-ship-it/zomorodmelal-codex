@@ -62,7 +62,9 @@ def create_task(
     authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     _require_token(authorization)
-    return service.handle(payload.request, payload.context, approved=payload.approved)
+    context = dict(payload.context)
+    context["require_approval"] = not payload.approved
+    return service.handle(payload.request, context, approved=payload.approved)
 
 
 @app.post("/v1/voice")
