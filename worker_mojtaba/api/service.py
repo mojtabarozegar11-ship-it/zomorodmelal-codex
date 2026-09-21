@@ -85,6 +85,18 @@ class WorkerService:
             context=execution_context,
         )
         result = lifecycle.get("result") or {}
+        if lifecycle.get("status") == "approval_required":
+            return {
+                "status": "approval_required",
+                "request": request,
+                "intent": None,
+                "route": None,
+                "plan": lifecycle.get("plan", []),
+                "ai": {},
+                "execution": {},
+                "tools": [],
+                "authorization": {},
+            }
         execution = result.get("execution") or {}
         self.audit.record(
             "task",
