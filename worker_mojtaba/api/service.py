@@ -1,10 +1,11 @@
-"""Application service boundary for Android clients."""
+"""Application service boundary for Worker Mojtaba."""
 from decimal import Decimal
 from typing import Any
 
 from worker_mojtaba.ai.registry import AIProviderRegistry
 from worker_mojtaba.core.engine import ExecutionEngine
 from worker_mojtaba.core.memory import MemoryStore
+from worker_mojtaba.core.master_capability import MasterCapability
 from worker_mojtaba.tools.registry import ToolRegistry
 from worker_mojtaba.tools.center import ToolCenter
 from worker_mojtaba.tools.media_adapter import MediaToolAdapter
@@ -61,14 +62,30 @@ class WorkerService:
         self.engine = ExecutionEngine(
             self.memory, self.tools, ai_registry, self.tool_center, policy=self.policy
         )
+        self.master = MasterCapability()
         self.audit = AuditLog()
 
-    def handle(self, request: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
-        result = self.engine.run(request, context=context or {})
+    def dispatch(self, request: str, context: dict[str, Any]) -> dict[str, Any]:
+        return self.engine.run(request, context=context)
+
+    def handle(
+        self,
+        request: str,
+        context: dict[str, Any] | None = None,
+        *,
+        approved: bool = False,
+    ) -> dict[str, Any]:
+        lifecycle = self.master.run(
+            request,
+            approved=approved,
+            dispatch=self.dispatch,
+            context=context or {},
+        )
+        result = lifecycle.get("result") or {}
         execution = result.get("execution") or {}
         self.audit.record(
             "task",
-            execution.get("result_state", result.get("status", "unknown")),
+            execution.get("result_state", lifecycle.get("status", "unknown")),
             {
                 "request": request,
                 "route": result.get("route"),
@@ -78,4 +95,6 @@ class WorkerService:
                 "execution_status": execution.get("status"),
             },
         )
+        if lifecycle.get("status") != "completed":
+            return lifecycle
         return result
