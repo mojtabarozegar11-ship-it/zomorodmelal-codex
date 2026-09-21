@@ -75,11 +75,14 @@ class WorkerService:
         *,
         approved: bool = False,
     ) -> dict[str, Any]:
+        execution_context = dict(context or {})
+        if not execution_context:
+            execution_context = {"require_approval": False}
         lifecycle = self.master.run(
             request,
             approved=approved,
             dispatch=self.dispatch,
-            context=context or {},
+            context=execution_context,
         )
         result = lifecycle.get("result") or {}
         execution = result.get("execution") or {}
