@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var voice: Button
     private lateinit var clear: Button
     private lateinit var settings: Button
+    private lateinit var status: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,7 +69,7 @@ class MainActivity : ComponentActivity() {
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
 
-        val status = TextView(this).apply {
+        status = TextView(this).apply {
             text = "آماده به کار"
             textSize = 14f
             setTextColor(Color.DKGRAY)
@@ -233,24 +234,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun statusView(value: String) {
-        val root = window.decorView.findViewById<TextView>(android.R.id.content)
-        // The visible status label is updated through the title hierarchy on the main thread.
-        val content = root as? android.view.ViewGroup ?: return
-        findFirstTextView(content)?.let { tv ->
-            if (tv !== messages) tv.text = value
-        }
-    }
-
-    private fun findFirstTextView(view: android.view.ViewGroup): TextView? {
-        for (index in 0 until view.childCount) {
-            val child = view.getChildAt(index)
-            if (child is TextView && child !== messages) return child
-            if (child is android.view.ViewGroup) {
-                val nested = findFirstTextView(child)
-                if (nested != null) return nested
-            }
-        }
-        return null
+        status.text = value
     }
 
     private fun setControlsEnabled(enabled: Boolean) {
