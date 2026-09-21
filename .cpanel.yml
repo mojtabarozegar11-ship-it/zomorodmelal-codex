@@ -1,0 +1,4 @@
+deployment:
+  tasks:
+    - /bin/mkdir -p /home/zomorodm/zomorodmelal-app/tmp
+    - /bin/touch /home/zomorodm/zomorodmelal-app/tmp/restart.txt
