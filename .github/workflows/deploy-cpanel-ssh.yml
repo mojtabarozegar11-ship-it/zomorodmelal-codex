@@ -1,10 +1,17 @@
 name: Deploy to Pars Web Server cPanel
 
 on:
+  push:
+    branches:
+      - release/cpanel-final-20260921
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: cpanel-production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
