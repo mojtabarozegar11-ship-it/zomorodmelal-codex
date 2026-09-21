@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from worker_mojtaba.api.service import WorkerService
 
-app = FastAPI(title="Worker Mojtaba API", version="0.5.0")
+app = FastAPI(title="Worker Mojtaba API", version="0.6.0")
 service = WorkerService()
 
 MAX_REQUEST_LENGTH = 8_000
@@ -17,6 +17,7 @@ MAX_AUDIO_BYTES = 10 * 1024 * 1024
 class TaskRequest(BaseModel):
     request: str = Field(min_length=1, max_length=MAX_REQUEST_LENGTH)
     context: dict[str, Any] = Field(default_factory=dict)
+    approved: bool = False
 
 
 class TaskResponse(BaseModel):
@@ -28,6 +29,7 @@ class TaskResponse(BaseModel):
     ai: dict[str, Any] = Field(default_factory=dict)
     execution: dict[str, Any] = Field(default_factory=dict)
     tools: list[str] = Field(default_factory=list)
+    authorization: dict[str, Any] = Field(default_factory=dict)
 
 
 def _require_token(authorization: str | None) -> None:
@@ -43,7 +45,7 @@ def _require_token(authorization: str | None) -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "worker-mojtaba", "version": "0.5.0"}
+    return {"status": "ok", "service": "worker-mojtaba", "version": "0.6.0"}
 
 
 @app.post("/v1/tasks", response_model=TaskResponse)
@@ -52,7 +54,7 @@ def create_task(
     authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
     _require_token(authorization)
-    result = service.handle(payload.request, payload.context)
+    result = service.handle(payload.request, payload.context, approved=payload.approved)
     return result
 
 
