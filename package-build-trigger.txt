@@ -1,1 +1,2 @@
-cPanel deployment package build trigger.\n
+cPanel deployment package build trigger.
+retry=1
