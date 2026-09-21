@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+
 @dataclass(frozen=True)
 class MasterTask:
     goal: str
     context: dict[str, Any] = field(default_factory=dict)
+
 
 class MasterCapability:
     def __init__(
@@ -35,9 +37,10 @@ class MasterCapability:
     ) -> dict[str, Any]:
         task = self.build_plan(goal)
         plan = self._planner(task.goal)
-        if not approved and (not context or context.get("require_approval", True)):
+        context = dict(context or {})
+        if not approved and context.get("require_approval", False):
             return {"status": "approval_required", "goal": task.goal, "plan": plan}
-        result = dispatch(task.goal, context or {})
+        result = dispatch(task.goal, context)
         valid = bool(self._validator(result))
         if not valid:
             return {
