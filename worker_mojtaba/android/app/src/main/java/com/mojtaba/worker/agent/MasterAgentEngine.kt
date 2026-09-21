@@ -20,11 +20,12 @@ class MasterAgentEngine(private val rootDir: File) {
     fun status(): JSONObject {
         val state = loadState()
         return JSONObject(state.toString()).apply {
-            put("runtime", "zomorodmelal-android-local")
+            put("runtime", "zomorodmelal-android")
             put("version", "1.0.0")
-            put("execution_mode", "device_local_safe")
+            put("execution_mode", "api_first_with_local_fallback")
             put("owner_approval_required", true)
             put("real_world_execution", false)
+            put("api_configured", System.getenv("WORKER_API_BASE_URL")?.isNotBlank() == true)
         }
     }
 
@@ -51,17 +52,17 @@ class MasterAgentEngine(private val rootDir: File) {
             .put("sequence", id)
             .put("last_goal", clean)
             .put("last_mission_id", id)
-            .put("phase", "next_goal")
+            .put("phase", "planned")
             .put("cycles", currentState.optLong("cycles", 0L) + 1L)
         saveState(state)
 
         val response = JSONObject()
             .put("status", "planned")
-            .put("message", "مأموریت محلی ثبت و برای اجرا در محیط امن آماده شد.")
+            .put("message", "درخواست شما ثبت شد و برای پردازش آماده است.")
             .put("mission_id", id)
             .put("goal", clean)
             .put("execution", JSONObject()
-                .put("status", "sandbox_planned")
+                .put("status", "planned")
                 .put("safe", true)
                 .put("real_world_action", false))
             .put("safety", JSONObject()
@@ -82,11 +83,11 @@ class MasterAgentEngine(private val rootDir: File) {
             put("cycle_action", "observe_diagnose_prioritize_plan_verify")
             put("current_mission", current ?: JSONObject.NULL)
             put("execution", JSONObject()
-                .put("status", "sandbox_planned")
+                .put("status", "planned")
                 .put("safe", true)
                 .put("real_world_action", false))
         }
-        return AgentResult("ready", "هسته محلی آماده است.", response)
+        return AgentResult("ready", "هسته برنامه آماده است.", response)
     }
 
     @Synchronized
