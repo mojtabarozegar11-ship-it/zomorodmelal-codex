@@ -81,7 +81,7 @@ jobs:
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: zomorodmelal-android-artifacts
+          name: worker-mojtaba-release
           path: |
             worker_mojtaba/android/app/build/outputs/apk/debug/app-debug.apk
             worker_mojtaba/android/app/build/outputs/bundle/release/app-release.aab
