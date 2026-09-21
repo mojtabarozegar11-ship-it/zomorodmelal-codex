@@ -75,7 +75,6 @@ class MasterAgentEngine(private val rootDir: File) {
     }
 
     @Synchronized
-    @Synchronized
     fun recordRemoteSuccess(goal: String) {
         val state = loadState()
             .put("last_remote_goal", goal)
