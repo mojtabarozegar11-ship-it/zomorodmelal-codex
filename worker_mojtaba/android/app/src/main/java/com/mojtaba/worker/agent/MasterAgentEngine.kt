@@ -75,6 +75,25 @@ class MasterAgentEngine(private val rootDir: File) {
     }
 
     @Synchronized
+    @Synchronized
+    fun recordRemoteSuccess(goal: String) {
+        val state = loadState()
+            .put("last_remote_goal", goal)
+            .put("last_remote_status", "success")
+            .put("last_remote_at", System.currentTimeMillis())
+        saveState(state)
+    }
+
+    @Synchronized
+    fun recordRemoteFailure(goal: String, reason: String) {
+        val state = loadState()
+            .put("last_remote_goal", goal)
+            .put("last_remote_status", "failure")
+            .put("last_remote_error", reason)
+            .put("last_remote_at", System.currentTimeMillis())
+        saveState(state)
+    }
+
     fun runCycle(goal: String? = null): AgentResult {
         if (!goal.isNullOrBlank()) return submit(goal)
         val queue = loadMissions()
