@@ -1,0 +1,46 @@
+name: cPanel preflight
+
+on:
+  push:
+    branches:
+      - release/cpanel-final-20260921
+  pull_request:
+    branches:
+      - main
+      - release/cpanel-final-20260921
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify source layout
+        run: python scripts/verify_cpanel_layout.py
+
+      - name: Verify Passenger entrypoint
+        run: |
+          python -m py_compile django_project/passenger_wsgi.py django_project/manage.py
+          grep -q 'DJANGO_SETTINGS_MODULE.*config.settings' django_project/passenger_wsgi.py
+          grep -q 'from config.wsgi import application' django_project/passenger_wsgi.py
+
+      - name: Verify deployment contract
+        run: |
+          test -f django_project/requirements-host.txt
+          test -f .cpanel.yml
+          test -f .github/workflows/deploy-cpanel-ssh.yml
+          grep -q 'zomorodmelal.ir' CPANEL_DEPLOYMENT.md
+          grep -q 'passenger_wsgi.py' CPANEL_DEPLOYMENT.md
+          grep -q 'manage.py migrate' CPANEL_DEPLOYMENT.md
+          grep -q 'collectstatic' CPANEL_DEPLOYMENT.md
+
+      - name: Verify no obvious secrets
+        run: |
+          if grep -RInE '(sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY)' --exclude-dir=.git .; then
+            echo "Potential secret material detected"
+            exit 1
+          fi
