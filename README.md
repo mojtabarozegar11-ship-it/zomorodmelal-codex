@@ -1,51 +1,36 @@
-# Zomorod Melal Master Agent Core
+# Zomorod Melal — Android Master Agent
 
-## Overview
-Core execution framework and Django management layer for the Zomorod Melal Master Agent.
+## Product
+Zomorod Melal is an **Android application installed on a mobile device**.
 
-## Android Admin Panel
-The repository now includes an Android-installable Progressive Web App (PWA) for the management panel:
+The production runtime is local to Android. The project is **not deployed to cPanel, Passenger, or a web host**.
 
-- URL: `/mobile-admin/`
-- Android Chrome can install it from the browser's install/add-to-home-screen flow.
-- The app opens the Django Admin and AI configuration screens in a mobile-friendly management shell.
-- DeepSeek API keys are entered through Django Admin and are never rendered back into the form.
-- The DeepSeek provider reads the enabled configuration at runtime.
-- External AI remains disabled unless `AI_PROVIDER_ENABLED=True` is explicitly configured.
-- No API key is stored in GitHub, source code, APK, or frontend assets.
+## Canonical architecture
 
-## Security Rule
+`Android App → Canonical Master Agent → autonomous_core.MasterCore → task/worker orchestration → device-local state`
 
-OWNER APPROVAL REQUIRED BEFORE CRITICAL ACTION
+The canonical application/runtime boundary is:
 
-Production deployment and external host actions remain gated by owner approval.
+- Android project: `worker_mojtaba/android`
+- Master Agent entry point: `master_agent.CanonicalMasterAgent`
+- Python orchestration kernel: `autonomous_core.MasterCore`
 
-## Runtime
-- Django admin: `/admin/`
-- Android PWA admin: `/mobile-admin/`
-- Agent API status: `/api/status/`
-- Agent API execution: `/api/execute/`
+Network/API integrations are optional capabilities of the application; they are not the location where the Master Agent runs.
 
-## CI
-MVP tests run on Python 3.8 through GitHub Actions.
+## Build outputs
 
-## Canonical Django deployment layout
+- **APK**: install directly on an Android device for testing/installation.
+- **AAB**: release bundle for app distribution.
 
-The production Django application is **`django_project/`**. This is the canonical host entrypoint and the only Django tree that should be registered in cPanel Application Manager.
+The GitHub Actions Android pipeline validates the Gradle project, runs Android unit tests, and builds both debug APK and release AAB.
 
-- Project root: `django_project/`
-- Django settings: `config.settings`
-- WSGI callable: `config.wsgi.application`
-- cPanel/Passenger startup file: `django_project/passenger_wsgi.py`
-- Host dependency file: `django_project/requirements-host.txt`
-- The top-level `website/` tree is retained for compatibility/reference and must not be registered as the production cPanel application.
+## Production rules
 
-For cPanel, the application path is the extracted `django_project` directory (the current host copy may be named `django-project`; use the directory that actually contains `manage.py`, `config/`, `apps/`, and `requirements-host.txt`).
+- No cPanel deployment.
+- No Passenger/Django host runtime.
+- No server deployment as a production gate.
+- No credentials embedded in the APK or source tree.
+- Critical external actions remain behind explicit owner approval.
 
-## Remaining external setup
-1. Run Django migrations on the target host.
-2. Create/enable the admin account on the target host.
-3. Open `/mobile-admin/` on Android and install the PWA.
-4. Enter the DeepSeek API key through the secured admin form when ready.
-5. Enable the provider only after the owner explicitly approves external AI use.
-6. Configure production deployment credentials only after owner approval.
+## Legacy code
+Server/Django directories may still exist while migration cleanup is completed. They are not production runtime dependencies for the Android application.
