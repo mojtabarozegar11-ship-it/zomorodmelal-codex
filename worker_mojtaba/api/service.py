@@ -96,5 +96,16 @@ class WorkerService:
             },
         )
         if lifecycle.get("status") != "completed":
-            return lifecycle
+            return {
+                "status": lifecycle.get("status", "unknown"),
+                "request": request,
+                "plan": lifecycle.get("plan", []),
+                "goal": lifecycle.get("goal", request),
+                "intent": None,
+                "route": None,
+                "ai": {},
+                "execution": {},
+                "tools": [],
+                "authorization": {},
+            }
         return result
