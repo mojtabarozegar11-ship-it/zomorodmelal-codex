@@ -2,10 +2,16 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#173d2f">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#123529">
   <meta name="description" content="{% block meta_description %}شرکت کشت و صنعت زمرد ملل؛ اکوسیستم کشاورزی، صنعت، دانش، اقتصاد و فناوری{% endblock %}">
-  <title>{% block title %}کشت و صنعت زمرد ملل{% endblock %}</title>
+  <meta name="robots" content="{% block robots %}index,follow{% endblock %}">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:locale" content="fa_IR">
+  <meta property="og:title" content="{% block og_title %}{% block title %}کشت و صنعت زمرد ملل{% endblock %}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}اکوسیستم یکپارچه تولید، دانش، اقتصاد و نوآوری{% endblock %}">
+  <link rel="canonical" href="{{ request.build_absolute_uri }}">
+  <title>{{ block.super }}</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'site/logo.svg' %}">
   <link rel="stylesheet" href="{% static 'site/main.css' %}">
   <link rel="stylesheet" href="{% static 'site/design-tokens.css' %}">
@@ -15,6 +21,7 @@
   {% block page_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}page-default{% endblock %}">
+  <a class="skip-link" href="#main-content">پرش به محتوای اصلی</a>
   <header class="site-header">
     <a class="brand" href="/" aria-label="شرکت کشت و صنعت زمرد ملل">
       <img class="brand-logo" src="{% static 'site/logo.svg' %}" alt="لوگوی رسمی شرکت کشت و صنعت زمرد ملل">
@@ -32,7 +39,7 @@
       <a href="/admin/">مدیریت</a>
     </nav>
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main id="main-content" tabindex="-1">{% block content %}{% endblock %}</main>
   <footer class="site-footer">
     <div class="footer-brand">
       <img class="footer-logo" src="{% static 'site/logo.svg' %}" alt="" aria-hidden="true">
