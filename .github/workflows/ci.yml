@@ -47,6 +47,7 @@ jobs:
           DJANGO_SECRET_KEY: ci-only-secret-not-for-production
           DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
           DJANGO_CSRF_TRUSTED_ORIGINS: https://localhost
+          DJANGO_HSTS_SECONDS: "31536000"
         run: python manage.py check
 
       - name: Django deploy check
@@ -56,6 +57,7 @@ jobs:
           DJANGO_SECRET_KEY: ci-only-secret-not-for-production
           DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
           DJANGO_CSRF_TRUSTED_ORIGINS: https://localhost
+          DJANGO_HSTS_SECONDS: "31536000"
         run: python manage.py check --deploy
 
       - name: Migration consistency
