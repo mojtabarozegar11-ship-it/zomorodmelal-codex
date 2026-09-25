@@ -8,10 +8,10 @@
   <meta name="robots" content="{% block robots %}index,follow{% endblock %}">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
   <meta property="og:locale" content="fa_IR">
-  <meta property="og:title" content="{% block og_title %}{% block title %}کشت و صنعت زمرد ملل{% endblock %}{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}کشت و صنعت زمرد ملل{% endblock %}">
   <meta property="og:description" content="{% block og_description %}اکوسیستم یکپارچه تولید، دانش، اقتصاد و نوآوری{% endblock %}">
   <link rel="canonical" href="{{ request.build_absolute_uri }}">
-  <title>{{ block.super }}</title>
+  <title>{% block title %}کشت و صنعت زمرد ملل{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'site/logo.svg' %}">
   <link rel="stylesheet" href="{% static 'site/main.css' %}">
   <link rel="stylesheet" href="{% static 'site/design-tokens.css' %}">
