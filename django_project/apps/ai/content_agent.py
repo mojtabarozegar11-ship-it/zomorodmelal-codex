@@ -286,6 +286,14 @@ class ContentAgent:
             return publication
         if not self._owner(actor):
             raise PermissionDenied("Only the owner can approve publication.")
+        if not publication.brief.owner_approved:
+            raise PermissionDenied(
+                "CONTENT BRIEF OWNER APPROVAL REQUIRED BEFORE PUBLICATION APPROVAL"
+            )
+        if not publication.channel.owner_approved:
+            raise PermissionDenied(
+                "CONTENT CHANNEL OWNER APPROVAL REQUIRED BEFORE PUBLICATION APPROVAL"
+            )
         require_owner_approval(True)
         publication.owner_approved = True
         publication.save(update_fields=["owner_approved"])
@@ -373,6 +381,14 @@ class ContentAgent:
     def publish(self, publication: ContentPublication, *, actor=None):
         if publication.status in {"published", "cancelled"}:
             return publication
+        if not publication.brief.owner_approved:
+            raise PermissionDenied(
+                "CONTENT BRIEF OWNER APPROVAL REQUIRED BEFORE PUBLICATION"
+            )
+        if not publication.channel.owner_approved:
+            raise PermissionDenied(
+                "CONTENT CHANNEL OWNER APPROVAL REQUIRED BEFORE PUBLICATION"
+            )
         if not publication.owner_approved:
             raise PermissionDenied(
                 "OWNER APPROVAL REQUIRED BEFORE ANY SENSITIVE ACTION"
