@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.staticfiles.finders import find
 from django.test import SimpleTestCase
 from django.urls import resolve, reverse
@@ -30,3 +31,11 @@ class SiteContractTests(SimpleTestCase):
         self.assertContains(response, 'site/logo.svg')
         self.assertContains(response, "چهار دروازه اصلی")
         self.assertContains(response, "ورود سریع به بخش‌ها")
+
+    def test_https_proxy_contract_is_explicit(self):
+        self.assertEqual(settings.SECURE_PROXY_SSL_HEADER, ("HTTP_X_FORWARDED_PROTO", "https"))
+        self.assertTrue(settings.SECURE_SSL_REDIRECT)
+        self.assertTrue(settings.SESSION_COOKIE_SECURE)
+        self.assertTrue(settings.CSRF_COOKIE_SECURE)
+        self.assertIn("https://zomorodmelal.ir", settings.CSRF_TRUSTED_ORIGINS)
+        self.assertIn("https://www.zomorodmelal.ir", settings.CSRF_TRUSTED_ORIGINS)
