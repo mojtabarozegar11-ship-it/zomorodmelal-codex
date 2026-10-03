@@ -1,0 +1,227 @@
+{% load static %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>املاک زمرد ملل | زنجیره تأمین، ساخت و سرمایه‌گذاری</title>
+    <meta name="description" content="پرتال جامع املاک زمرد ملل؛ بازار ملک و زمین، سرمایه‌گذاری، مشارکت در ساخت، زنجیره تأمین ساختمان، مصالح، پیمانکاری و کلینیک ساختمان.">
+    <link rel="stylesheet" href="{% static 'real_estate_portal/real-estate.css' %}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/">زمرد ملل</a>
+        <nav class="nav" aria-label="ناوبری اصلی">
+            <a href="/">خانه</a>
+            <a class="active" href="/real-estate/">املاک</a>
+            <a href="#services">خدمات</a>
+            <a href="#investment">سرمایه‌گذاری</a>
+            <a href="#supply">زنجیره تأمین</a>
+            <a href="#clinic">کلینیک ساختمان</a>
+        </nav>
+        <a class="ghost-btn" href="#lead-form">ثبت درخواست</a>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-copy">
+                <span class="eyebrow">ZOMOROD MELAL REAL ESTATE ECOSYSTEM</span>
+                <h1>از زمین و سرمایه تا ساخت، تأمین و بهره‌برداری</h1>
+                <p>
+                    پرتال جامع املاک زمرد ملل، زنجیره کامل ارزش ساختمان را در یک نقطه به هم متصل می‌کند:
+                    ملک، سرمایه‌گذار، سازنده، پیمانکار، تأمین‌کننده، مصالح و خدمات تخصصی.
+                </p>
+                <div class="hero-actions">
+                    <a class="primary-btn" href="#lead-form">ثبت فرصت یا درخواست</a>
+                    <a class="secondary-btn" href="#investment">مشاهده فرصت‌های سرمایه‌گذاری</a>
+                </div>
+                <div class="pill-row" aria-label="مسیرهای اصلی">
+                    <span>خرید و فروش</span>
+                    <span>سرمایه‌گذاری</span>
+                    <span>مشارکت</span>
+                    <span>مصالح</span>
+                    <span>پیمانکاری</span>
+                    <span>کلینیک ساختمان</span>
+                </div>
+            </div>
+
+            <aside class="hero-panel" aria-label="مسیر زنجیره ارزش">
+                <h2>زنجیره ارزش یکپارچه</h2>
+                <ol>
+                    <li>زمین و ملک</li>
+                    <li>سرمایه و مشارکت</li>
+                    <li>طراحی و مهندسی</li>
+                    <li>تأمین مصالح و تجهیزات</li>
+                    <li>پیمانکاری و اجرا</li>
+                    <li>فروش، اجاره و بهره‌برداری</li>
+                </ol>
+            </aside>
+        </section>
+
+        <section class="quick-actions">
+            <a href="#lead-form">ملک می‌خواهم</a>
+            <a href="#lead-form">ملک دارم</a>
+            <a href="#lead-form">زمین برای مشارکت دارم</a>
+            <a href="#lead-form">سرمایه‌گذار هستم</a>
+            <a href="#lead-form">پیمانکار می‌خواهم</a>
+            <a href="#lead-form">مصالح می‌خواهم</a>
+        </section>
+
+        <section id="services" class="section">
+            <div class="section-heading">
+                <span>اکوسیستم خدمات</span>
+                <h2>همه خدمات ملک و ساختمان در یک پرتال</h2>
+                <p>هر کارت یک ورودی مستقل برای جذب کاربر، تولید لید و ایجاد درآمد است.</p>
+            </div>
+
+            <div class="service-grid">
+                {% for service in services %}
+                <article class="service-card">
+                    <div class="service-icon" aria-hidden="true">{{ service.icon }}</div>
+                    <h3>{{ service.title }}</h3>
+                    <p>{{ service.text }}</p>
+                    <a href="#lead-form">ورود به این خدمت</a>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="investment" class="feature-section">
+            <div>
+                <span class="eyebrow">INVESTMENT HUB</span>
+                <h2>مرکز سرمایه‌گذاری و مشارکت در املاک</h2>
+                <p>
+                    فرصت‌های سرمایه‌گذاری با ساختار استاندارد ثبت می‌شوند تا مالک، سازنده و سرمایه‌گذار
+                    بتوانند شفاف‌تر و سریع‌تر به یکدیگر متصل شوند.
+                </p>
+                <div class="metric-grid">
+                    <div><strong>مالک</strong><span>زمین، ملک یا پروژه</span></div>
+                    <div><strong>سازنده</strong><span>توان اجرا و مدیریت</span></div>
+                    <div><strong>سرمایه‌گذار</strong><span>سرمایه و مدل مشارکت</span></div>
+                    <div><strong>زمرد ملل</strong><span>اتصال، ارزیابی و خدمات</span></div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>کارت استاندارد فرصت سرمایه‌گذاری</h3>
+                <ul>
+                    <li>نوع و موقعیت پروژه</li>
+                    <li>ارزش برآوردی پروژه</li>
+                    <li>سرمایه موردنیاز</li>
+                    <li>آورده مالک و شرکا</li>
+                    <li>مرحله فعلی پروژه</li>
+                    <li>مدل مشارکت پیشنهادی</li>
+                    <li>مدت و برنامه اجرایی</li>
+                    <li>وضعیت بررسی مستندات</li>
+                </ul>
+                <a class="primary-btn block" href="#lead-form">ثبت فرصت سرمایه‌گذاری</a>
+            </div>
+        </section>
+
+        <section id="supply" class="section split-section">
+            <div>
+                <span class="eyebrow">SUPPLY CHAIN</span>
+                <h2>زنجیره تأمین ساختمان</h2>
+                <p>
+                    شبکه‌ای برای اتصال پروژه‌ها به تولیدکنندگان، کارخانه‌ها، عمده‌فروشان و تأمین‌کنندگان.
+                    کاربر می‌تواند نیاز پروژه را ثبت کند و چند پیشنهاد دریافت کند.
+                </p>
+                <div class="tag-cloud">
+                    <span>فولاد</span><span>سیمان</span><span>بتن</span><span>آجر و بلوک</span>
+                    <span>سنگ</span><span>کاشی و سرامیک</span><span>تأسیسات</span><span>برق</span>
+                    <span>آسانسور</span><span>درب و پنجره</span><span>ماشین‌آلات</span><span>لجستیک</span>
+                </div>
+            </div>
+            <div class="rfq-box">
+                <span>RFQ / استعلام قیمت</span>
+                <h3>نیاز پروژه را ثبت کنید</h3>
+                <p>مثلاً: «۵۰۰ تن میلگرد برای پروژه مسکونی» و پیشنهاد چند تأمین‌کننده را دریافت کنید.</p>
+                <a href="#lead-form" class="secondary-btn block">ثبت استعلام قیمت</a>
+            </div>
+        </section>
+
+        <section id="clinic" class="clinic-section">
+            <div class="clinic-copy">
+                <span class="eyebrow">BUILDING CLINIC</span>
+                <h2>کلینیک ساختمان زمرد ملل</h2>
+                <p>
+                    کاربر لازم نیست بداند چه متخصصی نیاز دارد؛ مشکل ساختمان را شرح می‌دهد و سامانه او را
+                    به مسیر مناسب کارشناسی، بازدید، برآورد و اجرا هدایت می‌کند.
+                </p>
+            </div>
+            <div class="clinic-grid">
+                <div>ترک و نشست</div>
+                <div>نم و رطوبت</div>
+                <div>نشتی و لوله‌کشی</div>
+                <div>تأسیسات و برق</div>
+                <div>نما و عایق</div>
+                <div>مقاوم‌سازی</div>
+                <div>بازسازی</div>
+                <div>نگهداری ساختمان</div>
+            </div>
+        </section>
+
+        <section class="section revenue-section">
+            <div class="section-heading">
+                <span>REVENUE ENGINE</span>
+                <h2>مدل چندلایه درآمدی</h2>
+                <p>هدف صفحه از ابتدا بر ایجاد چند جریان درآمدی همزمان طراحی شده است.</p>
+            </div>
+            <div class="revenue-grid">
+                {% for item in revenue %}
+                <div class="revenue-item">
+                    <span>{{ forloop.counter|stringformat:"02d" }}</span>
+                    <p>{{ item }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="lead-form" class="lead-section">
+            <div>
+                <span class="eyebrow">START HERE</span>
+                <h2>چه کاری می‌خواهید انجام دهید؟</h2>
+                <p>نوع نیاز را انتخاب کنید تا درخواست شما در مسیر مناسب کسب‌وکار قرار بگیرد.</p>
+            </div>
+            <form class="lead-form" action="#" method="post" onsubmit="return false;">
+                <label>
+                    نوع درخواست
+                    <select id="leadType">
+                        <option>خرید یا فروش ملک</option>
+                        <option>سرمایه‌گذاری در پروژه</option>
+                        <option>جذب سرمایه</option>
+                        <option>مشارکت در ساخت</option>
+                        <option>تأمین مصالح</option>
+                        <option>پیمانکاری</option>
+                        <option>کلینیک ساختمان</option>
+                        <option>استعلام قیمت / مناقصه</option>
+                    </select>
+                </label>
+                <label>
+                    نام و نام خانوادگی
+                    <input type="text" placeholder="نام شما">
+                </label>
+                <label>
+                    شماره تماس
+                    <input type="tel" placeholder="09xxxxxxxxx">
+                </label>
+                <label class="wide">
+                    شرح درخواست
+                    <textarea rows="4" placeholder="ملک، پروژه، میزان سرمایه، مصالح یا مشکل ساختمان را توضیح دهید."></textarea>
+                </label>
+                <button type="submit" class="primary-btn wide" id="demoSubmit">ثبت درخواست</button>
+                <p class="form-note" id="formNote">فرم در این نسخه نمایشی است و برای اتصال به CRM/API آماده شده است.</p>
+            </form>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div>
+            <strong>زمرد ملل | املاک</strong>
+            <p>پلتفرم زنجیره تأمین، ساخت و سرمایه‌گذاری املاک و ساختمان</p>
+        </div>
+        <a href="#top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">بازگشت به بالا ↑</a>
+    </footer>
+
+    <script src="{% static 'real_estate_portal/real-estate.js' %}"></script>
+</body>
+</html>
