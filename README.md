@@ -66,9 +66,9 @@ Syntax, unit/integration tests, Django checks, database migrations, static colle
 
 ## منابع جدید زنجیره سرد و ارزیابی تأمین‌کننده — ۳ آبان ۱۴۰۵
 
-دو راهنمای فارسی مستقل برای مطالعه و استفاده عملی منتشر شده‌اند. **فعلاً از نشانی مستقیم فایل استفاده کنید**؛ زیرا مسیر کوتاه پوشه و canonical این نسخه هنوز نیازمند اصلاح فنی است و نباید موفقیت سئوی آن ادعا شود.
+دو راهنمای فارسی مستقل برای مطالعه و استفاده عملی منتشر شده‌اند. نشانی‌های کوتاه canonical آن‌ها در ۲۵ اکتبر ۲۰۲۶ پس از اصلاح پیکربندی ایزوله و آزمون زنده HTTP 200 تأیید شدند؛ این نتیجه به معنی نمایه‌شدن در گوگل یا افزایش ترافیک نیست.
 
-- [چک‌لیست پذیرش و قرنطینه محموله در زنجیره سرد](https://zomorodmelal.ir/resources/20261025b/cold-chain-acceptance/index.html?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=cold_chain): کنترل دیتالاگر، نمونه‌گیری، شواهد کیفیت، آزادسازی و تحلیل ریشه‌ای مغایرت.
-- [چارچوب مقایسه فنی و اقتصادی تأمین‌کنندگان تجهیزات کشاورزی](https://zomorodmelal.ir/resources/20261025b/supplier-technical-comparison/index.html?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=supplier): شروط الزامی، هزینه مالکیت، اصالت مدارک و ریسک معامله.
+- [چک‌لیست پذیرش و قرنطینه محموله در زنجیره سرد](https://zomorodmelal.ir/resources/20261025b/cold-chain-acceptance/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=cold_chain): کنترل دیتالاگر، نمونه‌گیری، شواهد کیفیت، آزادسازی و تحلیل ریشه‌ای مغایرت.
+- [چارچوب مقایسه فنی و اقتصادی تأمین‌کنندگان تجهیزات کشاورزی](https://zomorodmelal.ir/resources/20261025b/supplier-technical-comparison/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=supplier): شروط الزامی، هزینه مالکیت، اصالت مدارک و ریسک معامله.
 
 این منابع آموزشی‌اند و به‌معنای تأیید رسمی یک تأمین‌کننده، صدور گواهی یا انجام معامله نیستند. [تماس و همکاری با شرکت](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=contact).
