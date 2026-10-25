@@ -44,3 +44,12 @@ Syntax, unit/integration tests, Django checks, database migrations, static colle
 
 پارامترهای UTM فقط در صورت پیکربندی ابزار تحلیل سایت امکان انتساب بازدید را فراهم می‌کنند؛ هیچ کلیک یا سرنخ تأییدنشده‌ای گزارش نمی‌شود.
 
+
+
+## راهنمای تازه ممیزی زنجیره سرد و کنترل ضایعات — ۳ آبان ۱۴۰۵
+
+[چک‌لیست تخصصی آزادسازی محموله‌های فسادپذیر](public-guides/fa-postharvest-cold-chain-release-audit-20261025.md) با فرم شناسنامه بچ، ثبت زمان و دما، نمونه‌برداری، تصمیم قرنطینه یا پذیرش و محاسبه افت قابل ممیزی در مخزن عمومی منتشر شد. **این سند یک منبع آموزشی در GitHub است و هنوز به‌عنوان صفحه جدید روی وبگاه زنده منتشر نشده است.**
+
+[وبگاه رسمی شرکت](https://zomorodmelal.ir/?utm_source=github&utm_medium=education&utm_campaign=cold_chain_20261025&utm_content=readme) · [تماس و همکاری](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=education&utm_campaign=cold_chain_20261025&utm_content=readme)
+
+این سند به معنای تأیید ایمنی محموله مشخص، ارائه تعرفه یا دریافت سفارش واقعی نیست.
