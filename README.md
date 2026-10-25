@@ -32,3 +32,15 @@ Syntax, unit/integration tests, Django checks, database migrations, static colle
 [راهنمای عملی سناریوسازی هزینه آب و انرژی در مزرعه](public-guides/rahnama-senario-ab-va-enerzhi-mazrae-20261025.md) با مثال عددی شفاف، چهار سناریوی ریسک و کنترل‌های کیفیت داده منتشر شد. این راهنما مکمل محاسبه‌گر رایگان مزرعه است و به معنای ارائه تعرفه روز، توصیه کشت قطعی یا سود تضمینی نیست.
 
 [مشاهده محاسبه‌گر رایگان مزرعه](https://zomorodmelal.ir/agriculture/free-tools/20261025/farm-break-even/?utm_source=github&utm_medium=referral&utm_campaign=water_energy_20261025&utm_content=readme) · [درخواست همکاری از وبگاه رسمی](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=referral&utm_campaign=water_energy_20261025&utm_content=readme)
+
+## راهنماهای جدید زنده کشاورزی و تجارت — ۳ آبان ۱۴۰۵
+
+این منابع در ۲۵ اکتبر ۲۰۲۶ روی دامنه رسمی شرکت مشاهده و نشانی‌های اصلی آن‌ها بررسی شده‌اند. محتوای آموزشی رایگان است و به‌معنای تأیید قرارداد، قیمت روز، مجوز واردات یا فروش نیست.
+
+- **[چک‌لیست تخصصی استعلام قیمت بین‌المللی (RFQ)](https://zomorodmelal.ir/resources/20261025/trade-rfq/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_evergreen_20261025&utm_content=rfq):** تعریف مشخصات فنی، مقدار، کنترل کیفیت، اینکوترمز ۲۰۲۰، پرداخت مجاز، اسناد و مقایسه پیشنهاد تأمین‌کنندگان. [محاسبه‌گر سناریوی هزینه واردات](https://zomorodmelal.ir/agriculture/free-tools/20261025/import-landed-cost/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_evergreen_20261025&utm_content=import_tool).
+- **[مدیریت ریسک آب، انرژی و سودآوری مزرعه](https://zomorodmelal.ir/resources/20261025/farm-risk/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_evergreen_20261025&utm_content=farm_risk):** ثبت داده‌های مزرعه، محاسبه هزینه متغیر و بررسی سناریوهای خشکسالی و انرژی. [محاسبه‌گر نقطه سربه‌سر مزرعه](https://zomorodmelal.ir/agriculture/free-tools/20261025/farm-break-even/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_evergreen_20261025&utm_content=farm_tool).
+
+[فهرست رسمی راهنماهای رایگان](https://zomorodmelal.ir/resources/20261025/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_evergreen_20261025&utm_content=directory) · [تماس برای همکاری](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_evergreen_20261025&utm_content=contact)
+
+پارامترهای UTM فقط در صورت پیکربندی ابزار تحلیل سایت امکان انتساب بازدید را فراهم می‌کنند؛ هیچ کلیک یا سرنخ تأییدنشده‌ای گزارش نمی‌شود.
+
