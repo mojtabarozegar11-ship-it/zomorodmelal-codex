@@ -2,6 +2,10 @@
 
 Unified Django website and Master Agent operational architecture.
 
+## اطلاعات عمومی رسانه‌ای و همکاری — ۳ آبان ۱۴۰۵
+
+[برگه اطلاعات رسمی قابل ارجاع شرکت کشت و صنعت زمرد ملل](public-guides/fa-zomorod-melal-media-factsheet-20261025.md) شامل معرفی فارسی، مسیر تماس و همکاری، منابع رایگان، وضعیت مستندات پژوهشی و هشدارهای راستی‌آزمایی حقوقی است. این سند در مخزن عمومی منتشر شده و به‌معنای انتشار پست اجتماعی، استقرار صفحه جدید روی وبگاه یا تأیید قرارداد و فروش نیست.
+
 ## Release policy
 - No production claim without runtime evidence.
 - Secrets must be supplied through environment variables.
