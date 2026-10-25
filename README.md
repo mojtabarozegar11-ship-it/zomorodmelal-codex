@@ -62,3 +62,13 @@ Syntax, unit/integration tests, Django checks, database migrations, static colle
 - [فرم مشخصات کیفی خرید محصولات کشاورزی](public-guides/fa-agricultural-buyer-quality-specification-20261025.md) — معیارهای قابل آزمون، ردیابی بچ، مستندات و تصمیم پذیرش یا قرنطینه. [مسیر همکاری](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=resource_directory&utm_campaign=buyer_quality_spec_20261025).
 
 **توجه:** هیچ نرخ روز، گواهی، موجودی کالا، قرارداد یا مجوز صادراتی در این منابع ادعا نشده است. کلیک و تبدیل تنها با داده معتبر ابزار تحلیل قابل گزارش است.
+
+
+## منابع جدید زنجیره سرد و ارزیابی تأمین‌کننده — ۳ آبان ۱۴۰۵
+
+دو راهنمای فارسی مستقل برای مطالعه و استفاده عملی منتشر شده‌اند. **فعلاً از نشانی مستقیم فایل استفاده کنید**؛ زیرا مسیر کوتاه پوشه و canonical این نسخه هنوز نیازمند اصلاح فنی است و نباید موفقیت سئوی آن ادعا شود.
+
+- [چک‌لیست پذیرش و قرنطینه محموله در زنجیره سرد](https://zomorodmelal.ir/resources/20261025b/cold-chain-acceptance/index.html?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=cold_chain): کنترل دیتالاگر، نمونه‌گیری، شواهد کیفیت، آزادسازی و تحلیل ریشه‌ای مغایرت.
+- [چارچوب مقایسه فنی و اقتصادی تأمین‌کنندگان تجهیزات کشاورزی](https://zomorodmelal.ir/resources/20261025b/supplier-technical-comparison/index.html?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=supplier): شروط الزامی، هزینه مالکیت، اصالت مدارک و ریسک معامله.
+
+این منابع آموزشی‌اند و به‌معنای تأیید رسمی یک تأمین‌کننده، صدور گواهی یا انجام معامله نیستند. [تماس و همکاری با شرکت](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=organic_referral&utm_campaign=zm_guides_20261025b&utm_content=contact).
