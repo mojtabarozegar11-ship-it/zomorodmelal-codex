@@ -53,3 +53,12 @@ Syntax, unit/integration tests, Django checks, database migrations, static colle
 [وبگاه رسمی شرکت](https://zomorodmelal.ir/?utm_source=github&utm_medium=education&utm_campaign=cold_chain_20261025&utm_content=readme) · [تماس و همکاری](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=education&utm_campaign=cold_chain_20261025&utm_content=readme)
 
 این سند به معنای تأیید ایمنی محموله مشخص، ارائه تعرفه یا دریافت سفارش واقعی نیست.
+
+## منابع تازه برای بهره‌برداران گلخانه و خریداران عمده — ۳ آبان ۱۴۰۵
+
+دو منبع آموزشی مستقل در **مخزن عمومی GitHub** منتشر شده‌اند؛ این ثبت به معنی استقرار صفحه تازه در وبگاه اصلی یا اثبات فروش و قرارداد نیست.
+
+- [دفتر محاسبه تراز آب گلخانه](public-guides/fa-greenhouse-irrigation-water-balance-20261025.md) — ثبت حجم ورودی و زه‌آب، تبدیل لیتر به میلی‌متر، کنترل ابزار و تفکیک اختلاف حجم از تبخیر-تعرق واقعی. [وبگاه رسمی](https://zomorodmelal.ir/?utm_source=github&utm_medium=resource_directory&utm_campaign=greenhouse_water_balance_20261025).
+- [فرم مشخصات کیفی خرید محصولات کشاورزی](public-guides/fa-agricultural-buyer-quality-specification-20261025.md) — معیارهای قابل آزمون، ردیابی بچ، مستندات و تصمیم پذیرش یا قرنطینه. [مسیر همکاری](https://zomorodmelal.ir/contact/?utm_source=github&utm_medium=resource_directory&utm_campaign=buyer_quality_spec_20261025).
+
+**توجه:** هیچ نرخ روز، گواهی، موجودی کالا، قرارداد یا مجوز صادراتی در این منابع ادعا نشده است. کلیک و تبدیل تنها با داده معتبر ابزار تحلیل قابل گزارش است.
