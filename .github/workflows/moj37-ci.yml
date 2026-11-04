@@ -27,8 +27,10 @@ jobs:
         with:
           version: stable
           cache: false
-      - name: Download audited OpenZeppelin version
-        run: git clone --depth 1 --branch v5.4.0 https://github.com/OpenZeppelin/openzeppelin-contracts.git lib/openzeppelin-contracts
+      - name: Download and verify exact OpenZeppelin release commit
+        run: |
+          git clone --depth 1 --branch v5.4.0 https://github.com/OpenZeppelin/openzeppelin-contracts.git lib/openzeppelin-contracts
+          test "$(git -C lib/openzeppelin-contracts rev-parse HEAD)" = 'c64a1edb67b6e3f4a15cca8909c9482ad33a02b0'
       - name: Print version
         run: forge --version
       - name: Compile source and Solidity tests
