@@ -1,0 +1,44 @@
+name: MOJ37 BSC contract EVM verification
+on:
+  push:
+    branches:
+      - audit/moj37-bsc-fixed-supply-20261104
+    paths:
+      - 'moj37/**'
+      - '.github/workflows/moj37-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  solidity-test:
+    name: MOJ37 EVM unit and fuzz suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: moj37
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+          cache: false
+      - name: Download audited OpenZeppelin version
+        run: git clone --depth 1 --branch v5.4.0 https://github.com/OpenZeppelin/openzeppelin-contracts.git lib/openzeppelin-contracts
+      - name: Print version
+        run: forge --version
+      - name: Compile source and Solidity tests
+        run: forge build --sizes
+      - name: Execute EVM unit and fuzz tests
+        run: forge test -vv
+      - name: Explicit deployment safety check
+        run: |
+          if grep -R -E '(PRIVATE_KEY|MNEMONIC|broadcast\(|--broadcast)' src test; then
+            echo 'Deployment-related code unexpectedly detected.'
+            exit 1
+          fi
+          echo 'Only local EVM execution; no signing or broadcasting.'
