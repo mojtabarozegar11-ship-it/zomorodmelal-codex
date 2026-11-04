@@ -30,6 +30,14 @@ contract MOJ37Test {
         require(token.balanceOf(RECIPIENT) == 0, "recipient unexpectedly funded");
     }
 
+    function testExactTrustWalletAddressReceivesEntireSupply() public {
+        address expectedHolder = 0x89149b01f59115B86553561F12438D2ADF517E75;
+        MOJ37 configuredToken = new MOJ37(expectedHolder);
+        require(configuredToken.balanceOf(expectedHolder) == SUPPLY, "owner did not receive total supply");
+        require(configuredToken.balanceOf(address(this)) == 0, "deployer received tokens unexpectedly");
+        require(configuredToken.totalSupply() == SUPPLY, "unexpected supply");
+    }
+
     function testDirectTransferPreservesSupply() public {
         uint256 amount = 7 * 10 ** 18;
         require(token.transfer(RECIPIENT, amount), "transfer");
