@@ -1,11 +1,5 @@
 name: MOJ37 BSC contract EVM verification
 on:
-  push:
-    branches:
-      - audit/moj37-bsc-fixed-supply-20261104
-    paths:
-      - 'moj37/**'
-      - '.github/workflows/moj37-ci.yml'
   pull_request:
     branches:
       - main
@@ -40,7 +34,7 @@ jobs:
       - name: Compile source and Solidity tests
         run: forge build --sizes
       - name: Execute EVM unit and fuzz tests
-        run: forge test -vv
+        run: forge test -vv --gas-report
       - name: Explicit deployment safety check
         run: |
           if grep -R -E '(PRIVATE_KEY|MNEMONIC|broadcast\(|--broadcast)' src test; then
