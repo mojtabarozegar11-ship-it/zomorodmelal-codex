@@ -3,9 +3,9 @@ pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-/// @title MOJ37 — fixed-supply ERC20 token for BNB Smart Chain
-/// @notice All tokens are minted once to the constructor-provided holder.
-/// @dev No privileged owner, mint, pause, blacklist, upgrade or transfer tax.
+/// @title MOJ37 - fixed supply token for BNB Smart Chain
+/// @notice All tokens are created once and assigned to initialHolder at deployment.
+/// @dev No owner, privileged roles, minting, tax, blacklist, pause, or upgrade hooks.
 contract MOJ37 is ERC20 {
     uint256 public constant INITIAL_SUPPLY = 1_000_000_000_000 * 10 ** 18;
 
