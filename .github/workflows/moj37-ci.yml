@@ -6,6 +6,12 @@ on:
     paths:
       - 'moj37/**'
       - '.github/workflows/moj37-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'moj37/**'
+      - '.github/workflows/moj37-ci.yml'
   workflow_dispatch:
 
 permissions:
