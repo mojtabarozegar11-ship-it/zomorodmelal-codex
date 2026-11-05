@@ -37,6 +37,46 @@ jobs:
         run: forge build --sizes
       - name: Execute EVM unit and fuzz tests
         run: forge test -vv --gas-report
+      - name: Read-only BSC wallet balance confirmation (never signs or sends)
+        env:
+          MOJ37_WALLET: '0x89149b01f59115B86553561F12438D2ADF517E75'
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from decimal import Decimal
+          address = os.environ["MOJ37_WALLET"]
+          endpoints = (
+              "https://bsc-rpc.publicnode.com",
+              "https://bsc-dataseed.bnbchain.org",
+              "https://bsc-dataseed.binance.org",
+          )
+          answers = []
+          for endpoint in endpoints:
+              try:
+                  def rpc(method, params):
+                      payload = json.dumps({"jsonrpc": "2.0", "method": method, "params": params, "id": 1}).encode()
+                      req = urllib.request.Request(endpoint, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+                      with urllib.request.urlopen(req, timeout=8) as r:
+                          output = json.load(r)
+                      if "result" not in output:
+                          raise ValueError(str(output)[:150])
+                      return output["result"]
+                  chain = int(rpc("eth_chainId", []), 16)
+                  if chain != 56:
+                      raise ValueError("Wrong chain ID " + str(chain))
+                  block = int(rpc("eth_blockNumber", []), 16)
+                  raw = int(rpc("eth_getBalance", [address, "latest"]), 16)
+                  balance = Decimal(raw) / Decimal(10**18)
+                  answers.append((endpoint, block, balance))
+                  print("BSC_READONLY_BALANCE", endpoint, "block", block, "BNB", balance)
+              except Exception as exc:
+                  print("RPC_UNAVAILABLE", endpoint, type(exc).__name__, str(exc)[:150])
+          if not answers:
+              raise SystemExit("BALANCE_NOT_VERIFIED: no public RPC response")
+          highest = max(answers, key=lambda x: x[1])
+          print("LATEST_VERIFIED_BNB_BALANCE", str(highest[2]), "block", highest[1])
+          print("HAS_AT_LEAST_0_002_BNB", highest[2] >= Decimal("0.002"))
+          PY
       - name: Explicit deployment safety check
         run: |
           if grep -R -E '(PRIVATE_KEY|MNEMONIC|broadcast\(|--broadcast)' src test; then
